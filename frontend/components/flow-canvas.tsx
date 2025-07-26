@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import {
   ReactFlow,
   type Node,
@@ -26,6 +26,9 @@ import { FlowToolbar } from "./flow-toolbar"
 import { CustomNodes } from "./custom-nodes"
 import { Button } from "@/components/ui/button"
 import { Save, Play } from "lucide-react"
+import { getTemplateById } from "@/lib/templates"
+import { CodeGenerator, type CodeGenerationResult } from "@/lib/code-generator"
+import { CodePreviewModal } from "./code-preview-modal"
 
 const nodeTypes: NodeTypes = CustomNodes
 
@@ -70,8 +73,30 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [templateLoaded, setTemplateLoaded] = useState(false)
+  const [codeResult, setCodeResult] = useState<CodeGenerationResult | null>(null)
+  const [showCodeModal, setShowCodeModal] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
+
+  // Load template data if project is created from template
+  useEffect(() => {
+    const loadTemplateFlow = () => {
+      // Check if this is a template-based project
+      if (projectId.startsWith('template-') && !templateLoaded) {
+        // In a real app, you'd fetch this from your database
+        // For demo, we'll check if it's the swap template
+        const template = getTemplateById('basic-swap-app')
+        if (template) {
+          setNodes(template.nodes)
+          setEdges(template.edges)
+          setTemplateLoaded(true)
+        }
+      }
+    }
+
+    loadTemplateFlow()
+  }, [projectId, setNodes, setEdges, templateLoaded])
 
   const onConnect = useCallback((params: Connection) => setEdges((eds) => addEdge(params, eds)), [setEdges])
 
@@ -141,6 +166,53 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           model: "gpt-3.5-turbo",
           prompt: "You are a helpful assistant",
         }
+      // New DeFi/Swap node defaults
+      case "uniswapV3Router":
+        return {
+          routerAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+          network: "ethereum",
+          slippageTolerance: "0.5",
+          deadline: "20"
+        }
+      case "chainlinkOracle":
+        return {
+          priceFeedAddresses: {
+            "ETH/USD": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "USDC/USD": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6"
+          },
+          updateInterval: "30"
+        }
+      case "swapInterface":
+        return {
+          title: "Token Swap",
+          defaultTokens: ["ETH", "USDC", "USDT", "DAI"],
+          showAdvancedSettings: true,
+          theme: "modern"
+        }
+      case "walletConnector":
+        return {
+          supportedWallets: ["MetaMask", "WalletConnect", "Coinbase Wallet"],
+          autoConnect: true,
+          networkChainId: "1"
+        }
+      case "transactionHistory":
+        return {
+          maxTransactions: "50",
+          showPendingTx: true,
+          enableFiltering: true
+        }
+      case "swapAPI":
+        return {
+          endpoints: ["/api/swap/quote", "/api/swap/execute", "/api/tokens/list", "/api/user/history"],
+          rateLimit: "100",
+          authentication: false
+        }
+      case "tokenDataService":
+        return {
+          dataProviders: ["CoinGecko", "CoinMarketCap"],
+          cacheDuration: "300",
+          supportedNetworks: ["ethereum", "polygon", "arbitrum"]
+        }
       default:
         return {}
     }
@@ -168,15 +240,22 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const generateCode = async () => {
     setGenerating(true)
     try {
-      // Simulate API call for now
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      console.log("Code generated for:", { projectId, nodes, edges })
-      // Handle success (show notification, etc.)
+      // Use the actual code generator
+      const projectName = isTemplateProject ? "MySwap" : "MyDApp"
+      const result = CodeGenerator.generateFromFlow(nodes, edges, projectName)
+      
+      // Show the code preview modal
+      setCodeResult(result)
+      setShowCodeModal(true)
+      
     } catch (error) {
       console.error("Error generating code:", error)
+      alert("❌ Error generating code. Please check the console for details.")
     }
     setGenerating(false)
   }
+
+  const isTemplateProject = projectId.startsWith('template-')
 
   return (
     <div className="h-screen flex">
@@ -214,12 +293,33 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                     <Save className="w-4 h-4 mr-2" />
                     {saving ? "Saving..." : "Save"}
                   </Button>
-                  <Button onClick={generateCode} disabled={generating} size="sm">
+                  <Button 
+                    onClick={generateCode} 
+                    disabled={generating} 
+                    size="sm"
+                    className={isTemplateProject ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700" : ""}
+                  >
                     <Play className="w-4 h-4 mr-2" />
-                    {generating ? "Generating..." : "Generate Code"}
+                    {generating ? "Generating..." : isTemplateProject ? "Deploy to GitHub" : "Generate Code"}
                   </Button>
                 </div>
               </Panel>
+
+              {/* Template Info Panel */}
+              {isTemplateProject && templateLoaded && (
+                <Panel position="bottom-left">
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-3 max-w-md">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">💱</span>
+                      <span className="font-medium text-blue-900">Basic Swap Application Template</span>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                      This template includes a complete DEX with Uniswap integration, wallet connection, and responsive UI. 
+                      Ready to deploy in minutes!
+                    </p>
+                  </div>
+                </Panel>
+              )}
             </ReactFlow>
           </div>
         </ReactFlowProvider>
@@ -232,6 +332,13 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           onClose={() => setSelectedNode(null)}
         />
       )}
+
+      <CodePreviewModal
+        isOpen={showCodeModal}
+        onClose={() => setShowCodeModal(false)}
+        result={codeResult}
+        projectName={isTemplateProject ? "MySwap" : "MyDApp"}
+      />
     </div>
   )
 }

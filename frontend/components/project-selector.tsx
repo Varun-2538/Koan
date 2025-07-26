@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -14,13 +15,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Plus, FolderOpen, Calendar } from "lucide-react"
+import { Plus, FolderOpen, Calendar, Zap, Layers } from "lucide-react"
+import { TemplateSelector } from "./template-selector"
+import { getTemplateById } from "@/lib/templates"
 
 interface Project {
   id: string
   name: string
   description: string
   created_at: string
+  templateId?: string
 }
 
 interface ProjectSelectorProps {
@@ -34,6 +38,7 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
   const [newProjectDescription, setNewProjectDescription] = useState("")
   const [creating, setCreating] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
 
   useEffect(() => {
     fetchProjects()
@@ -46,12 +51,14 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
         name: "DeFi Trading Bot",
         description: "AI-powered trading bot with smart contracts",
         created_at: new Date().toISOString(),
+        templateId: "ai-trading-bot"
       },
       {
         id: "demo-2",
         name: "DAO Governance Platform",
         description: "Decentralized voting and proposal system",
         created_at: new Date().toISOString(),
+        templateId: "basic-dao-governance"
       },
       {
         id: "demo-3",
@@ -82,11 +89,56 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
     setCreating(false)
   }
 
+  const handleTemplateSelect = async (templateId: string, inputs: Record<string, any>) => {
+    const template = getTemplateById(templateId)
+    if (!template) return
+
+    // Create project with template
+    const projectName = inputs.appName || template.name
+    const newProject = {
+      id: `template-${Date.now()}`,
+      name: projectName,
+      description: `Created from ${template.name} template`,
+      created_at: new Date().toISOString(),
+      templateId: templateId,
+      templateInputs: inputs
+    }
+    
+    setProjects([newProject, ...projects])
+    setShowTemplateSelector(false)
+    
+    // Automatically select the new project
+    onProjectSelect(newProject.id)
+  }
+
+  const getProjectIcon = (project: Project) => {
+    if (project.templateId) {
+      const template = getTemplateById(project.templateId)
+      switch (template?.category) {
+        case "defi": return "💱"
+        case "dao": return "🏛️"
+        case "nft": return "🎨"
+        case "ai": return "🤖"
+        default: return "📦"
+      }
+    }
+    return <FolderOpen className="w-5 h-5" />
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
+    )
+  }
+
+  if (showTemplateSelector) {
+    return (
+      <TemplateSelector 
+        onTemplateSelect={handleTemplateSelect}
+        onClose={() => setShowTemplateSelector(false)}
+      />
     )
   }
 
@@ -99,6 +151,14 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
             <p className="text-gray-600 mt-2">Select a project to start building flows</p>
           </div>
           <div className="flex gap-4">
+            <Button 
+              variant="outline"
+              onClick={() => setShowTemplateSelector(true)}
+              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0 hover:from-blue-600 hover:to-purple-700"
+            >
+              <Layers className="w-4 h-4 mr-2" />
+              Use Template
+            </Button>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -149,8 +209,17 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
             <Card key={project.id} className="cursor-pointer hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FolderOpen className="w-5 h-5" />
+                  {typeof getProjectIcon(project) === 'string' ? (
+                    <span className="text-xl">{getProjectIcon(project)}</span>
+                  ) : (
+                    getProjectIcon(project)
+                  )}
                   {project.name}
+                  {project.templateId && (
+                    <Badge variant="secondary" className="ml-auto">
+                      Template
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription>{project.description}</CardDescription>
               </CardHeader>
@@ -169,17 +238,29 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
 
         {projects.length === 0 && (
           <div className="text-center py-12">
-            <FolderOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
-            <p className="text-gray-600 mb-4">Create your first project to get started</p>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Project
+            <div className="mb-8">
+              <div className="text-6xl mb-4">🚀</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to build something amazing?</h3>
+              <p className="text-gray-600 mb-6">Get started quickly with a template or create a project from scratch</p>
+              
+              <div className="flex gap-4 justify-center">
+                <Button 
+                  onClick={() => setShowTemplateSelector(true)}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0 hover:from-blue-600 hover:to-purple-700"
+                >
+                  <Layers className="w-4 h-4 mr-2" />
+                  Start with Template
                 </Button>
-              </DialogTrigger>
-            </Dialog>
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create from Scratch
+                    </Button>
+                  </DialogTrigger>
+                </Dialog>
+              </div>
+            </div>
           </div>
         )}
       </div>

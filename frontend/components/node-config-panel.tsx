@@ -93,6 +93,409 @@ export function NodeConfigPanel({ node, onConfigChange, onClose }: NodeConfigPan
           </div>
         )
 
+      case "uniswapV3Router":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="router-address">Router Address</Label>
+              <Input
+                id="router-address"
+                value={config.routerAddress || ""}
+                onChange={(e) => handleConfigUpdate("routerAddress", e.target.value)}
+                placeholder="0xE592427A0AEce92De3Edee1F18E0157C05861564"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="network">Network</Label>
+              <Select value={config.network || "ethereum"} onValueChange={(value) => handleConfigUpdate("network", value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ethereum">Ethereum</SelectItem>
+                  <SelectItem value="polygon">Polygon</SelectItem>
+                  <SelectItem value="arbitrum">Arbitrum</SelectItem>
+                  <SelectItem value="base">Base</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="slippage">Slippage Tolerance (%)</Label>
+              <Input
+                id="slippage"
+                type="number"
+                step="0.1"
+                value={config.slippageTolerance || "0.5"}
+                onChange={(e) => handleConfigUpdate("slippageTolerance", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="deadline">Deadline (minutes)</Label>
+              <Input
+                id="deadline"
+                type="number"
+                value={config.deadline || "20"}
+                onChange={(e) => handleConfigUpdate("deadline", e.target.value)}
+              />
+            </div>
+          </div>
+        )
+
+      case "chainlinkOracle":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="update-interval">Update Interval (seconds)</Label>
+              <Input
+                id="update-interval"
+                type="number"
+                value={config.updateInterval || "30"}
+                onChange={(e) => handleConfigUpdate("updateInterval", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Price Feed Addresses</Label>
+              <div className="space-y-2">
+                <Input
+                  placeholder="ETH/USD Address"
+                  value={config.priceFeedAddresses?.["ETH/USD"] || ""}
+                  onChange={(e) => handleConfigUpdate("priceFeedAddresses", {
+                    ...config.priceFeedAddresses,
+                    "ETH/USD": e.target.value
+                  })}
+                />
+                <Input
+                  placeholder="USDC/USD Address"
+                  value={config.priceFeedAddresses?.["USDC/USD"] || ""}
+                  onChange={(e) => handleConfigUpdate("priceFeedAddresses", {
+                    ...config.priceFeedAddresses,
+                    "USDC/USD": e.target.value
+                  })}
+                />
+              </div>
+            </div>
+          </div>
+        )
+
+      case "swapInterface":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="interface-title">Interface Title</Label>
+              <Input
+                id="interface-title"
+                value={config.title || ""}
+                onChange={(e) => handleConfigUpdate("title", e.target.value)}
+                placeholder="Token Swap"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="theme">Theme</Label>
+              <Select value={config.theme || "modern"} onValueChange={(value) => handleConfigUpdate("theme", value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="modern">Modern</SelectItem>
+                  <SelectItem value="classic">Classic</SelectItem>
+                  <SelectItem value="minimal">Minimal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Default Tokens</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {(config.defaultTokens || []).map((token: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {token}
+                    <button
+                      onClick={() => {
+                        const newTokens = config.defaultTokens.filter((_: any, i: number) => i !== index)
+                        handleConfigUpdate("defaultTokens", newTokens)
+                      }}
+                      className="ml-1 hover:text-red-500"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <Select
+                onValueChange={(value) => {
+                  const tokens = config.defaultTokens || []
+                  if (!tokens.includes(value)) {
+                    handleConfigUpdate("defaultTokens", [...tokens, value])
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Add token" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ETH">ETH</SelectItem>
+                  <SelectItem value="USDC">USDC</SelectItem>
+                  <SelectItem value="USDT">USDT</SelectItem>
+                  <SelectItem value="DAI">DAI</SelectItem>
+                  <SelectItem value="WBTC">WBTC</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="advanced-settings"
+                checked={config.showAdvancedSettings || false}
+                onCheckedChange={(checked) => handleConfigUpdate("showAdvancedSettings", checked)}
+              />
+              <Label htmlFor="advanced-settings">Show Advanced Settings</Label>
+            </div>
+          </div>
+        )
+
+      case "walletConnector":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="chain-id">Network Chain ID</Label>
+              <Select value={config.networkChainId || "1"} onValueChange={(value) => handleConfigUpdate("networkChainId", value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Ethereum (1)</SelectItem>
+                  <SelectItem value="137">Polygon (137)</SelectItem>
+                  <SelectItem value="42161">Arbitrum (42161)</SelectItem>
+                  <SelectItem value="8453">Base (8453)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Supported Wallets</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {(config.supportedWallets || []).map((wallet: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {wallet}
+                    <button
+                      onClick={() => {
+                        const newWallets = config.supportedWallets.filter((_: any, i: number) => i !== index)
+                        handleConfigUpdate("supportedWallets", newWallets)
+                      }}
+                      className="ml-1 hover:text-red-500"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <Select
+                onValueChange={(value) => {
+                  const wallets = config.supportedWallets || []
+                  if (!wallets.includes(value)) {
+                    handleConfigUpdate("supportedWallets", [...wallets, value])
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Add wallet" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MetaMask">MetaMask</SelectItem>
+                  <SelectItem value="WalletConnect">WalletConnect</SelectItem>
+                  <SelectItem value="Coinbase Wallet">Coinbase Wallet</SelectItem>
+                  <SelectItem value="Rainbow">Rainbow</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="auto-connect"
+                checked={config.autoConnect || false}
+                onCheckedChange={(checked) => handleConfigUpdate("autoConnect", checked)}
+              />
+              <Label htmlFor="auto-connect">Auto Connect</Label>
+            </div>
+          </div>
+        )
+
+      case "transactionHistory":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="max-transactions">Max Transactions</Label>
+              <Input
+                id="max-transactions"
+                type="number"
+                value={config.maxTransactions || "50"}
+                onChange={(e) => handleConfigUpdate("maxTransactions", e.target.value)}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-pending"
+                checked={config.showPendingTx || false}
+                onCheckedChange={(checked) => handleConfigUpdate("showPendingTx", checked)}
+              />
+              <Label htmlFor="show-pending">Show Pending Transactions</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="enable-filtering"
+                checked={config.enableFiltering || false}
+                onCheckedChange={(checked) => handleConfigUpdate("enableFiltering", checked)}
+              />
+              <Label htmlFor="enable-filtering">Enable Filtering</Label>
+            </div>
+          </div>
+        )
+
+      case "swapAPI":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>API Endpoints</Label>
+              <div className="space-y-2">
+                {(config.endpoints || []).map((endpoint: string, index: number) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      value={endpoint}
+                      onChange={(e) => {
+                        const newEndpoints = [...config.endpoints]
+                        newEndpoints[index] = e.target.value
+                        handleConfigUpdate("endpoints", newEndpoints)
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newEndpoints = config.endpoints.filter((_: any, i: number) => i !== index)
+                        handleConfigUpdate("endpoints", newEndpoints)
+                      }}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const endpoints = config.endpoints || []
+                    handleConfigUpdate("endpoints", [...endpoints, "/api/new-endpoint"])
+                  }}
+                >
+                  Add Endpoint
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rate-limit">Rate Limit (requests/min)</Label>
+              <Input
+                id="rate-limit"
+                type="number"
+                value={config.rateLimit || "100"}
+                onChange={(e) => handleConfigUpdate("rateLimit", e.target.value)}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="api-authentication"
+                checked={config.authentication || false}
+                onCheckedChange={(checked) => handleConfigUpdate("authentication", checked)}
+              />
+              <Label htmlFor="api-authentication">Requires Authentication</Label>
+            </div>
+          </div>
+        )
+
+      case "tokenDataService":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Data Providers</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {(config.dataProviders || []).map((provider: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {provider}
+                    <button
+                      onClick={() => {
+                        const newProviders = config.dataProviders.filter((_: any, i: number) => i !== index)
+                        handleConfigUpdate("dataProviders", newProviders)
+                      }}
+                      className="ml-1 hover:text-red-500"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <Select
+                onValueChange={(value) => {
+                  const providers = config.dataProviders || []
+                  if (!providers.includes(value)) {
+                    handleConfigUpdate("dataProviders", [...providers, value])
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Add provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CoinGecko">CoinGecko</SelectItem>
+                  <SelectItem value="CoinMarketCap">CoinMarketCap</SelectItem>
+                  <SelectItem value="DefiPulse">DefiPulse</SelectItem>
+                  <SelectItem value="1inch">1inch API</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cache-duration">Cache Duration (seconds)</Label>
+              <Input
+                id="cache-duration"
+                type="number"
+                value={config.cacheDuration || "300"}
+                onChange={(e) => handleConfigUpdate("cacheDuration", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Supported Networks</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {(config.supportedNetworks || []).map((network: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {network}
+                    <button
+                      onClick={() => {
+                        const newNetworks = config.supportedNetworks.filter((_: any, i: number) => i !== index)
+                        handleConfigUpdate("supportedNetworks", newNetworks)
+                      }}
+                      className="ml-1 hover:text-red-500"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <Select
+                onValueChange={(value) => {
+                  const networks = config.supportedNetworks || []
+                  if (!networks.includes(value)) {
+                    handleConfigUpdate("supportedNetworks", [...networks, value])
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Add network" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ethereum">Ethereum</SelectItem>
+                  <SelectItem value="polygon">Polygon</SelectItem>
+                  <SelectItem value="arbitrum">Arbitrum</SelectItem>
+                  <SelectItem value="base">Base</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )
+
       case "governance":
         return (
           <div className="space-y-4">

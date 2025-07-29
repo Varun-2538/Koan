@@ -1,0 +1,15 @@
+[project]
+name = "unite-defi"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "agno>=1.7.6",
+    "anthropic>=0.60.0",
+    "fastapi>=0.116.1",
+    "gitpython>=3.1.45",
+    "numpy>=2.3.2",
+    "pandas>=2.3.1",
+    "uvicorn>=0.35.0",
+]

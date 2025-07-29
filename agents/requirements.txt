@@ -1,0 +1,7 @@
+agno
+anthropic
+fastapi
+gitpython
+numpy
+pandas
+uvicorn

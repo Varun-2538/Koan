@@ -1,0 +1,1 @@
+"""FastAPI application exposing endpoints for the DeFi flow generator."""

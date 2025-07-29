@@ -21,73 +21,28 @@ export interface FlowTemplate {
   }[]
 }
 
+// Unite DeFi Hackathon Templates - Optimized for 1inch Integration
 export const FLOW_TEMPLATES: FlowTemplate[] = [
   {
-    id: "basic-swap-app",
-    name: "Basic Swap Application",
-    description: "A complete DEX swap interface with Uniswap V3 integration, wallet connection, and responsive UI",
+    id: "oneinch-swap-dashboard",
+    name: "1inch Swap Dashboard",
+    description: "Complete DEX aggregator dashboard using 1inch Pathfinder algorithm with MEV protection and optimal routing across multiple chains",
     category: "defi",
-    difficulty: "beginner",
-    estimatedTime: "10 minutes",
+    difficulty: "intermediate",
+    estimatedTime: "45 minutes",
     features: [
-      "Token swap functionality",
-      "Wallet connection (MetaMask, WalletConnect)",
-      "Real-time price feeds",
-      "Slippage protection",
-      "Transaction history",
-      "Responsive dashboard UI"
+      "1inch Pathfinder routing algorithm",
+      "MEV protection with Fusion mode",
+      "Multi-chain support (12+ chains)",
+      "Real-time quotes with sub-400ms response",
+      "Gas optimization settings",
+      "Professional trading interface"
     ],
     nodes: [
-      // Smart Contract Layer
       {
-        id: "uniswap-v3-router",
-        type: "uniswapV3Router",
-        position: { x: 100, y: 100 },
-        data: {
-          label: "Uniswap V3 Router",
-          config: {
-            routerAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
-            network: "ethereum",
-            slippageTolerance: "0.5",
-            deadline: "20"
-          }
-        }
-      },
-      {
-        id: "price-oracle",
-        type: "chainlinkOracle",
-        position: { x: 100, y: 250 },
-        data: {
-          label: "Price Oracle",
-          config: {
-            priceFeedAddresses: {
-              "ETH/USD": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
-              "USDC/USD": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6"
-            },
-            updateInterval: "30"
-          }
-        }
-      },
-      
-      // Frontend UI Layer
-      {
-        id: "swap-interface",
-        type: "swapInterface",
-        position: { x: 400, y: 100 },
-        data: {
-          label: "Swap Interface",
-          config: {
-            title: "Token Swap",
-            defaultTokens: ["ETH", "USDC", "USDT", "DAI"],
-            showAdvancedSettings: true,
-            theme: "modern"
-          }
-        }
-      },
-      {
-        id: "wallet-connector",
+        id: "wallet-connector-1",
         type: "walletConnector",
-        position: { x: 400, y: 250 },
+        position: { x: 100, y: 100 },
         data: {
           label: "Wallet Connector",
           config: {
@@ -98,178 +53,334 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         }
       },
       {
-        id: "transaction-history",
-        type: "transactionHistory",
-        position: { x: 400, y: 400 },
+        id: "token-input-1",
+        type: "tokenInput",
+        position: { x: 100, y: 250 },
         data: {
-          label: "Transaction History",
+          label: "Token Input",
           config: {
-            maxTransactions: "50",
-            showPendingTx: true,
-            enableFiltering: true
-          }
-        }
-      },
-      
-      // Backend API Layer
-      {
-        id: "swap-api",
-        type: "swapAPI",
-        position: { x: 700, y: 100 },
-        data: {
-          label: "Swap API",
-          config: {
-            endpoints: [
-              "/api/swap/quote",
-              "/api/swap/execute",
-              "/api/tokens/list",
-              "/api/user/history"
-            ],
-            rateLimit: "100",
-            authentication: false
+            fromToken: "ETH",
+            toToken: "USDC",
+            amount: "1.0",
+            supportedTokens: ["ETH", "USDC", "USDT", "DAI", "WBTC", "1INCH"]
           }
         }
       },
       {
-        id: "token-data-service",
-        type: "tokenDataService",
+        id: "chain-selector-1",
+        type: "chainSelector",
+        position: { x: 400, y: 100 },
+        data: {
+          label: "Chain Selector",
+          config: {
+            selectedChain: "ethereum",
+            supportedChains: ["ethereum", "polygon", "bnb", "arbitrum", "optimism", "solana"]
+          }
+        }
+      },
+      {
+        id: "oneinch-quote-1",
+        type: "oneInchQuote",
+        position: { x: 400, y: 250 },
+        data: {
+          label: "1inch Quote Engine",
+          config: {
+            apiKey: "",
+            slippage: 1,
+            includeGas: true,
+            includeProtocols: true,
+            enablePathfinder: true
+          }
+        }
+      },
+      {
+        id: "oneinch-swap-1",
+        type: "oneInchSwap",
         position: { x: 700, y: 250 },
         data: {
-          label: "Token Data Service",
+          label: "1inch Swap Executor",
           config: {
-            dataProviders: ["CoinGecko", "CoinMarketCap"],
-            cacheDuration: "300",
-            supportedNetworks: ["ethereum", "polygon", "arbitrum"]
+            apiKey: "",
+            enableMEVProtection: true,
+            useFusion: false,
+            gasOptimization: "balanced"
+          }
+        }
+      },
+      {
+        id: "swap-interface-1",
+        type: "swapInterface",
+        position: { x: 700, y: 100 },
+        data: {
+          label: "Swap Interface",
+          config: {
+            title: "1inch Swap Dashboard",
+            showAdvancedSettings: true,
+            theme: "modern",
+            enablePriceChart: true
           }
         }
       }
     ],
     edges: [
-      // Smart Contract to Frontend connections
-      {
-        id: "e1",
-        source: "uniswap-v3-router",
-        target: "swap-interface",
-        sourceHandle: null,
-        targetHandle: null
-      },
-      {
-        id: "e2",
-        source: "price-oracle",
-        target: "swap-interface",
-        sourceHandle: null,
-        targetHandle: null
-      },
-      {
-        id: "e3",
-        source: "wallet-connector",
-        target: "swap-interface",
-        sourceHandle: null,
-        targetHandle: null
-      },
-      
-      // Frontend to Backend connections
-      {
-        id: "e4",
-        source: "swap-interface",
-        target: "swap-api",
-        sourceHandle: null,
-        targetHandle: null
-      },
-      {
-        id: "e5",
-        source: "transaction-history",
-        target: "swap-api",
-        sourceHandle: null,
-        targetHandle: null
-      },
-      {
-        id: "e6",
-        source: "token-data-service",
-        target: "swap-interface",
-        sourceHandle: null,
-        targetHandle: null
-      },
-      
-      // Backend internal connections
-      {
-        id: "e7",
-        source: "swap-api",
-        target: "token-data-service",
-        sourceHandle: null,
-        targetHandle: null
-      }
+      { id: "e1", source: "wallet-connector-1", target: "token-input-1" },
+      { id: "e2", source: "wallet-connector-1", target: "chain-selector-1" },
+      { id: "e3", source: "token-input-1", target: "oneinch-quote-1" },
+      { id: "e4", source: "chain-selector-1", target: "oneinch-quote-1" },
+      { id: "e5", source: "oneinch-quote-1", target: "oneinch-swap-1" },
+      { id: "e6", source: "oneinch-swap-1", target: "swap-interface-1" }
     ],
     requiredInputs: [
       {
-        key: "appName",
-        label: "Application Name",
-        description: "Name of your swap application",
+        key: "oneInchApiKey",
+        label: "1inch API Key",
+        description: "Your 1inch API key for accessing the aggregation protocol",
         type: "string",
-        required: true,
-        defaultValue: "MySwap"
+        required: true
       },
       {
-        key: "supportedTokens",
-        label: "Supported Tokens",
-        description: "Which tokens to support for swapping",
+        key: "supportedChains",
+        label: "Supported Chains",
+        description: "Which chains to support for swapping",
         type: "select",
-        options: ["ETH+Stablecoins", "Top 10 Tokens", "All ERC-20"],
+        options: ["Ethereum Only", "Multi-Chain (ETH+Polygon+BSC)", "All Supported Chains"],
         required: true,
-        defaultValue: "ETH+Stablecoins"
+        defaultValue: "Multi-Chain (ETH+Polygon+BSC)"
       },
       {
-        key: "network",
-        label: "Blockchain Network",
-        description: "Which network to deploy on",
-        type: "select",
-        options: ["Ethereum", "Polygon", "Arbitrum", "Base"],
-        required: true,
-        defaultValue: "Ethereum"
-      },
-      {
-        key: "feeRecipient",
-        label: "Fee Recipient Address",
-        description: "Address to receive trading fees (optional)",
-        type: "string",
-        required: false
+        key: "enableFusion",
+        label: "Enable Fusion Mode",
+        description: "Enable 1inch Fusion for MEV protection",
+        type: "boolean",
+        required: false,
+        defaultValue: true
       }
     ]
   },
-  
-  // Add more templates here
   {
-    id: "basic-dao-governance",
-    name: "Basic DAO Governance",
-    description: "Simple DAO with token-based voting and proposal system",
-    category: "dao",
-    difficulty: "intermediate",
-    estimatedTime: "15 minutes",
+    id: "crosschain-fusion-bridge",
+    name: "Cross-Chain Bridge with Fusion+",
+    description: "Secure cross-chain token transfers using 1inch Fusion+ with MEV protection and zero gas fees on supported chains",
+    category: "defi",
+    difficulty: "advanced",
+    estimatedTime: "60 minutes",
     features: [
-      "ERC-20 governance token",
-      "Proposal creation and voting",
-      "Treasury management",
-      "Delegation system"
+      "1inch Fusion+ cross-chain swaps",
+      "Zero gas fees on supported chains",
+      "MEV protection across chains",
+      "Support for 12+ blockchains",
+      "Real-time bridge status tracking",
+      "Optimal liquidity routing"
     ],
-    nodes: [],
-    edges: []
+    nodes: [
+      {
+        id: "source-chain-1",
+        type: "sourceChain",
+        position: { x: 100, y: 250 },
+        data: {
+          label: "Source Chain",
+          config: {
+            chain: "ethereum",
+            supportedChains: ["ethereum", "polygon", "bnb", "arbitrum", "optimism"]
+          }
+        }
+      },
+      {
+        id: "destination-chain-1",
+        type: "destinationChain",
+        position: { x: 100, y: 400 },
+        data: {
+          label: "Destination Chain",
+          config: {
+            chain: "solana",
+            supportedChains: ["ethereum", "polygon", "bnb", "arbitrum", "optimism", "solana"]
+          }
+        }
+      },
+      {
+        id: "fusion-plus-1",
+        type: "fusionPlus",
+        position: { x: 700, y: 250 },
+        data: {
+          label: "1inch Fusion+",
+          config: {
+            apiKey: "",
+            enableMEVProtection: true,
+            enableGaslessSwap: true,
+            crossChainRouting: "optimal"
+          }
+        }
+      }
+    ],
+    edges: [
+      { id: "e1", source: "source-chain-1", target: "fusion-plus-1" },
+      { id: "e2", source: "destination-chain-1", target: "fusion-plus-1" }
+    ],
+    requiredInputs: [
+      {
+        key: "oneInchApiKey",
+        label: "1inch API Key",
+        description: "Your 1inch API key for Fusion+ access",
+        type: "string",
+        required: true
+      },
+      {
+        key: "supportedChains",
+        label: "Bridge Chains",
+        description: "Which chains to support for bridging",
+        type: "select",
+        options: ["ETH-Polygon", "ETH-BSC", "ETH-Solana", "All Chains"],
+        required: true,
+        defaultValue: "ETH-Polygon"
+      }
+    ]
   },
-  
   {
-    id: "ai-trading-bot",
-    name: "AI Trading Bot",
-    description: "Automated trading bot with AI decision making",
-    category: "ai",
-    difficulty: "advanced", 
-    estimatedTime: "25 minutes",
+    id: "limit-order-dashboard",
+    name: "Advanced Limit Order Dashboard",
+    description: "Professional trading interface with limit orders, stop-loss, and P2P swaps using 1inch Limit Order Protocol",
+    category: "defi",
+    difficulty: "advanced",
+    estimatedTime: "75 minutes",
     features: [
-      "AI-powered trading decisions",
-      "Risk management",
-      "Multi-DEX arbitrage",
-      "Performance analytics"
+      "1inch Limit Order Protocol integration",
+      "Multiple order types (limit, stop-loss, P2P)",
+      "Professional order book interface",
+      "Real-time order status tracking",
+      "Advanced trading parameters",
+      "Order history and analytics"
     ],
-    nodes: [],
-    edges: []
+    nodes: [
+      {
+        id: "limit-order-protocol-1",
+        type: "limitOrderProtocol",
+        position: { x: 700, y: 250 },
+        data: {
+          label: "1inch Limit Order",
+          config: {
+            apiKey: "",
+            protocolVersion: "v3",
+            enableRFQ: true,
+            gasOptimization: true
+          }
+        }
+      }
+    ],
+    edges: [],
+    requiredInputs: [
+      {
+        key: "oneInchApiKey",
+        label: "1inch API Key",
+        description: "Your 1inch API key for Limit Order Protocol",
+        type: "string",
+        required: true
+      },
+      {
+        key: "orderTypes",
+        label: "Supported Order Types",
+        description: "Which order types to enable",
+        type: "select",
+        options: ["Limit Orders Only", "Limit + Stop Loss", "All Order Types"],
+        required: true,
+        defaultValue: "All Order Types"
+      }
+    ]
+  },
+  {
+    id: "yield-farming-aggregator",
+    name: "Multi-Protocol Yield Aggregator",
+    description: "Comprehensive yield farming dashboard aggregating opportunities across Aave, Compound, Curve with 1inch for optimal token swaps",
+    category: "defi",
+    difficulty: "advanced",
+    estimatedTime: "90 minutes",
+    features: [
+      "Multi-protocol yield aggregation",
+      "1inch integration for token swaps",
+      "Real-time APY tracking",
+      "Automated yield optimization",
+      "Portfolio tracking and analytics",
+      "Risk assessment metrics"
+    ],
+    nodes: [
+      {
+        id: "yield-optimizer-1",
+        type: "yieldOptimizer",
+        position: { x: 700, y: 250 },
+        data: {
+          label: "Yield Optimizer",
+          config: {
+            optimizationStrategy: "highest-apy",
+            riskTolerance: "medium",
+            autoCompound: true,
+            rebalanceThreshold: 0.5
+          }
+        }
+      }
+    ],
+    edges: [],
+    requiredInputs: [
+      {
+        key: "protocols",
+        label: "Supported Protocols",
+        description: "Which DeFi protocols to aggregate",
+        type: "select",
+        options: ["Aave + Compound", "Aave + Compound + Curve", "All Protocols"],
+        required: true,
+        defaultValue: "Aave + Compound + Curve"
+      }
+    ]
+  },
+  {
+    id: "dao-governance-treasury",
+    name: "DAO Governance & Treasury Management",
+    description: "Complete DAO governance system with proposal creation, voting mechanisms, and treasury management using 1inch for asset swaps",
+    category: "dao",
+    difficulty: "advanced",
+    estimatedTime: "120 minutes",
+    features: [
+      "Token-based governance system",
+      "Proposal creation and voting",
+      "Treasury management with 1inch",
+      "Delegation and voting power",
+      "Multi-signature treasury",
+      "Governance analytics dashboard"
+    ],
+    nodes: [
+      {
+        id: "governance-results-1",
+        type: "governanceResults",
+        position: { x: 1000, y: 250 },
+        data: {
+          label: "Results & Execution",
+          config: {
+            showVotingResults: true,
+            enableAutoExecution: true,
+            trackProposalStatus: true,
+            notifyOnExecution: true
+          }
+        }
+      }
+    ],
+    edges: [],
+    requiredInputs: [
+      {
+        key: "governanceToken",
+        label: "Governance Token",
+        description: "Token used for voting (e.g., 1INCH, UNI)",
+        type: "string",
+        required: true,
+        defaultValue: "1INCH"
+      },
+      {
+        key: "votingPeriod",
+        label: "Voting Period",
+        description: "How long proposals remain open for voting",
+        type: "select",
+        options: ["3 days", "7 days", "14 days"],
+        required: true,
+        defaultValue: "7 days"
+      }
+    ]
   }
 ]
 

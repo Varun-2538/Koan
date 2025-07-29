@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
+import "@/lib/execution-client" // Import execution client globally
 
 export const metadata: Metadata = {
   title: 'DeFiDAO - Build and Deploy DeFi Protocols',

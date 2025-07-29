@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { X } from "lucide-react"
 
 interface NodeConfigPanelProps {
@@ -720,25 +721,39 @@ export function NodeConfigPanel({ node, onConfigChange, onClose }: NodeConfigPan
   }
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 p-4 overflow-y-auto">
-      <div className="flex items-center justify-between mb-4">
+    <div className="w-80 h-screen bg-white border-l border-gray-200 flex flex-col">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
         <h3 className="text-lg font-semibold">Configure Node</h3>
         <Button variant="ghost" size="sm" onClick={onClose}>
           <X className="w-4 h-4" />
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{node.data.label}</CardTitle>
-          <CardDescription>Configure the properties for this {node.type} node</CardDescription>
-        </CardHeader>
-        <CardContent>{renderConfigFields()}</CardContent>
-      </Card>
+      <div className="flex-1 min-h-0">
+        <ScrollArea className="h-full">
+          <div className="p-4 pb-8">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">{node.data.label}</CardTitle>
+                <CardDescription className="text-sm">
+                  Configure the properties for this {node.type} node
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {renderConfigFields()}
+              </CardContent>
+            </Card>
 
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-        <h4 className="text-sm font-medium mb-2">Preview</h4>
-        <pre className="text-xs text-gray-600 overflow-x-auto">{JSON.stringify(config, null, 2)}</pre>
+            <div className="mt-6 p-3 bg-gray-50 rounded-lg">
+              <h4 className="text-sm font-medium mb-3">Configuration Preview</h4>
+              <ScrollArea className="h-32">
+                <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all font-mono">
+                  {JSON.stringify(config, null, 2)}
+                </pre>
+              </ScrollArea>
+            </div>
+          </div>
+        </ScrollArea>
       </div>
     </div>
   )

@@ -5,11 +5,222 @@ import { Handle, Position, type NodeProps } from "@xyflow/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Coins, Vote, Layout, Server, Bot, Repeat, Link, Clock, Database, Wallet } from "lucide-react"
+import { ExecutableNode } from "./nodes/executable-node"
+import { OneInchSwapComponent, OneInchQuoteComponent } from "@/lib/components/defi/oneinch-swap"
+import { FusionPlusComponent, ChainSelectorComponent } from "@/lib/components/defi/fusion-plus"
 
 const NodeWrapper = ({ children, selected }: { children: React.ReactNode; selected?: boolean }) => (
   <Card className={`min-w-[200px] ${selected ? "ring-2 ring-blue-500" : ""}`}>
     <CardContent className="p-3">{children}</CardContent>
   </Card>
+)
+
+// New DeFi Executable Nodes for Unite Hackathon
+export const OneInchSwapNode = (props: NodeProps) => {
+  const component = new OneInchSwapComponent()
+  return <ExecutableNode {...props} component={component} />
+}
+
+export const OneInchQuoteNode = (props: NodeProps) => {
+  const component = new OneInchQuoteComponent()
+  return <ExecutableNode {...props} component={component} />
+}
+
+export const FusionPlusNode = (props: NodeProps) => {
+  const component = new FusionPlusComponent()
+  return <ExecutableNode {...props} component={component} />
+}
+
+export const ChainSelectorNode = (props: NodeProps) => {
+  const component = new ChainSelectorComponent()
+  return <ExecutableNode {...props} component={component} />
+}
+
+// Token Input Node - Specialized for DeFi token selection
+export const TokenInputNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-blue-500 text-white rounded">
+        <Coins className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Token Input</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>From: {data.config?.fromToken || "ETH"}</div>
+      <div>To: {data.config?.toToken || "USDC"}</div>
+      <div>Amount: {data.config?.amount || "1.0"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+// Slippage Control Node
+export const SlippageControlNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-orange-500 text-white rounded">
+        <Clock className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Slippage Control</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Slippage: {data.config?.slippage || "1.0"}%</div>
+      <div>Auto: {data.config?.autoSlippage ? "Yes" : "No"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+// Transaction Status Node
+export const TransactionStatusNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-green-500 text-white rounded">
+        <Clock className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Transaction Status</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Track: {data.config?.trackGasUsed ? "Gas + Status" : "Status Only"}</div>
+      <div>Notify: {data.config?.enableNotifications ? "Yes" : "No"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+// Bridge-specific Nodes
+export const SourceChainNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-purple-500 text-white rounded">
+        <Link className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Source Chain</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Chain: {data.config?.chain || "ethereum"}</div>
+      <div className="flex flex-wrap gap-1">
+        <Badge variant="secondary" className="text-xs">
+          {data.config?.chain || "ETH"}
+        </Badge>
+      </div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+export const DestinationChainNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-indigo-500 text-white rounded">
+        <Link className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Destination Chain</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Chain: {data.config?.chain || "polygon"}</div>
+      <div className="flex flex-wrap gap-1">
+        <Badge variant="secondary" className="text-xs">
+          {data.config?.chain || "MATIC"}
+        </Badge>
+      </div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+// Limit Order Nodes
+export const OrderTypeNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-yellow-500 text-white rounded">
+        <Vote className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Order Type</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Type: {data.config?.orderType || "limit"}</div>
+      <div>Multiple: {data.config?.allowMultipleOrders ? "Yes" : "No"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+export const PriceTriggerNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-red-500 text-white rounded">
+        <Clock className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Price Trigger</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Price: ${data.config?.triggerPrice || "3000"}</div>
+      <div>Type: {data.config?.triggerType || "above"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+// Yield Farming Nodes
+export const YieldOptimizerNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-emerald-500 text-white rounded">
+        <Database className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Yield Optimizer</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Strategy: {data.config?.optimizationStrategy || "highest-apy"}</div>
+      <div>Risk: {data.config?.riskTolerance || "medium"}</div>
+      <div>Auto Compound: {data.config?.autoCompound ? "Yes" : "No"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+export const PortfolioTrackerNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-teal-500 text-white rounded">
+        <Layout className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Portfolio Tracker</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Staked Assets: {data.config?.trackStakedAssets ? "Yes" : "No"}</div>
+      <div>P&L Tracking: {data.config?.enablePnLTracking ? "Yes" : "No"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+// DAO Governance Nodes
+export const GovernanceResultsNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-purple-600 text-white rounded">
+        <Vote className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Governance Results</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Auto Execute: {data.config?.enableAutoExecution ? "Yes" : "No"}</div>
+      <div>Track Status: {data.config?.trackProposalStatus ? "Yes" : "No"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
 )
 
 export const ERC20TokenNode = ({ data, selected }: NodeProps) => (
@@ -109,7 +320,7 @@ export const AIAgentNode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-// New DeFi/Swap Nodes
+// Legacy nodes for backward compatibility
 export const UniswapV3RouterNode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
@@ -259,12 +470,40 @@ export const TokenDataServiceNode = ({ data, selected }: NodeProps) => (
 )
 
 export const CustomNodes = {
+  // New 1inch and DeFi executable nodes
+  oneInchSwap: OneInchSwapNode,
+  oneInchQuote: OneInchQuoteNode,
+  fusionPlus: FusionPlusNode,
+  chainSelector: ChainSelectorNode,
+  
+  // DeFi UI nodes
+  tokenInput: TokenInputNode,
+  slippageControl: SlippageControlNode,
+  transactionStatus: TransactionStatusNode,
+  
+  // Bridge nodes
+  sourceChain: SourceChainNode,
+  destinationChain: DestinationChainNode,
+  
+  // Trading nodes
+  orderType: OrderTypeNode,
+  priceTrigger: PriceTriggerNode,
+  
+  // Yield farming nodes
+  yieldOptimizer: YieldOptimizerNode,
+  portfolioTracker: PortfolioTrackerNode,
+  
+  // Governance nodes
+  governanceResults: GovernanceResultsNode,
+  
+  // Existing nodes
   erc20Token: ERC20TokenNode,
   governance: GovernanceNode,
   dashboard: DashboardNode,
   apiEndpoint: APIEndpointNode,
   aiAgent: AIAgentNode,
-  // New DeFi/Swap nodes
+  
+  // Legacy DeFi nodes
   uniswapV3Router: UniswapV3RouterNode,
   chainlinkOracle: ChainlinkOracleNode,
   swapInterface: SwapInterfaceNode,

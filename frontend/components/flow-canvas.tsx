@@ -25,10 +25,11 @@ import { NodeConfigPanel } from "./node-config-panel"
 import { FlowToolbar } from "./flow-toolbar"
 import { CustomNodes } from "./custom-nodes"
 import { Button } from "@/components/ui/button"
-import { Save, Play } from "lucide-react"
+import { Save, Play, Zap } from "lucide-react"
 import { getTemplateById } from "@/lib/templates"
 import { CodeGenerator, type CodeGenerationResult } from "@/lib/code-generator"
 import { CodePreviewModal } from "./code-preview-modal"
+import { executionClient, type WorkflowDefinition } from "@/lib/execution-client"
 
 const nodeTypes: NodeTypes = CustomNodes
 
@@ -78,6 +79,12 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const [showCodeModal, setShowCodeModal] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
+  
+  // Execution engine state
+  const [executing, setExecuting] = useState(false)
+  const [executionStatus, setExecutionStatus] = useState<string>("")
+  const [executionResult, setExecutionResult] = useState<any>(null)
+  const [executionError, setExecutionError] = useState<string | null>(null)
 
   // Load template data if project is created from template
   useEffect(() => {
@@ -136,6 +143,119 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
 
   const getDefaultConfig = (type: string) => {
     switch (type) {
+      // 1inch and Trading Nodes
+      case "oneInchSwap":
+        return {
+          api_key: "",
+          chain_id: "1",
+          from_token: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // ETH
+          to_token: "0xA0b86a33E6417c4a4e6d3b7e6d8f0e8b8e8c8d8e", // USDC
+          amount: "1000000000000000000", // 1 ETH
+          from_address: "",
+          slippage: 1,
+          enable_fusion: false,
+          gas_optimization: "balanced"
+        }
+      case "oneInchQuote":
+        return {
+          api_key: "",
+          chain_id: "1",
+          from_token: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+          to_token: "0xA0b86a33E6417c4a4e6d3b7e6d8f0e8b8e8c8d8e",
+          amount: "1000000000000000000"
+        }
+      case "fusionPlus":
+        return {
+          api_key: "",
+          source_chain: "1",
+          destination_chain: "137",
+          from_token: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+          to_token: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+          amount: "1000000000000000000",
+          from_address: "",
+          enable_mev_protection: true,
+          enable_gasless: true
+        }
+      case "orderType":
+        return {
+          orderType: "limit",
+          supportedTypes: ["limit", "stop-loss", "trailing-stop", "p2p-swap"],
+          allowMultipleOrders: true
+        }
+      case "priceTrigger":
+        return {
+          triggerPrice: "3000",
+          triggerType: "above",
+          percentageChange: "5",
+          useMarketPrice: false
+        }
+
+      // Chain and Bridge Nodes
+      case "chainSelector":
+        return {
+          available_chains: "all",
+          primary_chain: "1",
+          enable_testnet: false
+        }
+      case "sourceChain":
+        return {
+          chain: "ethereum",
+          supportedChains: ["ethereum", "polygon", "bnb", "arbitrum", "optimism"]
+        }
+      case "destinationChain":
+        return {
+          chain: "polygon",
+          supportedChains: ["ethereum", "polygon", "bnb", "arbitrum", "optimism", "solana"]
+        }
+
+      // DeFi Core Nodes
+      case "tokenInput":
+        return {
+          fromToken: "ETH",
+          toToken: "USDC",
+          amount: "1.0",
+          supportedTokens: ["ETH", "USDC", "USDT", "DAI", "WBTC", "1INCH"]
+        }
+      case "slippageControl":
+        return {
+          slippage: 1.0,
+          minSlippage: 0.1,
+          maxSlippage: 5.0,
+          autoSlippage: true
+        }
+      case "transactionStatus":
+        return {
+          showPendingState: true,
+          enableNotifications: true,
+          trackGasUsed: true
+        }
+
+      // Yield and Farming Nodes
+      case "yieldOptimizer":
+        return {
+          optimizationStrategy: "highest-apy",
+          riskTolerance: "medium",
+          autoCompound: true,
+          rebalanceThreshold: 0.5
+        }
+      case "portfolioTracker":
+        return {
+          trackStakedAssets: true,
+          showEarnedRewards: true,
+          calculateTotalValue: true,
+          enablePnLTracking: true
+        }
+
+      // Governance Nodes
+      case "governanceResults":
+        return {
+          showVotingResults: true,
+          enableAutoExecution: true,
+          trackProposalStatus: true,
+          notifyOnExecution: true
+        }
+
+      // Existing nodes
       case "erc20Token":
         return {
           name: "MyToken",
@@ -166,7 +286,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           model: "gpt-3.5-turbo",
           prompt: "You are a helpful assistant",
         }
-      // New DeFi/Swap node defaults
+      // Legacy DeFi node defaults
       case "uniswapV3Router":
         return {
           routerAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
@@ -255,6 +375,77 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     setGenerating(false)
   }
 
+  const executeFlow = async () => {
+    setExecuting(true)
+    setExecutionStatus("Starting execution...")
+    setExecutionError(null)
+    setExecutionResult(null)
+
+    try {
+      // Convert React Flow nodes/edges to workflow definition
+      const workflow: WorkflowDefinition = {
+        id: `workflow-${projectId}-${Date.now()}`,
+        name: `Flow Execution - ${projectId}`,
+        description: "Executing DeFi workflow from visual canvas",
+        nodes: nodes.map(node => ({
+          id: node.id,
+          type: node.type || 'default',
+          position: node.position,
+          data: {
+            label: node.data?.label || node.type || 'Node',
+            config: node.data?.config || {}
+          }
+        })),
+        edges: edges.map(edge => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle,
+          targetHandle: edge.targetHandle
+        }))
+      }
+
+      // Set up execution event listeners
+      executionClient.on('execution.started', (data) => {
+        setExecutionStatus(`Execution started: ${data.executionId}`)
+        console.log('🚀 Execution started:', data)
+      })
+
+      executionClient.on('node.started', (data) => {
+        setExecutionStatus(`Executing node: ${data.nodeId}`)
+        console.log('⚡ Node started:', data)
+      })
+
+      executionClient.on('node.completed', (data) => {
+        setExecutionStatus(`Node completed: ${data.nodeId}`)
+        console.log('✅ Node completed:', data)
+      })
+
+      executionClient.on('execution.completed', (data) => {
+        setExecutionStatus("Execution completed successfully!")
+        setExecutionResult(data)
+        console.log('🎉 Execution completed:', data)
+      })
+
+      executionClient.on('execution.failed', (data) => {
+        setExecutionStatus("Execution failed")
+        setExecutionError(data.error || 'Unknown error')
+        console.error('❌ Execution failed:', data)
+      })
+
+      // Execute the workflow
+      const executionId = await executionClient.executeWorkflow(workflow)
+      console.log('📊 Workflow execution initiated:', executionId)
+
+    } catch (error) {
+      console.error('❌ Execution error:', error)
+      setExecutionStatus("Execution failed")
+      setExecutionError(error instanceof Error ? error.message : 'Unknown error')
+    } finally {
+      setExecuting(false)
+    }
+  }
+
   const isTemplateProject = projectId.startsWith('template-')
 
   return (
@@ -281,7 +472,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
             >
               <Controls />
               <MiniMap />
-              <Background variant="dots" gap={12} size={1} />
+              <Background gap={12} size={1} />
 
               <Panel position="top-left">
                 <FlowToolbar projectId={projectId} />
@@ -292,6 +483,15 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                   <Button onClick={saveFlow} disabled={saving} size="sm">
                     <Save className="w-4 h-4 mr-2" />
                     {saving ? "Saving..." : "Save"}
+                  </Button>
+                  <Button 
+                    onClick={executeFlow}
+                    disabled={executing || nodes.length === 0} 
+                    size="sm"
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                  >
+                    <Zap className="w-4 h-4 mr-2" />
+                    {executing ? "Executing..." : "Execute Flow"}
                   </Button>
                   <Button 
                     onClick={generateCode} 
@@ -317,6 +517,45 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                       This template includes a complete DEX with Uniswap integration, wallet connection, and responsive UI. 
                       Ready to deploy in minutes!
                     </p>
+                  </div>
+                </Panel>
+              )}
+
+              {/* Execution Status Panel */}
+              {(executing || executionStatus || executionResult || executionError) && (
+                <Panel position="bottom-right">
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 max-w-md shadow-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-lg">⚡</span>
+                      <span className="font-medium text-gray-900">Execution Status</span>
+                    </div>
+                    
+                    {executing && (
+                      <div className="text-sm text-blue-600 mb-2">
+                        {executionStatus}
+                      </div>
+                    )}
+                    
+                    {executionResult && (
+                      <div className="text-sm text-green-600 mb-2">
+                        ✅ {executionStatus}
+                      </div>
+                    )}
+                    
+                    {executionError && (
+                      <div className="text-sm text-red-600 mb-2">
+                        ❌ {executionError}
+                      </div>
+                    )}
+                    
+                    {executionResult && (
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-gray-600">View Results</summary>
+                        <pre className="mt-2 p-2 bg-gray-50 rounded text-xs overflow-auto max-h-32">
+                          {JSON.stringify(executionResult, null, 2)}
+                        </pre>
+                      </details>
+                    )}
                   </div>
                 </Panel>
               )}

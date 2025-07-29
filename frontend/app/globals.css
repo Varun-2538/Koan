@@ -88,3 +88,27 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .node-scroll-area {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(156 163 175) transparent;
+  }
+  
+  .node-scroll-area::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .node-scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .node-scroll-area::-webkit-scrollbar-thumb {
+    background-color: rgb(156 163 175);
+    border-radius: 3px;
+  }
+  
+  .node-scroll-area::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(107 114 128);
+  }
+}

@@ -3,16 +3,16 @@
 import { useState } from "react"
 import { FlowCanvas } from "@/components/flow-canvas"
 import { ProjectSelector } from "@/components/project-selector"
-import { DemoNotice } from "@/components/demo-notice"
+import { GridBackground } from "@/components/grid-background"
 
 export default function ToolingSelection() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
 
   if (!selectedProject) {
     return (
-      <div className="h-screen flex flex-col">
-        <DemoNotice />
-        <div className="flex-1">
+      <div className="relative min-h-screen bg-black overflow-hidden">
+        <GridBackground />
+        <div className="relative z-10 flex-1">
           <ProjectSelector onProjectSelect={setSelectedProject} />
         </div>
       </div>
@@ -21,10 +21,7 @@ export default function ToolingSelection() {
 
   return (
     <div className="h-screen flex flex-col">
-      <DemoNotice />
-      <div className="flex-1">
-        <FlowCanvas projectId={selectedProject} />
-      </div>
+      <FlowCanvas projectId={selectedProject} />
     </div>
   )
 } 

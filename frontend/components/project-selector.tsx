@@ -128,7 +128,7 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-400"></div>
       </div>
     )
   }
@@ -143,12 +143,12 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Your Projects</h1>
-            <p className="text-gray-600 mt-2">Select a project to start building flows</p>
+            <h1 className="text-3xl font-bold text-white">Your Projects</h1>
+            <p className="text-gray-300 mt-2">Select a project to start building flows</p>
           </div>
           <div className="flex gap-4">
             <Button 
@@ -161,7 +161,7 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
             </Button>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white border-0">
                   <Plus className="w-4 h-4 mr-2" />
                   New Project
                 </Button>
@@ -206,30 +206,35 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project) => (
-            <Card key={project.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+            <Card key={project.id} className="cursor-pointer transition-all duration-300 hover:scale-[1.02] bg-white/10 backdrop-blur-md border border-white/20 hover:border-white/30">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   {typeof getProjectIcon(project) === 'string' ? (
                     <span className="text-xl">{getProjectIcon(project)}</span>
                   ) : (
-                    getProjectIcon(project)
+                    <div className="text-blue-400">{getProjectIcon(project)}</div>
                   )}
                   {project.name}
                   {project.templateId && (
-                    <Badge variant="secondary" className="ml-auto">
+                    <Badge variant="secondary" className="ml-auto bg-blue-500/20 text-blue-300 border border-blue-500/30">
                       Template
                     </Badge>
                   )}
                 </CardTitle>
-                <CardDescription>{project.description}</CardDescription>
+                <CardDescription className="text-gray-300">{project.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
                     <Calendar className="w-4 h-4" />
                     {new Date(project.created_at).toLocaleDateString()}
                   </div>
-                  <Button onClick={() => onProjectSelect(project.id)}>Open</Button>
+                  <Button 
+                    onClick={() => onProjectSelect(project.id)}
+                    className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white border-0"
+                  >
+                    Open
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -238,10 +243,10 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
 
         {projects.length === 0 && (
           <div className="text-center py-12">
-            <div className="mb-8">
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-8 max-w-lg mx-auto">
               <div className="text-6xl mb-4">🚀</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to build something amazing?</h3>
-              <p className="text-gray-600 mb-6">Get started quickly with a template or create a project from scratch</p>
+              <h3 className="text-lg font-medium text-white mb-2">Ready to build something amazing?</h3>
+              <p className="text-gray-300 mb-6">Get started quickly with a template or create a project from scratch</p>
               
               <div className="flex gap-4 justify-center">
                 <Button 
@@ -253,7 +258,7 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
                 </Button>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline">
+                    <Button variant="outline" className="border-white/30 text-gray-300 hover:text-white hover:border-white/50 bg-white/5 backdrop-blur-sm">
                       <Plus className="w-4 h-4 mr-2" />
                       Create from Scratch
                     </Button>

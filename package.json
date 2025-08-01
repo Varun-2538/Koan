@@ -1,0 +1,52 @@
+{
+  "name": "unite-defi-template-system",
+  "version": "1.0.0",
+  "description": "Web3 Langflow-type platform for creating DeFi applications with 1inch integration",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "test": "npm run test:nodes && npm run test:codegen",
+    "test:nodes": "ts-node scripts/test-executable-nodes.ts",
+    "test:codegen": "ts-node scripts/test-code-generation.ts",
+    "test:github": "ts-node scripts/test-github-publishing.ts",
+    "test:complete": "ts-node scripts/run-complete-test-suite.ts",
+    "demo": "ts-node scripts/demo-template-showcase.ts",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "install:all": "npm install && npm run install:backend && npm run install:frontend",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "setup": "npm run install:all && cp backend/.env.example backend/.env"
+  },
+  "devDependencies": {
+    "@octokit/rest": "^20.0.2",
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "dotenv": "^16.3.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "defi",
+    "web3",
+    "1inch",
+    "hackathon",
+    "unite-defi",
+    "langflow",
+    "blockchain",
+    "ethereum"
+  ],
+  "author": "Unite DeFi Team",
+  "license": "MIT"
+}

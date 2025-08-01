@@ -276,9 +276,25 @@ export class DeFiExecutionEngine extends EventEmitter {
 
       // Validate inputs
       const validation = await executor.validate(inputs)
-      if (!validation.valid) {
+      
+      // Handle both boolean and object validation responses
+      let isValid = false
+      let errorMessage = 'Validation failed'
+      
+      if (typeof validation === 'boolean') {
+        // Legacy boolean format
+        isValid = validation
+      } else if (validation && typeof validation === 'object') {
+        // New object format with valid and errors properties
+        isValid = validation.valid
+        if (!isValid && validation.errors && Array.isArray(validation.errors)) {
+          errorMessage = `Input validation failed: ${validation.errors.join(', ')}`
+        }
+      }
+      
+      if (!isValid) {
         throw new ExecutionError(
-          `Input validation failed: ${validation.errors.join(', ')}`,
+          errorMessage,
           nodeId,
           nodeType,
           execution.id

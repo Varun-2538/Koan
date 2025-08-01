@@ -17,6 +17,10 @@ import { ERC20TokenExecutor } from './nodes/erc20-token-executor';
 import { TokenSelectorExecutor } from './nodes/token-selector-executor';
 import { PriceImpactCalculatorExecutor } from './nodes/price-impact-calculator-executor';
 import { TransactionMonitorExecutor } from './nodes/transaction-monitor-executor';
+import { PortfolioAPIExecutor } from './nodes/portfolio-api-executor';
+import { OneInchQuoteExecutor } from './nodes/oneinch-quote-executor';
+import { FusionSwapExecutor } from './nodes/fusion-swap-executor';
+import { LimitOrderExecutor } from './nodes/limit-order-executor';
 import {
   WorkflowDefinition,
   ExecutionContext,
@@ -123,6 +127,10 @@ executionEngine.registerNodeExecutor(new ERC20TokenExecutor())
 executionEngine.registerNodeExecutor(new TokenSelectorExecutor())
 executionEngine.registerNodeExecutor(new PriceImpactCalculatorExecutor())
 executionEngine.registerNodeExecutor(new TransactionMonitorExecutor())
+executionEngine.registerNodeExecutor(new PortfolioAPIExecutor(logger))
+executionEngine.registerNodeExecutor(new OneInchQuoteExecutor(logger, config.apis.oneInch.apiKey))
+executionEngine.registerNodeExecutor(new FusionSwapExecutor(logger, config.apis.oneInch.apiKey))
+executionEngine.registerNodeExecutor(new LimitOrderExecutor(logger, config.apis.oneInch.apiKey))
 
 // Track WebSocket connections
 const connectedClients = new Map<string, any>()

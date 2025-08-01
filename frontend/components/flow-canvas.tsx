@@ -505,7 +505,19 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           position: node.position,
           data: {
             label: node.data?.label || node.type || 'Node',
-            config: node.data?.config || {}
+            config: {
+              ...(node.data?.config || {}),
+              // Add template creation mode for template projects
+              ...(projectId.startsWith('template-') && {
+                template_creation_mode: true,
+                supported_wallets: ['metamask', 'walletconnect', 'coinbase'],
+                supported_networks: [1, 137, 42161],
+                default_tokens: ['ETH', 'USDC', 'WBTC', 'DAI', 'USDT', '1INCH'],
+                show_popular_tokens: true,
+                track_protocols: true,
+                allow_custom_tokens: true
+              })
+            }
           }
         })),
         edges: edges.map(edge => ({

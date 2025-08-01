@@ -39,19 +39,6 @@ export class WalletConnectorExecutor implements NodeExecutor {
     return networks[chainId] || `Chain ${chainId}`;
   }
 
-  private isValidChainId(chainId: string): boolean {
-    const supportedChains = [
-      '1', '5', '11155111', // Ethereum
-      '137', '80001', // Polygon
-      '42161', '421613', // Arbitrum
-      '10', '420', // Optimism
-      '56', '97', // BSC
-      '43114', '43113', // Avalanche
-      '250', '4002' // Fantom
-    ];
-    return supportedChains.includes(chainId);
-  }
-
   async validate(inputs: Record<string, any>): Promise<{ valid: boolean; errors: string[] }> {
     // Check if this is template creation mode (configuration only)
     const isTemplateMode = inputs.template_creation_mode || inputs.mode === 'template' || !inputs.wallet_address;
@@ -137,7 +124,7 @@ export class WalletConnectorExecutor implements NodeExecutor {
         address: '0x0000000000000000000000000000000000000000', // Template placeholder
         provider: config.supported_wallets[0],
         chainId: config.default_network.toString(),
-        balance: '0',
+
         isConnected: false, // Template mode - not actually connected
         network: this.getNetworkName(config.default_network.toString())
       };
@@ -428,9 +415,19 @@ export class WalletConnectorExecutor implements NodeExecutor {
     return (nativeValue + tokenValue).toFixed(2);
   }
 
+
+
   private isValidChainId(chainId: string): boolean {
-    const validChainIds = ['1', '56', '137', '42161', '10', '250', '43114', '25', '8453', '324', '59144', '5000', '5'];
-    return validChainIds.includes(chainId);
+    const supportedChains = [
+      '1', '5', '11155111', // Ethereum
+      '137', '80001', // Polygon
+      '42161', '421613', // Arbitrum
+      '10', '420', // Optimism
+      '56', '97', // BSC
+      '43114', '43113', // Avalanche
+      '250', '4002' // Fantom
+    ];
+    return supportedChains.includes(chainId);
   }
 
   private getMaxGasLimit(chainId: string): string {

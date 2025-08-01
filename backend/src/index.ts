@@ -13,6 +13,10 @@ import { FusionPlusExecutor } from './nodes/fusion-plus-executor';
 import { ChainSelectorExecutor } from './nodes/chain-selector-executor';
 import { WalletConnectorExecutor } from './nodes/wallet-connector-executor';
 import { TransactionStatusExecutor } from './nodes/transaction-status-executor';
+import { ERC20TokenExecutor } from './nodes/erc20-token-executor';
+import { TokenSelectorExecutor } from './nodes/token-selector-executor';
+import { PriceImpactCalculatorExecutor } from './nodes/price-impact-calculator-executor';
+import { TransactionMonitorExecutor } from './nodes/transaction-monitor-executor';
 import {
   WorkflowDefinition,
   ExecutionContext,
@@ -115,6 +119,10 @@ executionEngine.registerNodeExecutor(new FusionPlusExecutor())
 executionEngine.registerNodeExecutor(new ChainSelectorExecutor())
 executionEngine.registerNodeExecutor(new WalletConnectorExecutor())
 executionEngine.registerNodeExecutor(new TransactionStatusExecutor())
+executionEngine.registerNodeExecutor(new ERC20TokenExecutor())
+executionEngine.registerNodeExecutor(new TokenSelectorExecutor())
+executionEngine.registerNodeExecutor(new PriceImpactCalculatorExecutor())
+executionEngine.registerNodeExecutor(new TransactionMonitorExecutor())
 
 // Track WebSocket connections
 const connectedClients = new Map<string, any>()

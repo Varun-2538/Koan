@@ -25,7 +25,7 @@ import { NodeConfigPanel } from "./node-config-panel"
 import { FlowToolbar } from "./flow-toolbar"
 import { CustomNodes } from "./custom-nodes"
 import { Button } from "@/components/ui/button"
-import { Save, Play, Zap } from "lucide-react"
+import { Save, Play, Zap, Trash2 } from "lucide-react"
 import { getTemplateById } from "@/lib/templates"
 import { CodeGenerator, type CodeGenerationResult } from "@/lib/code-generator"
 import { CodePreviewModal } from "./code-preview-modal"
@@ -89,15 +89,15 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   // Load template data if project is created from template
   useEffect(() => {
     const loadTemplateFlow = () => {
-      // Check if this is a template-based project
-      if (projectId.startsWith('template-') && !templateLoaded) {
-        // In a real app, you'd fetch this from your database
-        // For demo, we'll check if it's the swap template
-        const template = getTemplateById('basic-swap-app')
-        if (template) {
-          setNodes(template.nodes)
-          setEdges(template.edges)
-          setTemplateLoaded(true)
+              // Check if this is a template-based project
+        if (projectId.startsWith('template-') && !templateLoaded) {
+          // In a real app, you'd fetch this from your database
+          // For demo, we'll check if it's the swap template
+          const template = getTemplateById('dex-aggregator-swap')
+          if (template) {
+            setNodes(template.nodes)
+            setEdges(template.edges)
+            setTemplateLoaded(true)
         }
       }
     }
@@ -106,6 +106,33 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   }, [projectId, setNodes, setEdges, templateLoaded])
 
   const onConnect = useCallback((params: Connection) => setEdges((eds) => addEdge(params, eds)), [setEdges])
+
+  // Handle node deletion with keyboard
+  const onNodesDelete = useCallback((deletedNodes: Node[]) => {
+    // Close config panel if deleted node was selected
+    const deletedNodeIds = deletedNodes.map(node => node.id)
+    if (selectedNode && deletedNodeIds.includes(selectedNode.id)) {
+      setSelectedNode(null)
+    }
+  }, [selectedNode])
+
+  // Handle keyboard events for deletion
+  const onKeyDown = useCallback((event: KeyboardEvent) => {
+    if ((event.key === 'Delete' || event.key === 'Backspace') && selectedNode) {
+      event.preventDefault()
+      setNodes((nodes) => nodes.filter((node) => node.id !== selectedNode.id))
+      setEdges((edges) => edges.filter((edge) => 
+        edge.source !== selectedNode.id && edge.target !== selectedNode.id
+      ))
+      setSelectedNode(null)
+    }
+  }, [selectedNode, setNodes, setEdges])
+
+  // Add keyboard event listener
+  useEffect(() => {
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onKeyDown])
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
@@ -146,35 +173,48 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
       // 1inch and Trading Nodes
       case "oneInchSwap":
         return {
-          api_key: "",
-          chain_id: "1",
-          from_token: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // ETH
-          to_token: "0xA0b86a33E6417c4a4e6d3b7e6d8f0e8b8e8c8d8e", // USDC
-          amount: "1000000000000000000", // 1 ETH
-          from_address: "",
-          slippage: 1,
-          enable_fusion: false,
-          gas_optimization: "balanced"
+          apiKey: "",
+          enableMEVProtection: true,
+          useFusion: false,
+          gasOptimization: "balanced"
         }
       case "oneInchQuote":
         return {
-          api_key: "",
-          chain_id: "1",
-          from_token: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-          to_token: "0xA0b86a33E6417c4a4e6d3b7e6d8f0e8b8e8c8d8e",
-          amount: "1000000000000000000"
+          apiKey: "",
+          slippage: 1,
+          includeGas: true,
+          includeProtocols: true,
+          enablePathfinder: true,
+          gasOptimization: "balanced"
         }
       case "fusionPlus":
         return {
           api_key: "",
-          source_chain: "1",
-          destination_chain: "137",
-          from_token: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-          to_token: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-          amount: "1000000000000000000",
-          from_address: "",
+          supported_chains: ["1", "137"],
+          default_bridge_pairs: [
+            { 
+              from: { chain: "1", token: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", symbol: "ETH" },
+              to: { chain: "137", token: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619", symbol: "WETH" },
+              label: "ETH → Polygon WETH"
+            }
+          ],
           enable_mev_protection: true,
-          enable_gasless: true
+          enable_gasless: true,
+          default_timeout: 30,
+          ui_config: {
+            theme: "modern",
+            showBridgeStatus: true,
+            showEstimatedTime: true,
+            showFees: true,
+            enableChainSelector: true,
+            showAdvancedOptions: false
+          },
+          rate_limits: {
+            requests_per_minute: 30,
+            requests_per_hour: 500,
+            enable_caching: true,
+            cache_duration: 300
+          }
         }
       case "orderType":
         return {
@@ -193,9 +233,17 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
       // Chain and Bridge Nodes
       case "chainSelector":
         return {
-          available_chains: "all",
-          primary_chain: "1",
-          enable_testnet: false
+          supported_chains: ["1", "137"],
+          default_chain: "1",
+          enable_testnet: false,
+          ui_config: {
+            theme: "modern",
+            showChainLogos: true,
+            showNetworkStatus: true,
+            enableQuickSwitch: true,
+            showGasPrice: false
+          },
+          rpc_endpoints: {}
         }
       case "sourceChain":
         return {
@@ -209,6 +257,29 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         }
 
       // DeFi Core Nodes
+      case "tokenSelector":
+        return {
+          defaultFromToken: "ETH",
+          defaultToToken: "USDC",
+          enabledTokens: ["ETH", "USDC", "WBTC", "USDT", "DAI", "1INCH"],
+          includeMetadata: true,
+          priceSource: "1inch"
+        }
+      case "priceImpactCalculator":
+        return {
+          warningThreshold: 3,
+          maxImpactThreshold: 15,
+          includeSlippage: true,
+          detailedAnalysis: true
+        }
+      case "transactionMonitor":
+        return {
+          confirmationsRequired: 1,
+          timeoutMinutes: 30,
+          enableAlerts: true,
+          includeGasTracking: true,
+          enableMEVDetection: true
+        }
       case "tokenInput":
         return {
           fromToken: "ETH",
@@ -315,6 +386,43 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           autoConnect: true,
           networkChainId: "1"
         }
+      case "swapInterface":
+        return {
+          title: "DEX Aggregator Swap",
+          showAdvancedSettings: true,
+          theme: "modern",
+          enablePriceChart: true,
+          showPriceImpact: true,
+          enableTransactionHistory: true
+        }
+      case "fusionSwap":
+        return {
+          apiKey: "",
+          enableGaslessSwaps: true,
+          auctionDuration: "auto",
+          enableMEVProtection: true
+        }
+      case "limitOrder":
+        return {
+          apiKey: "",
+          orderType: "limit",
+          enableAdvancedStrategies: true
+        }
+      case "portfolioAPI":
+        return {
+          apiKey: "",
+          trackHistory: true,
+          enableAnalytics: true
+        }
+      case "defiDashboard":
+        return {
+          title: "1inch-Powered DeFi Suite",
+          enableMultiSwap: true,
+          showPortfolio: true,
+          enableLimitOrders: true,
+          showAnalytics: true,
+          theme: "1inch-branded"
+        }
       case "transactionHistory":
         return {
           maxTransactions: "50",
@@ -340,6 +448,10 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedNode(node)
+  }, [])
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNode(null)
   }, [])
 
   const updateNodeConfig = useCallback(
@@ -465,6 +577,8 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
               onDrop={onDrop}
               onDragOver={onDragOver}
               onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
+              onNodesDelete={onNodesDelete}
               nodeTypes={nodeTypes}
               connectionMode={ConnectionMode.Loose}
               fitView
@@ -478,8 +592,38 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                 <FlowToolbar projectId={projectId} />
               </Panel>
 
+              {/* Instructions Panel */}
+              <Panel position="bottom-left">
+                <div className="bg-white border border-gray-200 rounded-lg p-3 max-w-sm shadow-sm">
+                  <div className="text-xs text-gray-600 space-y-1">
+                    <div className="font-medium text-gray-800 mb-2">💡 Quick Tips:</div>
+                    <div>• Click a node to select it</div>
+                    <div>• Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Delete</kbd> or <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Backspace</kbd> to delete</div>
+                    <div>• Use the <span className="text-red-600">Delete Node</span> button</div>
+                    <div>• Click empty space to deselect</div>
+                  </div>
+                </div>
+              </Panel>
+
               <Panel position="top-right">
                 <div className="flex gap-2">
+                  {selectedNode && (
+                    <Button 
+                      onClick={() => {
+                        setNodes((nodes) => nodes.filter((node) => node.id !== selectedNode.id))
+                        setEdges((edges) => edges.filter((edge) => 
+                          edge.source !== selectedNode.id && edge.target !== selectedNode.id
+                        ))
+                        setSelectedNode(null)
+                      }}
+                      size="sm"
+                      variant="destructive"
+                      title="Delete selected node (Delete key)"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Node
+                    </Button>
+                  )}
                   <Button onClick={saveFlow} disabled={saving} size="sm">
                     <Save className="w-4 h-4 mr-2" />
                     {saving ? "Saving..." : "Save"}

@@ -80,6 +80,16 @@ const COMPONENT_SECTIONS: CategorySection[] = [
         hackathonFocus: true
       },
       {
+        type: "fusionSwap",
+        name: "1inch Fusion",
+        description: "Gasless swaps with MEV protection using intent-based architecture",
+        icon: Zap,
+        category: "1inch Protocol",
+        tags: ["fusion", "gasless", "intent-based", "mev-protection"],
+        difficulty: "intermediate",
+        hackathonFocus: true
+      },
+      {
         type: "fusionPlus",
         name: "Fusion+",
         description: "Cross-chain swaps with MEV protection and gasless mode",
@@ -87,6 +97,26 @@ const COMPONENT_SECTIONS: CategorySection[] = [
         category: "1inch Protocol",
         tags: ["fusion+", "cross-chain", "mev-protection", "gasless"],
         difficulty: "advanced",
+        hackathonFocus: true
+      },
+      {
+        type: "limitOrder",
+        name: "Limit Order Protocol",
+        description: "Advanced limit orders with custom strategies and hooks",
+        icon: Target,
+        category: "1inch Protocol",
+        tags: ["limit-order", "protocol", "strategies", "hooks"],
+        difficulty: "intermediate",
+        hackathonFocus: true
+      },
+      {
+        type: "priceImpactCalculator",
+        name: "Price Impact Calculator",
+        description: "Analyze trade impact on market price with risk assessment",
+        icon: TrendingUp,
+        category: "1inch Protocol",
+        tags: ["price-impact", "analysis", "risk", "trading"],
+        difficulty: "intermediate",
         hackathonFocus: true
       },
       {
@@ -162,6 +192,16 @@ const COMPONENT_SECTIONS: CategorySection[] = [
         hackathonFocus: true
       },
       {
+        type: "tokenSelector",
+        name: "Token Selector",
+        description: "Advanced token selection with metadata and price information",
+        icon: Coins,
+        category: "Wallet & Authentication",
+        tags: ["token", "selector", "metadata", "price"],
+        difficulty: "beginner",
+        hackathonFocus: true
+      },
+      {
         type: "tokenInput",
         name: "Token Input",
         description: "Token selection and amount input interface",
@@ -194,6 +234,26 @@ const COMPONENT_SECTIONS: CategorySection[] = [
         icon: Activity,
         category: "Transaction & Monitoring",
         tags: ["transaction", "status", "monitoring"],
+        difficulty: "intermediate",
+        hackathonFocus: true
+      },
+      {
+        type: "transactionMonitor",
+        name: "Transaction Monitor",
+        description: "Real-time transaction monitoring with MEV detection and alerts",
+        icon: Activity,
+        category: "Transaction & Monitoring",
+        tags: ["transaction", "monitor", "real-time", "mev", "alerts"],
+        difficulty: "intermediate",
+        hackathonFocus: true
+      },
+      {
+        type: "portfolioAPI",
+        name: "1inch Portfolio API",
+        description: "Track portfolio performance using 1inch Portfolio and Balance APIs",
+        icon: TrendingUp,
+        category: "Transaction & Monitoring",
+        tags: ["portfolio", "1inch-api", "balance", "history"],
         difficulty: "intermediate",
         hackathonFocus: true
       },
@@ -266,6 +326,16 @@ const COMPONENT_SECTIONS: CategorySection[] = [
         category: "User Interface",
         tags: ["ui", "interface", "swap"],
         difficulty: "intermediate"
+      },
+      {
+        type: "defiDashboard",
+        name: "1inch DeFi Dashboard",
+        description: "Complete DeFi dashboard showcasing multiple 1inch APIs and protocols",
+        icon: Layout,
+        category: "User Interface",
+        tags: ["dashboard", "1inch", "defi-suite", "multi-api"],
+        difficulty: "intermediate",
+        hackathonFocus: true
       },
       {
         type: "dashboard",

@@ -24,6 +24,210 @@ export interface FlowTemplate {
 // Unite DeFi Hackathon Templates - Optimized for 1inch Integration
 export const FLOW_TEMPLATES: FlowTemplate[] = [
   {
+    id: "dex-aggregator-swap",
+    name: "1inch-Powered DeFi Suite",
+    description: "Complete DeFi application suite using multiple 1inch APIs - Swap, Fusion, Limit Orders, Portfolio tracking, and advanced analytics. Perfect for Unite DeFi hackathon!",
+    category: "defi",
+    difficulty: "intermediate",
+    estimatedTime: "45 minutes",
+    features: [
+      "🔥 1inch Classic Swap API integration",
+      "⚡ 1inch Fusion gasless swaps",
+      "🌉 1inch Fusion+ cross-chain swaps",
+      "📊 1inch Limit Order Protocol",
+      "💰 1inch Portfolio & Balance APIs",
+      "📈 1inch Spot Price & History APIs",
+      "🛡️ MEV protection with Fusion mode",
+      "📱 Professional trading interface",
+      "🔍 Real-time transaction monitoring",
+      "💎 Advanced DeFi analytics"
+    ],
+    nodes: [
+      {
+        id: "wallet-connector-1",
+        type: "walletConnector",
+        position: { x: 100, y: 100 },
+        data: {
+          label: "Wallet Connection",
+          config: {
+            supportedWallets: ["MetaMask", "WalletConnect", "Coinbase Wallet"],
+            autoConnect: true,
+            networkChainId: "1"
+          }
+        }
+      },
+      {
+        id: "token-selector-1",
+        type: "tokenSelector",
+        position: { x: 100, y: 280 },
+        data: {
+          label: "Token Selector",
+          config: {
+            defaultFromToken: "ETH",
+            defaultToToken: "USDC",
+            enabledTokens: ["ETH", "USDC", "WBTC", "USDT", "DAI", "1INCH"],
+            includeMetadata: true,
+            priceSource: "1inch"
+          }
+        }
+      },
+      {
+        id: "oneinch-quote-1",
+        type: "oneInchQuote",
+        position: { x: 400, y: 280 },
+        data: {
+          label: "1inch Quote Engine",
+          config: {
+            apiKey: "",
+            slippage: 1,
+            includeGas: true,
+            includeProtocols: true,
+            enablePathfinder: true,
+            gasOptimization: "balanced"
+          }
+        }
+      },
+      {
+        id: "fusion-swap-1",
+        type: "fusionSwap",
+        position: { x: 700, y: 450 },
+        data: {
+          label: "1inch Fusion (Gasless)",
+          config: {
+            apiKey: "",
+            enableGaslessSwaps: true,
+            auctionDuration: "auto",
+            enableMEVProtection: true
+          }
+        }
+      },
+      {
+        id: "limit-order-1",
+        type: "limitOrder",
+        position: { x: 1000, y: 450 },
+        data: {
+          label: "1inch Limit Orders",
+          config: {
+            apiKey: "",
+            orderType: "limit",
+            enableAdvancedStrategies: true
+          }
+        }
+      },
+      {
+        id: "portfolio-tracker-1",
+        type: "portfolioAPI",
+        position: { x: 1300, y: 100 },
+        data: {
+          label: "1inch Portfolio API",
+          config: {
+            apiKey: "",
+            trackHistory: true,
+            enableAnalytics: true
+          }
+        }
+      },
+      {
+        id: "price-impact-1",
+        type: "priceImpactCalculator",
+        position: { x: 700, y: 280 },
+        data: {
+          label: "Price Impact Analysis",
+          config: {
+            warningThreshold: 3,
+            maxImpactThreshold: 15,
+            includeSlippage: true,
+            detailedAnalysis: true
+          }
+        }
+      },
+      {
+        id: "oneinch-swap-1",
+        type: "oneInchSwap",
+        position: { x: 1000, y: 280 },
+        data: {
+          label: "1inch Swap Executor",
+          config: {
+            apiKey: "",
+            enableMEVProtection: true,
+            useFusion: false,
+            gasOptimization: "balanced"
+          }
+        }
+      },
+      {
+        id: "transaction-monitor-1",
+        type: "transactionMonitor",
+        position: { x: 1300, y: 280 },
+        data: {
+          label: "Transaction Monitor",
+          config: {
+            confirmationsRequired: 1,
+            timeoutMinutes: 30,
+            enableAlerts: true,
+            includeGasTracking: true,
+            enableMEVDetection: true
+          }
+        }
+      },
+      {
+        id: "defi-dashboard-1",
+        type: "defiDashboard",
+        position: { x: 700, y: 100 },
+        data: {
+          label: "1inch DeFi Dashboard",
+          config: {
+            title: "1inch-Powered DeFi Suite",
+            enableMultiSwap: true,
+            showPortfolio: true,
+            enableLimitOrders: true,
+            showAnalytics: true,
+            theme: "1inch-branded"
+          }
+        }
+      }
+    ],
+    edges: [
+      // Main swap flow
+      { id: "e1", source: "wallet-connector-1", target: "token-selector-1" },
+      { id: "e2", source: "token-selector-1", target: "oneinch-quote-1" },
+      { id: "e3", source: "oneinch-quote-1", target: "price-impact-1" },
+      { id: "e4", source: "price-impact-1", target: "oneinch-swap-1" },
+      { id: "e5", source: "oneinch-swap-1", target: "transaction-monitor-1" },
+      
+      // Alternative swap methods
+      { id: "e6", source: "token-selector-1", target: "fusion-swap-1" },
+      { id: "e7", source: "token-selector-1", target: "limit-order-1" },
+      { id: "e8", source: "fusion-swap-1", target: "transaction-monitor-1" },
+      { id: "e9", source: "limit-order-1", target: "transaction-monitor-1" },
+      
+      // Dashboard connections
+      { id: "e10", source: "wallet-connector-1", target: "defi-dashboard-1" },
+      { id: "e11", source: "wallet-connector-1", target: "portfolio-tracker-1" },
+      { id: "e12", source: "portfolio-tracker-1", target: "defi-dashboard-1" },
+      { id: "e13", source: "transaction-monitor-1", target: "defi-dashboard-1" },
+      { id: "e14", source: "price-impact-1", target: "defi-dashboard-1" }
+    ],
+    requiredInputs: [
+      {
+        key: "appName",
+        label: "DeFi Suite Name",
+        description: "Name for your 1inch-powered DeFi application",
+        type: "string",
+        required: false,
+        defaultValue: "My 1inch DeFi Suite"
+      },
+      {
+        key: "hackathonMode",
+        label: "Unite DeFi Hackathon Mode",
+        description: "Enable hackathon-specific features and 1inch API showcase",
+        type: "boolean",
+        required: false,
+        defaultValue: true
+      }
+    ]
+  },
+  {
     id: "oneinch-swap-dashboard",
     name: "1inch Swap Dashboard",
     description: "Complete DEX aggregator dashboard using 1inch Pathfinder algorithm with MEV protection and optimal routing across multiple chains",

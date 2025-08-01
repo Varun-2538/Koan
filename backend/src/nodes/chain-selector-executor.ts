@@ -2,7 +2,9 @@ import { NodeExecutor, ExecutionContext, NodeExecutionResult, ChainConfig } from
 import { logger } from '../utils/logger';
 
 export class ChainSelectorExecutor implements NodeExecutor {
-  nodeType = 'chainSelector';
+  readonly type = 'chainSelector';
+  readonly name = 'Chain Selector';
+  readonly description = 'Select and configure blockchain networks for DeFi operations';
 
   private chainConfigs: Record<string, ChainConfig> = {
     '1': {
@@ -128,26 +130,28 @@ export class ChainSelectorExecutor implements NodeExecutor {
     }
   };
 
-  async validate(inputs: Record<string, any>): Promise<boolean> {
+  async validate(inputs: Record<string, any>): Promise<{ valid: boolean; errors: string[] }> {
+    const errors: string[] = [];
+
     // Basic validation
     if (!inputs.primary_chain) {
-      throw new Error('primary_chain is required');
-    }
-
-    // Validate chain ID exists
-    if (!this.chainConfigs[inputs.primary_chain]) {
-      throw new Error(`Unsupported chain ID: ${inputs.primary_chain}`);
-    }
-
-    // Validate testnet settings
-    if (inputs.enable_testnet === false) {
-      const chain = this.chainConfigs[inputs.primary_chain];
-      if (chain.isTestnet) {
-        throw new Error('Testnet chains are disabled in configuration');
+      errors.push('primary_chain is required');
+    } else {
+      // Validate chain ID exists
+      if (!this.chainConfigs[inputs.primary_chain]) {
+        errors.push(`Unsupported chain ID: ${inputs.primary_chain}`);
+      } else {
+        // Validate testnet settings
+        if (inputs.enable_testnet === false) {
+          const chain = this.chainConfigs[inputs.primary_chain];
+          if (chain.isTestnet) {
+            errors.push('Testnet chains are disabled in configuration');
+          }
+        }
       }
     }
 
-    return true;
+    return { valid: errors.length === 0, errors };
   }
 
   async execute(inputs: Record<string, any>, context: ExecutionContext): Promise<NodeExecutionResult> {

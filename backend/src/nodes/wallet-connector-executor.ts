@@ -3,7 +3,9 @@ import { logger } from '../utils/logger';
 import axios from 'axios';
 
 export class WalletConnectorExecutor implements NodeExecutor {
-  nodeType = 'walletConnector';
+  readonly type = 'walletConnector';
+  readonly name = 'Wallet Connector';
+  readonly description = 'Connect and manage cryptocurrency wallets for DeFi operations';
 
   private supportedWallets = [
     'metamask',
@@ -16,32 +18,162 @@ export class WalletConnectorExecutor implements NodeExecutor {
     'trezor'
   ];
 
-  async validate(inputs: Record<string, any>): Promise<boolean> {
-    if (!inputs.wallet_address) {
-      throw new Error('wallet_address is required');
+  private getNetworkName(chainId: string): string {
+    const networks: Record<string, string> = {
+      '1': 'Ethereum Mainnet',
+      '5': 'Goerli Testnet',
+      '11155111': 'Sepolia Testnet',
+      '137': 'Polygon',
+      '80001': 'Polygon Mumbai',
+      '42161': 'Arbitrum One',
+      '421613': 'Arbitrum Goerli',
+      '10': 'Optimism',
+      '420': 'Optimism Goerli',
+      '56': 'BSC',
+      '97': 'BSC Testnet',
+      '43114': 'Avalanche',
+      '43113': 'Avalanche Fuji',
+      '250': 'Fantom',
+      '4002': 'Fantom Testnet'
+    };
+    return networks[chainId] || `Chain ${chainId}`;
+  }
+
+  private isValidChainId(chainId: string): boolean {
+    const supportedChains = [
+      '1', '5', '11155111', // Ethereum
+      '137', '80001', // Polygon
+      '42161', '421613', // Arbitrum
+      '10', '420', // Optimism
+      '56', '97', // BSC
+      '43114', '43113', // Avalanche
+      '250', '4002' // Fantom
+    ];
+    return supportedChains.includes(chainId);
+  }
+
+  async validate(inputs: Record<string, any>): Promise<{ valid: boolean; errors: string[] }> {
+    // Check if this is template creation mode (configuration only)
+    const isTemplateMode = inputs.template_creation_mode || inputs.mode === 'template' || !inputs.wallet_address;
+    
+    const errors: string[] = [];
+
+    if (isTemplateMode) {
+      // In template mode, validate configuration instead of actual wallet
+      try {
+        await this.validateTemplateConfig(inputs);
+        return { valid: true, errors: [] };
+      } catch (error: any) {
+        return { valid: false, errors: [error.message] };
+      }
     }
 
-    // Validate wallet address format
-    const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-    if (!addressRegex.test(inputs.wallet_address)) {
-      throw new Error('Invalid wallet address format. Must be a valid Ethereum address.');
+    // In execution mode, require actual wallet address
+    if (!inputs.wallet_address) {
+      errors.push('wallet_address is required');
+    } else {
+      // Validate wallet address format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(inputs.wallet_address)) {
+        errors.push('Invalid wallet address format. Must be a valid Ethereum address.');
+      }
     }
 
     // Validate wallet provider if specified
     if (inputs.wallet_provider && !this.supportedWallets.includes(inputs.wallet_provider)) {
-      throw new Error(`Unsupported wallet provider: ${inputs.wallet_provider}`);
+      errors.push(`Unsupported wallet provider: ${inputs.wallet_provider}`);
     }
 
     // Validate chain ID if specified
     if (inputs.chain_id && !this.isValidChainId(inputs.chain_id)) {
-      throw new Error(`Invalid chain ID: ${inputs.chain_id}`);
+      errors.push(`Invalid chain ID: ${inputs.chain_id}`);
     }
 
-    return true;
+    return { valid: errors.length === 0, errors };
+  }
+
+  private async validateTemplateConfig(inputs: Record<string, any>): Promise<void> {
+    // Validate supported wallets configuration
+    if (inputs.supported_wallets) {
+      if (!Array.isArray(inputs.supported_wallets)) {
+        throw new Error('supported_wallets must be an array');
+      }
+      const invalidWallets = inputs.supported_wallets.filter(wallet => !this.supportedWallets.includes(wallet));
+      if (invalidWallets.length > 0) {
+        throw new Error(`Unsupported wallets: ${invalidWallets.join(', ')}`);
+      }
+    }
+
+    // Validate supported networks configuration
+    if (inputs.supported_networks) {
+      if (!Array.isArray(inputs.supported_networks)) {
+        throw new Error('supported_networks must be an array');
+      }
+      const invalidNetworks = inputs.supported_networks.filter(chainId => !this.isValidChainId(chainId.toString()));
+      if (invalidNetworks.length > 0) {
+        throw new Error(`Invalid network IDs: ${invalidNetworks.join(', ')}`);
+      }
+    }
+  }
+
+  private async executeTemplateMode(inputs: Record<string, any>, context: ExecutionContext): Promise<NodeExecutionResult> {
+    try {
+      logger.info(`🔧 Configuring wallet connector for template creation`);
+
+      const config = {
+        supported_wallets: inputs.supported_wallets || ['metamask', 'walletconnect', 'coinbase'],
+        supported_networks: inputs.supported_networks || [1, 137, 42161], // Ethereum, Polygon, Arbitrum
+        default_network: inputs.default_network || 1,
+        connection_options: {
+          auto_connect: inputs.auto_connect || false,
+          show_balance: inputs.show_balance !== false,
+          show_network_switcher: inputs.show_network_switcher !== false,
+          theme: inputs.theme || 'light'
+        }
+      };
+
+      // Simulate wallet connection configuration
+      const mockConnection: WalletConnection = {
+        address: '0x0000000000000000000000000000000000000000', // Template placeholder
+        provider: config.supported_wallets[0],
+        chainId: config.default_network.toString(),
+        balance: '0',
+        isConnected: false, // Template mode - not actually connected
+        network: this.getNetworkName(config.default_network.toString())
+      };
+
+      return {
+        success: true,
+        outputs: {
+          wallet_connection: mockConnection,
+          wallet_config: config,
+          supported_wallets: config.supported_wallets,
+          supported_networks: config.supported_networks
+        },
+        executionTime: 100, // Fast template configuration
+        logs: [
+          `Configured wallet connector with ${config.supported_wallets.length} wallet options`,
+          `Supporting ${config.supported_networks.length} networks`,
+          `Default network: ${this.getNetworkName(config.default_network.toString())}`
+        ]
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+        executionTime: 100
+      };
+    }
   }
 
   async execute(inputs: Record<string, any>, context: ExecutionContext): Promise<NodeExecutionResult> {
     try {
+      const isTemplateMode = inputs.template_creation_mode || inputs.mode === 'template' || !inputs.wallet_address;
+      
+      if (isTemplateMode) {
+        return this.executeTemplateMode(inputs, context);
+      }
+
       logger.info(`💳 Connecting wallet: ${inputs.wallet_address}`);
 
       const walletAddress = inputs.wallet_address;

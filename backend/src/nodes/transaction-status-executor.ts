@@ -2,29 +2,34 @@ import { NodeExecutor, ExecutionContext, NodeExecutionResult, TransactionRequest
 import { logger } from '../utils/logger';
 import axios from 'axios';
 
+type TransactionStatus = 'pending' | 'confirmed' | 'failed' | 'dropped';
+
 export class TransactionStatusExecutor implements NodeExecutor {
-  nodeType = 'transactionStatus';
+  readonly type = 'transactionStatus';
+  readonly name = 'Transaction Status';
+  readonly description = 'Monitor and track blockchain transaction status and confirmations';
 
-  private transactionStatuses = ['pending', 'confirmed', 'failed', 'dropped'] as const;
-  type TransactionStatus = typeof this.transactionStatuses[number];
+  private transactionStatuses: TransactionStatus[] = ['pending', 'confirmed', 'failed', 'dropped'];
 
-  async validate(inputs: Record<string, any>): Promise<boolean> {
+  async validate(inputs: Record<string, any>): Promise<{ valid: boolean; errors: string[] }> {
+    const errors: string[] = [];
+
     if (!inputs.transaction_hash) {
-      throw new Error('transaction_hash is required');
-    }
-
-    // Validate transaction hash format
-    const hashRegex = /^0x[a-fA-F0-9]{64}$/;
-    if (!hashRegex.test(inputs.transaction_hash)) {
-      throw new Error('Invalid transaction hash format. Must be a valid 32-byte hex string.');
+      errors.push('transaction_hash is required');
+    } else {
+      // Validate transaction hash format
+      const hashRegex = /^0x[a-fA-F0-9]{64}$/;
+      if (!hashRegex.test(inputs.transaction_hash)) {
+        errors.push('Invalid transaction hash format. Must be a valid 32-byte hex string.');
+      }
     }
 
     // Validate chain ID if specified
     if (inputs.chain_id && !this.isValidChainId(inputs.chain_id)) {
-      throw new Error(`Invalid chain ID: ${inputs.chain_id}`);
+      errors.push(`Invalid chain ID: ${inputs.chain_id}`);
     }
 
-    return true;
+    return { valid: errors.length === 0, errors };
   }
 
   async execute(inputs: Record<string, any>, context: ExecutionContext): Promise<NodeExecutionResult> {

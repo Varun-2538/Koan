@@ -3,44 +3,47 @@ import axios from 'axios';
 import { logger } from '../utils/logger';
 
 export class FusionPlusExecutor implements NodeExecutor {
-  nodeType = 'fusionPlus';
+  readonly type = 'fusionPlus';
+  readonly name = 'Fusion+ Cross-Chain Swap';
+  readonly description = 'Execute cross-chain swaps using 1inch Fusion+ protocol';
 
-  async validate(inputs: Record<string, any>): Promise<boolean> {
+  async validate(inputs: Record<string, any>): Promise<{ valid: boolean; errors: string[] }> {
+    const errors: string[] = [];
     const required = ['api_key', 'source_chain', 'destination_chain', 'from_token', 'to_token', 'amount', 'from_address'];
     
     for (const field of required) {
       if (!inputs[field]) {
-        throw new Error(`${field} is required for Fusion+ cross-chain swap`);
+        errors.push(`${field} is required for Fusion+ cross-chain swap`);
       }
     }
 
     // Validate chain IDs
     const supportedChains = ['1', '56', '137', '42161', '10', '250', '43114', '25', '8453', '324', '59144', '5000'];
-    if (!supportedChains.includes(inputs.source_chain)) {
-      throw new Error(`Source chain ${inputs.source_chain} not supported`);
+    if (inputs.source_chain && !supportedChains.includes(inputs.source_chain)) {
+      errors.push(`Source chain ${inputs.source_chain} not supported`);
     }
-    if (!supportedChains.includes(inputs.destination_chain)) {
-      throw new Error(`Destination chain ${inputs.destination_chain} not supported`);
+    if (inputs.destination_chain && !supportedChains.includes(inputs.destination_chain)) {
+      errors.push(`Destination chain ${inputs.destination_chain} not supported`);
     }
 
     // Validate amount
-    if (isNaN(Number(inputs.amount)) || Number(inputs.amount) <= 0) {
-      throw new Error('Amount must be a positive number');
+    if (inputs.amount && (isNaN(Number(inputs.amount)) || Number(inputs.amount) <= 0)) {
+      errors.push('Amount must be a positive number');
     }
 
     // Validate addresses
     const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-    if (!addressRegex.test(inputs.from_address)) {
-      throw new Error('Invalid from_address format');
+    if (inputs.from_address && !addressRegex.test(inputs.from_address)) {
+      errors.push('Invalid from_address format');
     }
-    if (inputs.from_token !== '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' && !addressRegex.test(inputs.from_token)) {
-      throw new Error('Invalid from_token address format');
+    if (inputs.from_token && inputs.from_token !== '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' && !addressRegex.test(inputs.from_token)) {
+      errors.push('Invalid from_token address format');
     }
-    if (inputs.to_token !== '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' && !addressRegex.test(inputs.to_token)) {
-      throw new Error('Invalid to_token address format');
+    if (inputs.to_token && inputs.to_token !== '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' && !addressRegex.test(inputs.to_token)) {
+      errors.push('Invalid to_token address format');
     }
 
-    return true;
+    return { valid: errors.length === 0, errors };
   }
 
   async execute(inputs: Record<string, any>, context: ExecutionContext): Promise<NodeExecutionResult> {
@@ -97,13 +100,21 @@ export class FusionPlusExecutor implements NodeExecutor {
       };
 
       logger.info(`✅ Fusion+ cross-chain swap prepared successfully`);
-      return result;
+      return {
+        success: true,
+        outputs: result.data,
+        logs: [`Fusion+ cross-chain swap prepared successfully`],
+        executionTime: Date.now() - context.startTime
+      };
 
     } catch (error) {
       logger.error(`❌ Fusion+ execution failed:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Fusion+ execution failed'
+        outputs: {},
+        error: error instanceof Error ? error.message : 'Fusion+ execution failed',
+        logs: [`Fusion+ execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        executionTime: Date.now() - context.startTime
       };
     }
   }

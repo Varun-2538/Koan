@@ -4,7 +4,7 @@ import type React from "react"
 import { Handle, Position, type NodeProps } from "@xyflow/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Coins, Vote, Layout, Server, Bot, Repeat, Link, Clock, Database, Wallet } from "lucide-react"
+import { Coins, Vote, Layout, Server, Bot, Repeat, Link, Clock, Database, Wallet, TrendingUp, Activity, Search } from "lucide-react"
 import { ExecutableNode } from "./nodes/executable-node"
 import { OneInchSwapComponent, OneInchQuoteComponent } from "@/lib/components/defi/oneinch-swap"
 import { FusionPlusComponent, ChainSelectorComponent } from "@/lib/components/defi/fusion-plus"
@@ -164,6 +164,139 @@ export const PriceTriggerNode = ({ data, selected }: NodeProps) => (
     <div className="text-xs text-gray-600 space-y-1">
       <div>Price: ${data.config?.triggerPrice || "3000"}</div>
       <div>Type: {data.config?.triggerType || "above"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+// New Swap Application Nodes
+export const TokenSelectorNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-blue-500 text-white rounded">
+        <Search className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Token Selector</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>From: {data.config?.defaultFromToken || "ETH"}</div>
+      <div>To: {data.config?.defaultToToken || "USDC"}</div>
+      <div>Tokens: {data.config?.enabledTokens?.length || 6}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+export const PriceImpactCalculatorNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-orange-500 text-white rounded">
+        <TrendingUp className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Price Impact</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Warning: {data.config?.warningThreshold || 3}%</div>
+      <div>Max: {data.config?.maxImpactThreshold || 15}%</div>
+      <div>Analysis: {data.config?.detailedAnalysis ? "Yes" : "No"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+export const TransactionMonitorNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-green-500 text-white rounded">
+        <Activity className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Transaction Monitor</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Confirmations: {data.config?.confirmationsRequired || 1}</div>
+      <div>Timeout: {data.config?.timeoutMinutes || 30}m</div>
+      <div>MEV Detection: {data.config?.enableMEVDetection ? "On" : "Off"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+// 1inch Protocol Nodes
+export const FusionSwapNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-purple-500 text-white rounded">
+        <Zap className="w-4 h-4" />
+      </div>
+      <span className="font-medium">1inch Fusion</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Mode: {data.config?.enableGaslessSwaps ? "Gasless" : "Standard"}</div>
+      <div>Auction: {data.config?.auctionDuration || "auto"}</div>
+      <div>MEV Protection: {data.config?.enableMEVProtection ? "On" : "Off"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+export const LimitOrderNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-indigo-500 text-white rounded">
+        <TrendingUp className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Limit Orders</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Type: {data.config?.orderType || "limit"}</div>
+      <div>Strategies: {data.config?.enableAdvancedStrategies ? "Advanced" : "Basic"}</div>
+      <div>Protocol: 1inch v3</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+export const PortfolioAPINode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-emerald-500 text-white rounded">
+        <TrendingUp className="w-4 h-4" />
+      </div>
+      <span className="font-medium">1inch Portfolio</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>History: {data.config?.trackHistory ? "Enabled" : "Disabled"}</div>
+      <div>Analytics: {data.config?.enableAnalytics ? "On" : "Off"}</div>
+      <div>APIs: Balance + Portfolio</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+export const DeFiDashboardNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded">
+        <Layout className="w-4 h-4" />
+      </div>
+      <span className="font-medium">1inch DeFi Suite</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div className="flex flex-wrap gap-1">
+        {["Swap", "Fusion", "Limits", "Portfolio"].map((feature) => (
+          <Badge key={feature} variant="secondary" className="text-xs">
+            {feature}
+          </Badge>
+        ))}
+      </div>
+      <div>Theme: {data.config?.theme || "1inch-branded"}</div>
     </div>
     <Handle type="source" position={Position.Bottom} />
   </NodeWrapper>
@@ -475,6 +608,17 @@ export const CustomNodes = {
   oneInchQuote: OneInchQuoteNode,
   fusionPlus: FusionPlusNode,
   chainSelector: ChainSelectorNode,
+  
+  // New 1inch Protocol nodes for hackathon
+  fusionSwap: FusionSwapNode,
+  limitOrder: LimitOrderNode,
+  portfolioAPI: PortfolioAPINode,
+  defiDashboard: DeFiDashboardNode,
+  
+  // New Swap Application nodes
+  tokenSelector: TokenSelectorNode,
+  priceImpactCalculator: PriceImpactCalculatorNode,
+  transactionMonitor: TransactionMonitorNode,
   
   // DeFi UI nodes
   tokenInput: TokenInputNode,

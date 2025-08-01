@@ -27,8 +27,9 @@ import { CustomNodes } from "./custom-nodes"
 import { Button } from "@/components/ui/button"
 import { Save, Play, Zap, Trash2 } from "lucide-react"
 import { getTemplateById } from "@/lib/templates"
-import { CodeGenerator, type CodeGenerationResult } from "@/lib/code-generator"
+import { OneInchCodeGenerator, type CodeGenerationResult } from "@/lib/oneinch-code-generator"
 import { CodePreviewModal } from "./code-preview-modal"
+import { GitHubPublishModal } from "./github-publish-modal"
 import { executionClient, type WorkflowDefinition } from "@/lib/execution-client"
 
 const nodeTypes: NodeTypes = CustomNodes
@@ -77,6 +78,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const [templateLoaded, setTemplateLoaded] = useState(false)
   const [codeResult, setCodeResult] = useState<CodeGenerationResult | null>(null)
   const [showCodeModal, setShowCodeModal] = useState(false)
+  const [showGitHubModal, setShowGitHubModal] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
   
@@ -472,9 +474,18 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const generateCode = async () => {
     setGenerating(true)
     try {
-      // Use the actual code generator
-      const projectName = isTemplateProject ? "MySwap" : "MyDApp"
-      const result = CodeGenerator.generateFromFlow(nodes, edges, projectName)
+      // Use the new 1inch code generator
+      const projectName = isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"
+      const result = OneInchCodeGenerator.generateFromWorkflow(
+        nodes, 
+        edges, 
+        projectName,
+        { 
+          network: "Ethereum",
+          hackathonMode: true,
+          oneInchApiKey: "template-mode-no-key-needed"
+        }
+      )
       
       // Show the code preview modal
       setCodeResult(result)
@@ -732,7 +743,18 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         isOpen={showCodeModal}
         onClose={() => setShowCodeModal(false)}
         result={codeResult}
-        projectName={isTemplateProject ? "MySwap" : "MyDApp"}
+        projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+        onPublishToGitHub={() => {
+          setShowCodeModal(false)
+          setShowGitHubModal(true)
+        }}
+      />
+
+      <GitHubPublishModal
+        isOpen={showGitHubModal}
+        onClose={() => setShowGitHubModal(false)}
+        codeResult={codeResult}
+        projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
       />
     </div>
   )

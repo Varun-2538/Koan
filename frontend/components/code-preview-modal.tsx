@@ -5,19 +5,39 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Copy, Download, Github, ExternalLink } from "lucide-react"
-import type { CodeGenerationResult } from "@/lib/code-generator"
+import type { CodeGenerationResult } from "@/lib/oneinch-code-generator"
 
 interface CodePreviewModalProps {
   isOpen: boolean
   onClose: () => void
   result: CodeGenerationResult | null
   projectName: string
+  onPublishToGitHub?: () => void
 }
 
-export function CodePreviewModal({ isOpen, onClose, result, projectName }: CodePreviewModalProps) {
+export function CodePreviewModal({ isOpen, onClose, result, projectName, onPublishToGitHub }: CodePreviewModalProps) {
   const [copiedFile, setCopiedFile] = useState<string | null>(null)
 
   if (!result) return null
+
+  const downloadCode = () => {
+    if (!result) return;
+    
+    // Create a zip-like structure by downloading individual files
+    result.files.forEach((file, index) => {
+      setTimeout(() => {
+        const blob = new Blob([file.content], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.path.replace('/', '_');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, index * 100); // Stagger downloads
+    });
+  };
 
   const copyToClipboard = async (content: string, fileName: string) => {
     try {
@@ -144,10 +164,16 @@ export function CodePreviewModal({ isOpen, onClose, result, projectName }: CodeP
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
-            <Github className="w-4 h-4 mr-2" />
-            Deploy Now
+          <Button onClick={downloadCode} variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Download Code
           </Button>
+          {onPublishToGitHub && (
+            <Button onClick={onPublishToGitHub} className="bg-black text-white hover:bg-gray-800">
+              <Github className="w-4 h-4 mr-2" />
+              Publish to GitHub
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

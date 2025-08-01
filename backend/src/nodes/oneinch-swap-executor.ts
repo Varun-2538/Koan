@@ -26,9 +26,19 @@ export class OneInchSwapExecutor implements NodeExecutor {
   }
 
   async validate(inputs: Record<string, any>): Promise<{ valid: boolean; errors: string[] }> {
-    const errors: string[] = []
+    const isTemplateMode = inputs.template_creation_mode || inputs.mode === 'template' || inputs.config_only;
+    const errors: string[] = [];
 
-    // Required fields
+    if (isTemplateMode) {
+      try {
+        await this.validateTemplateConfig(inputs);
+        return { valid: true, errors: [] };
+      } catch (error: any) {
+        return { valid: false, errors: [error.message] };
+      }
+    }
+
+    // Execution mode validation
     if (!inputs.api_key && !this.apiKey) {
       errors.push('1inch API key is required')
     }
@@ -90,11 +100,43 @@ export class OneInchSwapExecutor implements NodeExecutor {
     return { valid: errors.length === 0, errors }
   }
 
+  private async validateTemplateConfig(inputs: Record<string, any>): Promise<void> {
+    // Validate supported chains
+    if (inputs.supported_chains) {
+      if (!Array.isArray(inputs.supported_chains)) {
+        throw new Error('supported_chains must be an array');
+      }
+      
+      const validChains = [1, 137, 56, 42161, 10, 43114];
+      const invalidChains = inputs.supported_chains.filter(chain => !validChains.includes(Number(chain)));
+      if (invalidChains.length > 0) {
+        throw new Error(`Unsupported chains: ${invalidChains.join(', ')}`);
+      }
+    }
+
+    // Validate slippage settings
+    if (inputs.default_slippage !== undefined) {
+      if (typeof inputs.default_slippage !== 'number' || inputs.default_slippage < 0.1 || inputs.default_slippage > 50) {
+        throw new Error('default_slippage must be a number between 0.1 and 50');
+      }
+    }
+
+    // Validate gas optimization
+    if (inputs.gas_optimization && !['speed', 'balanced', 'cost'].includes(inputs.gas_optimization)) {
+      throw new Error('gas_optimization must be one of: speed, balanced, cost');
+    }
+  }
+
   async execute(inputs: Record<string, any>, context: ExecutionContext): Promise<NodeExecutionResult> {
     const startTime = Date.now()
-    const logs: string[] = []
+    const isTemplateMode = inputs.template_creation_mode || inputs.mode === 'template' || inputs.config_only;
 
     try {
+      if (isTemplateMode) {
+        return this.executeTemplateMode(inputs, context);
+      }
+
+      const logs: string[] = []
       logs.push(`[${new Date().toISOString()}] Starting 1inch swap execution`)
 
       // Use provided API key or fallback to constructor key
@@ -368,6 +410,56 @@ export class OneInchSwapExecutor implements NodeExecutor {
     // This would compare with other DEX rates
     // For now, return estimated savings
     return quote.estimatedGas || '0'
+  }
+
+  private async executeTemplateMode(inputs: Record<string, any>, context: ExecutionContext): Promise<NodeExecutionResult> {
+    this.logger.info('🔄 Configuring 1inch swap for template creation');
+
+    const config = {
+      supported_chains: inputs.supported_chains || [1, 137, 42161, 10, 56, 43114],
+      default_slippage: inputs.default_slippage || 1,
+      gas_optimization: inputs.gas_optimization || 'balanced',
+      enable_partial_fill: inputs.enable_partial_fill !== false,
+      mev_protection: inputs.mev_protection !== false,
+      deadline: inputs.deadline || 300 // 5 minutes
+    };
+
+    // Mock swap result for template
+    const mockSwapResult = {
+      transaction_hash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+      from_token: 'ETH',
+      to_token: 'USDC',
+      from_amount: '1.0',
+      to_amount: '1650.25',
+      gas_used: '120000',
+      gas_price: '20',
+      status: 'completed'
+    };
+
+    return {
+      success: true,
+      outputs: {
+        swap_config: config,
+        mock_swap: mockSwapResult,
+        supported_features: [
+          '1inch DEX aggregation',
+          'Optimal routing algorithm',
+          'MEV protection',
+          'Gas optimization',
+          'Partial fill support',
+          'Multi-chain support'
+        ]
+      },
+      logs: [
+        `🔄 1inch swap configured`,
+        `🔗 Supporting ${config.supported_chains.length} chains`,
+        `📊 Default slippage: ${config.default_slippage}%`,
+        `⛽ Gas optimization: ${config.gas_optimization}`,
+        `🛡️ MEV protection: ${config.mev_protection ? 'enabled' : 'disabled'}`,
+        `⏰ Deadline: ${config.deadline}s`
+      ],
+      executionTime: 5
+    };
   }
 
   private isValidAddress(address: string): boolean {

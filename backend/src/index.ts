@@ -21,6 +21,7 @@ import { PortfolioAPIExecutor } from './nodes/portfolio-api-executor';
 import { OneInchQuoteExecutor } from './nodes/oneinch-quote-executor';
 import { FusionSwapExecutor } from './nodes/fusion-swap-executor';
 import { LimitOrderExecutor } from './nodes/limit-order-executor';
+import { DeFiDashboardExecutor } from './nodes/defi-dashboard-executor';
 import {
   WorkflowDefinition,
   ExecutionContext,
@@ -131,6 +132,7 @@ executionEngine.registerNodeExecutor(new PortfolioAPIExecutor(logger))
 executionEngine.registerNodeExecutor(new OneInchQuoteExecutor(logger, config.apis.oneInch.apiKey))
 executionEngine.registerNodeExecutor(new FusionSwapExecutor(logger, config.apis.oneInch.apiKey))
 executionEngine.registerNodeExecutor(new LimitOrderExecutor(logger, config.apis.oneInch.apiKey))
+executionEngine.registerNodeExecutor(new DeFiDashboardExecutor(logger))
 
 // Track WebSocket connections
 const connectedClients = new Map<string, any>()

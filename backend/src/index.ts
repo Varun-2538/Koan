@@ -218,7 +218,7 @@ executionEngine.on('execution.event', (event: ExecutionEvent) => {
 // REST API Routes
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),

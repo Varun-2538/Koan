@@ -218,7 +218,7 @@ executionEngine.on('execution.event', (event: ExecutionEvent) => {
 // REST API Routes
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -320,6 +320,49 @@ app.get('/api/executions/:executionId/logs', (req, res) => {
   }
   
   res.json({ logs })
+})
+
+// Return generated code artifacts (if any) for an execution
+app.get('/api/executions/:executionId/code', async (req, res) => {
+  const { executionId } = req.params
+
+  const execution = executionEngine.getExecution(executionId)
+  if (!execution) {
+    return res.status(404).json({ error: 'Execution not found' })
+  }
+
+  // Aggregate any generated files from node results (supports nested structures)
+  const generated: Record<string, any> = {}
+  for (const [nodeId, step] of execution.steps) {
+    const outputs = step.result?.outputs || {}
+
+    if (outputs.generatedFiles) {
+      generated[nodeId] = outputs.generatedFiles
+    } else if (outputs.code) {
+      generated[nodeId] = outputs.code
+    } else {
+      // Look one level deeper for typical template wrappers (e.g., mock_dashboard)
+      for (const key of Object.keys(outputs)) {
+        const inner = outputs[key]
+        if (inner && typeof inner === 'object') {
+          if (inner.generatedFiles) {
+            generated[nodeId] = inner.generatedFiles
+            break
+          }
+          if (inner.code) {
+            generated[nodeId] = inner.code
+            break
+          }
+        }
+      }
+    }
+  }
+
+  if (Object.keys(generated).length === 0) {
+    return res.status(404).json({ error: 'No generated code available for this execution' })
+  }
+
+  res.json({ executionId, generated })
 })
 
 // Cancel execution

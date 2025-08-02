@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import asyncio
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List
 
@@ -41,10 +42,11 @@ class ArchitectureMapperAgent:
     Example usage
     -------------
     >>> agent = ArchitectureMapperAgent()
-    >>> flow = await agent.map_user_idea(
+    >>> await agent.initialize()
+    >>> requirements = await agent.analyze_request(
     ...     "Create a swap application for ETH, USDC, WBTC with slippage protection"
     ... )
-    >>> print(flow.to_dict())
+    >>> print(requirements)
     """
 
     def __init__(
@@ -52,8 +54,14 @@ class ArchitectureMapperAgent:
         model_id: str = "claude-sonnet-4-20250514",
         temperature: float = 0.0,
     ) -> None:
+        self.model_id = model_id
+        self.temperature = temperature
+        self._agent = None
+        
+    async def initialize(self) -> None:
+        """Initialize the agno agent - required before use"""
         # Initialize underlying LLM via agno-agi.
-        claude = Claude(id=model_id, temperature=temperature)
+        claude = Claude(id=self.model_id, temperature=self.temperature)
 
         self._agent = Agent(
             model=claude,
@@ -68,29 +76,170 @@ class ArchitectureMapperAgent:
         """Detailed prompt sent as system instructions to the LLM."""
         return (
             "You are an expert DeFi architecture mapper. "
-            "Given a user's natural-language request, extract the following as JSON:\n"
-            "  description: brief summary\n"
-            "  nodes: list of node specifications. Each node spec has:\n"
-            "    id: unique slug (string, lowercase, hyphen-separated)\n"
-            "    type: node type (e.g. wallet, token_selector, dex_quote)\n"
-            "    params: object with key/value parameters relevant to the node\n"
-            "  edges: list of edges where each edge is {\"from\": node_id, \"to\": node_id}\n"
+            "Given a user's natural-language request, analyze it and provide structured information.\n\n"
+            
+            "Available backend node types:\n"
+            "- walletConnector: Connect cryptocurrency wallets\n" 
+            "- tokenSelector: Select and configure tokens for swapping\n"
+            "- oneInchQuote: Get optimal swap quotes using 1inch\n"
+            "- oneInchSwap: Execute token swaps using 1inch\n"
+            "- priceImpactCalculator: Calculate price impact with risk assessment\n"
+            "- transactionMonitor: Monitor transaction status\n"
+            "- fusionPlus: Cross-chain swaps using Fusion+\n"
+            "- portfolioAPI: Portfolio tracking and analytics\n"
+            "- chainSelector: Select blockchain networks\n"
+            "- transactionStatus: Track transaction confirmations\n"
+            "- limitOrder: Create limit orders\n"
+            "- fusionSwap: Gasless MEV-protected swaps\n\n"
+            
+            "Respond with a JSON object containing:\n"
+            "{\n"
+            "  \"pattern\": \"type of DeFi application (e.g., 'DEX Aggregator', 'Cross-Chain Bridge')\",\n"
+            "  \"tokens\": [\"list\", \"of\", \"tokens\", \"mentioned\"],\n"
+            "  \"features\": [\"list\", \"of\", \"features\", \"like\", \"slippage protection\"],\n"
+            "  \"chains\": [\"ethereum\", \"polygon\"],\n"
+            "  \"user_intent\": \"summary of what user wants\",\n"
+            "  \"suggested_nodes\": [\"list\", \"of\", \"recommended\", \"node\", \"types\"]\n"
+            "}\n\n"
             "Respond ONLY with valid JSON (no markdown)."
         )
 
-    async def map_user_idea(self, user_input: str) -> NodeFlow:
-        """Main public API: convert *user_input* into a NodeFlow object."""
-        # Run the agent synchronously; agno returns an iterator of messages.
-        messages = self._agent.run(user_input)
+    async def analyze_request(self, user_input: str) -> Dict[str, Any]:
+        """
+        Analyze user's natural language request and extract DeFi requirements
+        
+        Args:
+            user_input: Natural language description of DeFi requirements
+            
+        Returns:
+            Structured requirements dictionary
+        """
+        if not self._agent:
+            raise RuntimeError("Agent not initialized. Call initialize() first.")
+            
+        # Run the agent - this might be sync or async depending on agno version
+        try:
+            if hasattr(self._agent, 'arun'):
+                # Async version
+                messages = await self._agent.arun(user_input)
+            else:
+                # Sync version - run in executor to avoid blocking
+                messages = await asyncio.to_thread(self._agent.run, user_input)
+        except Exception as e:
+            # Fallback to mock analysis if agno fails
+            return self._fallback_analysis(user_input)
 
         content = "".join([m.content for m in messages]) if isinstance(messages, list) else str(messages)
 
-        data = self._extract_json(content)
+        try:
+            data = self._extract_json(content)
+            return self._normalize_requirements(data)
+        except (json.JSONDecodeError, ValueError) as e:
+            # Fallback if JSON parsing fails
+            return self._fallback_analysis(user_input)
 
-        nodes = [NodeSpec(**n) for n in data.get("nodes", [])]
-        edges = data.get("edges", [])
-        description = data.get("description", "")
-        return NodeFlow(description=description, nodes=nodes, edges=edges)
+    async def map_user_idea(self, user_input: str) -> NodeFlow:
+        """Legacy method for backward compatibility - converts to new format"""
+        requirements = await self.analyze_request(user_input)
+        
+        # Convert to NodeFlow format
+        nodes = []
+        edges = []
+        
+        suggested_nodes = requirements.get('suggested_nodes', [])
+        for i, node_type in enumerate(suggested_nodes):
+            nodes.append(NodeSpec(
+                id=f"{node_type}-{i+1}",
+                type=node_type,
+                params=self._generate_node_params(node_type, requirements)
+            ))
+            
+            # Create simple chain of edges
+            if i > 0:
+                edges.append({
+                    "from": f"{suggested_nodes[i-1]}-{i}",
+                    "to": f"{node_type}-{i+1}"
+                })
+        
+        return NodeFlow(
+            description=requirements.get('user_intent', 'DeFi workflow'),
+            nodes=nodes,
+            edges=edges
+        )
+
+    def _generate_node_params(self, node_type: str, requirements: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate appropriate parameters for each node type"""
+        base_params = {}
+        
+        if node_type == 'tokenSelector':
+            base_params['tokens'] = requirements.get('tokens', ['ETH', 'USDC'])
+            
+        elif node_type == 'chainSelector':
+            base_params['chains'] = requirements.get('chains', ['ethereum'])
+            
+        elif node_type in ['oneInchQuote', 'oneInchSwap']:
+            if 'slippage protection' in requirements.get('features', []):
+                base_params['slippageProtection'] = True
+                
+        elif node_type == 'priceImpactCalculator':
+            base_params['warningThreshold'] = 3.0
+            base_params['detailedAnalysis'] = True
+            
+        return base_params
+        
+    def _fallback_analysis(self, user_input: str) -> Dict[str, Any]:
+        """Fallback analysis when agno is not available"""
+        input_lower = user_input.lower()
+        
+        # Simple pattern detection
+        if any(word in input_lower for word in ['swap', 'exchange', 'trade']):
+            pattern = "DEX Aggregator"
+            suggested_nodes = ['walletConnector', 'tokenSelector', 'oneInchQuote', 'priceImpactCalculator', 'oneInchSwap', 'transactionMonitor']
+        elif any(word in input_lower for word in ['bridge', 'cross-chain']):
+            pattern = "Cross-Chain Bridge"
+            suggested_nodes = ['walletConnector', 'chainSelector', 'tokenSelector', 'fusionPlus', 'transactionMonitor']
+        elif any(word in input_lower for word in ['portfolio', 'dashboard']):
+            pattern = "Portfolio Dashboard"
+            suggested_nodes = ['walletConnector', 'portfolioAPI']
+        else:
+            pattern = "Custom DeFi Application"
+            suggested_nodes = ['walletConnector', 'tokenSelector']
+            
+        # Extract tokens
+        tokens = []
+        token_patterns = ['eth', 'usdc', 'usdt', 'wbtc', 'dai', 'uni', 'link']
+        for token in token_patterns:
+            if token in input_lower:
+                tokens.append(token.upper())
+                
+        # Extract features
+        features = []
+        if 'slippage' in input_lower:
+            features.append('slippage protection')
+        if 'mev' in input_lower:
+            features.append('MEV protection')
+        if 'gas' in input_lower:
+            features.append('gas optimization')
+            
+        return {
+            'pattern': pattern,
+            'tokens': tokens or ['ETH', 'USDC'],
+            'features': features,
+            'chains': ['ethereum'],
+            'user_intent': user_input,
+            'suggested_nodes': suggested_nodes
+        }
+
+    def _normalize_requirements(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize parsed requirements to expected format"""
+        return {
+            'pattern': data.get('pattern', 'Custom DeFi Application'),
+            'tokens': data.get('tokens', []),
+            'features': data.get('features', []),
+            'chains': data.get('chains', ['ethereum']),
+            'user_intent': data.get('user_intent', ''),
+            'suggested_nodes': data.get('suggested_nodes', [])
+        }
 
     @staticmethod
     def _extract_json(text: str) -> Dict[str, Any]:

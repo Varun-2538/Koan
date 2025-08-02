@@ -79,18 +79,26 @@ class ArchitectureMapperAgent:
             "Given a user's natural-language request, analyze it and provide structured information.\n\n"
             
             "Available backend node types:\n"
-            "- walletConnector: Connect cryptocurrency wallets\n" 
-            "- tokenSelector: Select and configure tokens for swapping\n"
-            "- oneInchQuote: Get optimal swap quotes using 1inch\n"
-            "- oneInchSwap: Execute token swaps using 1inch\n"
+            "- walletConnector: Connect cryptocurrency wallets (MetaMask, WalletConnect)\n" 
+            "- tokenSelector: Select and configure tokens for operations (ETH, USDC, WBTC, etc.)\n"
+            "- oneInchQuote: Get optimal swap quotes using 1inch aggregator\n"
+            "- oneInchSwap: Execute token swaps using 1inch aggregator\n"
+            "- limitOrder: Create and manage limit orders using 1inch Limit Order Protocol\n"
             "- priceImpactCalculator: Calculate price impact with risk assessment\n"
-            "- transactionMonitor: Monitor transaction status\n"
-            "- fusionPlus: Cross-chain swaps using Fusion+\n"
+            "- transactionMonitor: Monitor transaction status and confirmations\n"
+            "- transactionStatus: Track transaction confirmations and results\n"
+            "- fusionPlus: Cross-chain swaps using Fusion+ bridge\n"
+            "- fusionSwap: Gasless MEV-protected swaps using Fusion\n"
             "- portfolioAPI: Portfolio tracking and analytics\n"
-            "- chainSelector: Select blockchain networks\n"
-            "- transactionStatus: Track transaction confirmations\n"
-            "- limitOrder: Create limit orders\n"
-            "- fusionSwap: Gasless MEV-protected swaps\n\n"
+            "- chainSelector: Select blockchain networks (Ethereum, Polygon, etc.)\n"
+            "- erc20Token: ERC20 token operations and management\n"
+            "- defiDashboard: DeFi dashboard with analytics and monitoring\n\n"
+            
+            "Node selection guidelines:\n"
+            "- For LIMIT ORDERS: Use limitOrder + tokenSelector + walletConnector\n"
+            "- For SWAPS: Use oneInchQuote + oneInchSwap + tokenSelector + walletConnector\n"
+            "- For PORTFOLIO: Use portfolioAPI + walletConnector\n"
+            "- For CROSS-CHAIN: Use fusionPlus + chainSelector + tokenSelector\n\n"
             
             "Respond with a JSON object containing:\n"
             "{\n"
@@ -104,30 +112,42 @@ class ArchitectureMapperAgent:
             "Respond ONLY with valid JSON (no markdown)."
         )
 
-    async def analyze_request(self, user_input: str) -> Dict[str, Any]:
+    async def analyze_request(self, user_input: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Analyze user's natural language request and extract DeFi requirements
         
         Args:
             user_input: Natural language description of DeFi requirements
+            context: Optional conversation context for multi-turn interactions
             
         Returns:
             Structured requirements dictionary
         """
         if not self._agent:
             raise RuntimeError("Agent not initialized. Call initialize() first.")
-            
+        
+        # Prepare input with context if available
+        enhanced_input = user_input
+        if context and context.get("history"):
+            # Add conversation history for context
+            history_context = "\n\nConversation history:\n"
+            for msg in context["history"][-3:]:  # Last 3 messages for context
+                role = msg.get("role", "unknown")
+                content = msg.get("content", "")
+                history_context += f"{role}: {content}\n"
+            enhanced_input = f"{user_input}{history_context}"
+        
         # Run the agent - this might be sync or async depending on agno version
         try:
             if hasattr(self._agent, 'arun'):
                 # Async version
-                messages = await self._agent.arun(user_input)
+                messages = await self._agent.arun(enhanced_input)
             else:
                 # Sync version - run in executor to avoid blocking
-                messages = await asyncio.to_thread(self._agent.run, user_input)
+                messages = await asyncio.to_thread(self._agent.run, enhanced_input)
         except Exception as e:
             # Fallback to mock analysis if agno fails
-            return self._fallback_analysis(user_input)
+            return self._fallback_analysis(user_input, context)
 
         content = "".join([m.content for m in messages]) if isinstance(messages, list) else str(messages)
 
@@ -136,7 +156,7 @@ class ArchitectureMapperAgent:
             return self._normalize_requirements(data)
         except (json.JSONDecodeError, ValueError) as e:
             # Fallback if JSON parsing fails
-            return self._fallback_analysis(user_input)
+            return self._fallback_analysis(user_input, context)
 
     async def map_user_idea(self, user_input: str) -> NodeFlow:
         """Legacy method for backward compatibility - converts to new format"""
@@ -187,12 +207,15 @@ class ArchitectureMapperAgent:
             
         return base_params
         
-    def _fallback_analysis(self, user_input: str) -> Dict[str, Any]:
+    def _fallback_analysis(self, user_input: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Fallback analysis when agno is not available"""
         input_lower = user_input.lower()
         
         # Simple pattern detection
-        if any(word in input_lower for word in ['swap', 'exchange', 'trade']):
+        if any(word in input_lower for word in ['limit order', 'limit-order', 'limitorder', 'order']):
+            pattern = "Limit Order Application"
+            suggested_nodes = ['walletConnector', 'tokenSelector', 'limitOrder', 'transactionMonitor']
+        elif any(word in input_lower for word in ['swap', 'exchange', 'trade']):
             pattern = "DEX Aggregator"
             suggested_nodes = ['walletConnector', 'tokenSelector', 'oneInchQuote', 'priceImpactCalculator', 'oneInchSwap', 'transactionMonitor']
         elif any(word in input_lower for word in ['bridge', 'cross-chain']):
@@ -220,6 +243,10 @@ class ArchitectureMapperAgent:
             features.append('MEV protection')
         if 'gas' in input_lower:
             features.append('gas optimization')
+        if any(word in input_lower for word in ['limit', 'order']):
+            features.append('limit orders')
+        if 'monitor' in input_lower:
+            features.append('transaction monitoring')
             
         return {
             'pattern': pattern,

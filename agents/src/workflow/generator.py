@@ -45,6 +45,9 @@ class WorkflowGenerator:
         # Generate edges to connect the nodes
         edges = self._generate_edges(nodes)
         
+        # Add canvas positioning information
+        self._add_canvas_positions(nodes)
+        
         workflow_definition = {
             "id": workflow_id,
             "name": self._generate_workflow_name(requirements),
@@ -114,6 +117,14 @@ class WorkflowGenerator:
                 'fusionPlus',
                 'transactionMonitor',
                 'defiDashboard'
+            ]
+        elif pattern == 'Limit Order Application':
+            suggested_nodes = [
+                'walletConnector',
+                'tokenSelector', 
+                'limitOrder',
+                'transactionMonitor',
+                'portfolioAPI'
             ]
         
         nodes = []
@@ -486,3 +497,60 @@ class WorkflowGenerator:
                 errors.append(f"Edge {i}: Target node '{edge['target']}' does not exist")
                 
         return errors
+    
+    def _add_canvas_positions(self, nodes: List[Dict[str, Any]]) -> None:
+        """Add canvas positioning information to nodes for frontend display"""
+        
+        # Calculate grid layout
+        cols = 3  # Number of columns
+        node_width = 250
+        node_height = 150
+        start_x = 150
+        start_y = 100
+        
+        for i, node in enumerate(nodes):
+            col = i % cols
+            row = i // cols
+            
+            x = start_x + col * node_width
+            y = start_y + row * node_height
+            
+            # Add position and UI metadata for frontend
+            if 'position' not in node:
+                node['position'] = {'x': x, 'y': y}
+            
+            # Ensure node has frontend-compatible structure
+            if 'data' not in node:
+                node['data'] = {}
+            
+            # Add label if not present
+            if 'label' not in node['data']:
+                node['data']['label'] = self._generate_node_label(node)
+            
+            # Add config if not present
+            if 'config' not in node['data']:
+                node['data']['config'] = node.get('config', {})
+                
+    def _generate_node_label(self, node: Dict[str, Any]) -> str:
+        """Generate a human-readable label for a node"""
+        node_type = node.get('type', 'Unknown')
+        
+        # Map backend node types to frontend labels
+        label_map = {
+            'walletConnector': 'Wallet Connection',
+            'tokenSelector': 'Token Selector', 
+            'oneInchQuote': '1inch Quote',
+            'oneInchSwap': '1inch Swap',
+            'priceImpactCalculator': 'Price Impact Calculator',
+            'transactionMonitor': 'Transaction Monitor',
+            'fusionPlus': 'Fusion+ Bridge',
+            'chainSelector': 'Chain Selector',
+            'portfolioAPI': 'Portfolio API',
+            'fusionSwap': 'Fusion Swap',
+            'limitOrder': 'Limit Order',
+            'erc20Token': 'ERC20 Token',
+            'transactionStatus': 'Transaction Status',
+            'defiDashboard': 'DeFi Dashboard'
+        }
+        
+        return label_map.get(node_type, node_type.replace('_', ' ').title())

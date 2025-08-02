@@ -1,175 +1,191 @@
-# DeFi Agent System - API Integration Testing
+# DeFi Flow Generator - Streamlit Visual Interface
 
 ## Goal
-Create a **Python agent system** that takes natural language input, generates DeFi workflows using agno-agi, and executes them by calling the existing TypeScript backend APIs.
+Create a **Streamlit web application** that takes natural language DeFi requirements, generates workflows using agno-agi agents, and displays interactive visual node flows with connections.
 
-## Architecture Overview
-- **Python Frontend**: AI agents for natural language processing and workflow generation
-- **TypeScript Backend**: Existing DeFiExecutionEngine and NodeExecutors (already implemented)
-- **API Communication**: Python makes HTTP calls to TypeScript backend APIs
+## Visual Interface Requirements
 
-## Implementation Requirements
+### 1. Main Streamlit App (`app.py`)
+Create a web interface with:
+- **Text input box** for DeFi requirements
+- **Submit button** to process the input
+- **Live agent call logging** in a sidebar
+- **Interactive flow visualization** as the main content
+- **Workflow details panel** showing generated nodes and connections
 
-### 1. Python Agent System (`main.py`)
-Create the conversational interface:
-- Takes user input: `"I want to create a swap application for my DeFi protocol that supports ETH, USDC, and WBTC with slippage protection"`
-- Uses agno-agi to parse requirements and generate workflow definitions
-- Calls TypeScript backend APIs to execute the workflow
-
-### 2. AI Agent Implementation (`agents/defi_architecture_agent.py`)
-Using agno-agi framework:
-- **Parse natural language** to extract DeFi requirements
-- **Generate WorkflowDefinition** with proper nodes and dependencies
-- **Map to existing node types** from your TypeScript backend:
-  - `walletConnection`
-  - `tokenSelector` 
-  - `oneInchQuote`
-  - `priceImpactCalculator`
-  - `swapExecution`
-  - `transactionMonitor`
-
-### 3. Backend API Client (`api/backend_client.py`)
-HTTP client to communicate with your TypeScript backend:
-```python
-class DeFiBackendClient:
-    def __init__(self, base_url="http://localhost:3000"):
-        self.base_url = base_url
-    
-    async def execute_workflow(self, workflow_definition: Dict) -> Dict:
-        """Call the TypeScript backend to execute workflow"""
-        response = await httpx.post(
-            f"{self.base_url}/api/workflows/execute",
-            json=workflow_definition
-        )
-        return response.json()
-    
-    async def get_execution_status(self, execution_id: str) -> Dict:
-        """Get workflow execution status"""
-        response = await httpx.get(
-            f"{self.base_url}/api/executions/{execution_id}"
-        )
-        return response.json()
+### 2. Test Input
+Default placeholder text in the input box:
+```
+"I want to create a swap application for my DeFi protocol that supports ETH, USDC, and WBTC with slippage protection"
 ```
 
-### 4. Workflow Generation (`workflow/generator.py`)
-Convert agent output to WorkflowDefinition format:
-```python
-def generate_swap_workflow(tokens: List[str], features: List[str]) -> Dict:
-    """Generate workflow definition for TypeScript backend"""
-    return {
-        "id": str(uuid.uuid4()),
-        "name": "DEX Swap Application",
-        "nodes": [
-            {
-                "id": "wallet-1",
-                "type": "walletConnection",
-                "data": {"config": {"networks": ["ethereum"]}}
-            },
-            {
-                "id": "tokens-1", 
-                "type": "tokenSelector",
-                "data": {"config": {"tokens": tokens}}
-            },
-            {
-                "id": "quote-1",
-                "type": "oneInchQuote", 
-                "data": {"config": {"slippageProtection": True}}
-            },
-            # ... other nodes
-        ],
-        "edges": [
-            {"source": "wallet-1", "target": "tokens-1"},
-            {"source": "tokens-1", "target": "quote-1"},
-            # ... connections
-        ]
-    }
-```
+### 3. Agent Integration (`agents/visual_architecture_agent.py`)
+Using agno-agi framework to:
+- **Parse natural language** input for DeFi requirements
+- **Generate workflow definition** with nodes and connections
+- **Log each agent decision** visibly in the Streamlit sidebar
+- **Return structured flow data** for visualization
 
-### 5. **CRITICAL: Agent-Based Workflow Generation**
-The key test - visible agent decision making:
-```python
+Expected agent call flow:
+```
 [AGENT CALL] ArchitectureMapper analyzing: "swap application for ETH, USDC, WBTC with slippage protection"
 [AGENT CALL] Detected DeFi pattern: DEX Aggregator Template
 [AGENT CALL] Required tokens: ETH, USDC, WBTC
-[AGENT CALL] Required feature: slippage protection  
-[AGENT CALL] Mapping to backend nodes:
-[AGENT CALL] → walletConnection (for wallet integration)
-[AGENT CALL] → tokenSelector (ETH, USDC, WBTC)
-[AGENT CALL] → oneInchQuote (with slippage protection)
-[AGENT CALL] → priceImpactCalculator
-[AGENT CALL] → swapExecution
-[AGENT CALL] → transactionMonitor
-[AGENT CALL] Building workflow definition...
-[API CALL] Sending workflow to TypeScript backend: http://localhost:3000/api/workflows/execute
+[AGENT CALL] Required feature: slippage protection
+[AGENT CALL] Generating node: WalletConnection
+[AGENT CALL] Generating node: TokenSelector (ETH, USDC, WBTC)
+[AGENT CALL] Generating node: OneInchQuote (with slippage)
+[AGENT CALL] Generating node: PriceImpactCalculator
+[AGENT CALL] Generating node: SwapExecution
+[AGENT CALL] Generating node: TransactionMonitor
+[AGENT CALL] Building connections: wallet → tokens → quote → calculate → execute → monitor
 ```
 
-### 6. Expected Terminal Output
-```bash
-$ python main.py
+### 4. Visual Flow Display (`visualization/flow_renderer.py`)
+Create interactive node flow visualization using one of:
+- **Streamlit-Agraph** for network graphs
+- **Plotly** for interactive diagrams
+- **Graphviz** for structured layouts
+- **Custom HTML/CSS** with streamlit components
 
-> Enter your DeFi request: I want to create a swap application for my DeFi protocol that supports ETH, USDC, and WBTC with slippage protection
+Requirements:
+- **Nodes** displayed as boxes with names and descriptions
+- **Connections** shown as arrows between nodes
+- **Interactive elements** - hover for details, click for configuration
+- **Color coding** by node type (wallet=blue, DEX=green, monitor=orange, etc.)
+- **Layout** that clearly shows the flow direction
 
-🤖 Processing with AI agents...
-[AGENT CALL] ArchitectureMapper analyzing request...
-[AGENT CALL] Detected pattern: Basic DEX Aggregator Template
-[AGENT CALL] Tokens identified: ETH, USDC, WBTC
-[AGENT CALL] Feature required: slippage protection
-[AGENT CALL] Generating workflow definition...
-
-📡 Calling TypeScript backend APIs...
-[API CALL] POST /api/workflows/execute
-[API RESPONSE] Execution started: exec_12345
-
-🚀 Workflow executing on backend...
-[API CALL] GET /api/executions/exec_12345/status
-[BACKEND] ⏳ Executing: walletConnection
-[BACKEND] ✅ Wallet connected (0.2s)
-[BACKEND] ⏳ Executing: tokenSelector
-[BACKEND] ✅ Tokens selected: ETH, USDC, WBTC (0.1s)
-[BACKEND] ⏳ Executing: oneInchQuote
-[BACKEND] ✅ Quote received with slippage protection (0.8s)
-[BACKEND] ⏳ Executing: priceImpactCalculator
-[BACKEND] ✅ Price impact calculated: 0.12% (0.1s)
-[BACKEND] ⏳ Executing: swapExecution
-[BACKEND] ✅ Swap executed successfully (2.1s)
-[BACKEND] ⏳ Executing: transactionMonitor
-[BACKEND] ✅ Transaction confirmed (3.2s)
-
-🎉 Workflow completed successfully!
-Architecture: Basic DEX Aggregator Template
-Total execution time: 6.5s
-Gas used: 180,000
-Generated code available at: http://localhost:3000/api/executions/exec_12345/code
+### 5. Expected Visual Output
+```
+Streamlit Interface:
+┌─────────────────────────────────────────────────────────────────┐
+│ 🔄 DeFi Flow Generator                                          │
+├─────────────────────────────────────────────────────────────────┤
+│ Enter your DeFi requirements:                                   │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ I want to create a swap application for my DeFi protocol   │ │
+│ │ that supports ETH, USDC, and WBTC with slippage protection │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                               [Generate Flow] 🚀               │
+├─────────────────────────────────────────────────────────────────┤
+│                          Visual Flow:                          │
+│                                                                 │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐         │
+│  │   Wallet    │───▶│   Token     │───▶│  1inch      │         │
+│  │ Connection  │    │  Selector   │    │  Quote      │         │
+│  │    💳       │    │ (ETH,USDC,  │    │ (slippage)  │         │
+│  └─────────────┘    │    WBTC)    │    └─────────────┘         │
+│                     └─────────────┘           │                │
+│                            │                  │                │
+│                            ▼                  ▼                │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐         │
+│  │Transaction  │◀───│    Swap     │◀───│   Price     │         │
+│  │  Monitor    │    │ Execution   │    │   Impact    │         │
+│  │     📊      │    │     ⚡      │    │ Calculator  │         │
+│  └─────────────┘    └─────────────┘    └─────────────┘         │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│ Sidebar: Agent Calls Log                                        │
+│ ✅ ArchitectureMapper analyzing request...                      │
+│ ✅ Detected: DEX Aggregator Template                            │
+│ ✅ Tokens: ETH, USDC, WBTC                                      │
+│ ✅ Feature: slippage protection                                 │
+│ ✅ Generated 6 nodes with dependencies                          │
+│ ✅ Workflow ready for execution                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 7. File Structure
+### 6. File Structure
 ```
-python_agents/
-├── main.py                          # Entry point
+streamlit_defi_flows/
+├── app.py                              # Main Streamlit application
 ├── agents/
 │   ├── __init__.py
-│   └── defi_architecture_agent.py   # agno-agi integration
-├── api/
+│   └── visual_architecture_agent.py    # agno-agi integration
+├── visualization/
 │   ├── __init__.py
-│   └── backend_client.py            # HTTP client for TS backend
-├── workflow/
+│   ├── flow_renderer.py               # Visual flow display logic
+│   └── node_styles.py                 # Color schemes and styling
+├── models/
 │   ├── __init__.py
-│   └── generator.py                 # Workflow definition builder
-└── requirements.txt                 # httpx, agno, anthropic
+│   └── workflow_models.py             # Data structures for flows
+├── utils/
+│   ├── __init__.py
+│   └── logger.py                      # Streamlit logging utilities
+└── requirements.txt                   # streamlit, agno, anthropic, plotly/agraph
 ```
 
-### 8. Backend API Assumptions
-Your TypeScript backend should have these endpoints:
-- `POST /api/workflows/execute` - Execute a workflow
-- `GET /api/executions/{id}` - Get execution status
-- `GET /api/executions/{id}/code` - Get generated code
+### 7. Streamlit App Layout (`app.py`)
+```python
+import streamlit as st
+from agents.visual_architecture_agent import VisualArchitectureAgent
+from visualization.flow_renderer import FlowRenderer
 
-## Success Criteria
-- ✅ **Agent-based workflow generation** using agno-agi
-- ✅ **API communication** with existing TypeScript backend
-- ✅ **Real execution** using your existing node executors
-- ✅ **Live status monitoring** via API polling
-- ✅ **No code duplication** - reuse existing TypeScript implementation
-- ✅ **Clean separation** - Python for AI, TypeScript for execution
+st.title("🔄 DeFi Flow Generator")
+st.subheader("Convert natural language to visual DeFi workflows")
 
-This approach leverages your existing backend while adding the AI agent layer in Python!
+# Input section
+user_input = st.text_area(
+    "Enter your DeFi requirements:",
+    placeholder="I want to create a swap application for my DeFi protocol that supports ETH, USDC, and WBTC with slippage protection",
+    height=100
+)
+
+# Sidebar for agent logs
+with st.sidebar:
+    st.header("🤖 Agent Calls")
+    log_container = st.container()
+
+# Generate button
+if st.button("Generate Flow 🚀"):
+    if user_input:
+        # Process with agents
+        agent = VisualArchitectureAgent()
+        with st.spinner("Processing with AI agents..."):
+            workflow = agent.generate_workflow(user_input, log_container)
+        
+        # Display visual flow
+        st.header("📊 Generated Workflow")
+        renderer = FlowRenderer()
+        renderer.display_flow(workflow)
+        
+        # Show workflow details
+        with st.expander("📋 Workflow Details"):
+            st.json(workflow.to_dict())
+```
+
+### 8. Node Types to Generate
+Based on the test input, create these 6 node types:
+- **WalletConnection** (💳) - Blue color
+- **TokenSelector** (🪙) - Yellow color  
+- **OneInchQuote** (📈) - Green color
+- **PriceImpactCalculator** (📊) - Purple color
+- **SwapExecution** (⚡) - Red color
+- **TransactionMonitor** (📋) - Orange color
+
+### 9. Interactive Features
+- **Hover effects** on nodes showing detailed information
+- **Click handlers** for node configuration (future feature)
+- **Zoom and pan** capabilities for large workflows
+- **Export options** for workflow definitions
+- **Real-time agent logging** in sidebar during generation
+
+### 10. Success Criteria
+- ✅ **Visual workflow generation** from natural language
+- ✅ **Interactive node display** with clear connections
+- ✅ **Real-time agent logging** visible in sidebar
+- ✅ **Responsive layout** that works on different screen sizes
+- ✅ **Clear flow direction** from input to output
+- ✅ **Professional visual design** suitable for demos
+
+## Dependencies
+```
+streamlit>=1.28.0
+agno>=latest
+anthropic>=latest
+plotly>=5.17.0
+streamlit-agraph>=0.0.45
+graphviz>=0.20.1
+```
+
+This Streamlit app will provide a visual proof-of-concept for the AI agent workflow generation system, making it easy to test and demonstrate the flow creation capabilities.

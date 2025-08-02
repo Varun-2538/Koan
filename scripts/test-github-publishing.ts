@@ -42,7 +42,7 @@ class GitHubPublishTester {
 
     const tests: GitHubPublishTest[] = [
       {
-        templateId: 'dex-aggregator-swap',
+        templateId: 'oneinch-powered-defi-suite',
         templateName: '1inch-Powered DeFi Suite',
         repoName: `test-1inch-defi-suite-${Date.now()}`,
         inputs: {

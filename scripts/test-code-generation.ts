@@ -34,7 +34,7 @@ class CodeGenerationTester {
 
     const tests: CodeGenerationTest[] = [
       {
-        templateId: 'dex-aggregator-swap',
+        templateId: 'oneinch-powered-defi-suite',
         templateName: '1inch-Powered DeFi Suite',
         inputs: {
           appName: 'Test 1inch DeFi Suite',

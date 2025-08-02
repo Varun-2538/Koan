@@ -1,548 +1,364 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Play, 
-  Settings, 
-  ExternalLink, 
-  Zap, 
-  Wallet, 
-  Coins, 
-  TrendingUp,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Eye,
-  Code,
-  Globe
-} from 'lucide-react';
-import type { CodeGenerationResult } from '@/lib/oneinch-code-generator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Play, Stop, ExternalLink, Settings, Globe } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
-interface LiveDashboardPreviewProps {
-  isOpen: boolean;
+interface LivePreviewProps {
+  workflow: any;
   onClose: () => void;
-  codeResult: CodeGenerationResult | null;
-  projectName: string;
 }
 
-interface ApiConfig {
-  oneInchApiKey: string;
+interface PreviewConfig {
+  oneInchApiKey?: string;
   chainId: string;
-  rpcUrl: string;
+  rpcUrl?: string;
+  walletConnectProjectId?: string;
+  enabledChains: string[];
+  defaultTokens: Record<string, string[]>;
 }
 
-interface PreviewState {
-  isRunning: boolean;
-  previewUrl: string | null;
-  error: string | null;
-  logs: string[];
-}
+const SUPPORTED_CHAINS = {
+  '1': { name: 'Ethereum', symbol: 'ETH', rpc: 'https://eth.llamarpc.com' },
+  '137': { name: 'Polygon', symbol: 'MATIC', rpc: 'https://polygon-rpc.com' },
+  '56': { name: 'BSC', symbol: 'BNB', rpc: 'https://bsc-dataseed1.binance.org' },
+  '42161': { name: 'Arbitrum', symbol: 'ETH', rpc: 'https://arb1.arbitrum.io/rpc' },
+  '10': { name: 'Optimism', symbol: 'ETH', rpc: 'https://mainnet.optimism.io' },
+  '43114': { name: 'Avalanche', symbol: 'AVAX', rpc: 'https://api.avax.network/ext/bc/C/rpc' }
+};
 
-export function LiveDashboardPreview({ 
-  isOpen, 
-  onClose, 
-  codeResult, 
-  projectName 
-}: LiveDashboardPreviewProps) {
-  const [apiConfig, setApiConfig] = useState<ApiConfig>({
-    oneInchApiKey: '',
+const DEFAULT_TOKENS = {
+  '1': ['ETH', 'USDC', 'USDT', 'DAI', 'WBTC', '1INCH'],
+  '137': ['MATIC', 'USDC', 'USDT', 'DAI', 'WETH', 'AAVE'],
+  '56': ['BNB', 'USDT', 'BUSD', 'CAKE', 'ETH'],
+  '42161': ['ETH', 'USDC', 'USDT', 'ARB'],
+  '10': ['ETH', 'USDC', 'OP'],
+  '43114': ['AVAX', 'USDC', 'USDT']
+};
+
+export default function LiveDashboardPreview({ workflow, onClose }: LivePreviewProps) {
+  const [isStarting, setIsStarting] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [config, setConfig] = useState<PreviewConfig>({
     chainId: '1',
-    rpcUrl: 'https://eth-mainnet.g.alchemy.com/v2/demo'
-  });
-  
-  const [previewState, setPreviewState] = useState<PreviewState>({
-    isRunning: false,
-    previewUrl: null,
-    error: null,
-    logs: []
+    enabledChains: ['1', '137', '56'],
+    defaultTokens: DEFAULT_TOKENS
   });
 
-  const [activeTab, setActiveTab] = useState('config');
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [isFirefox, setIsFirefox] = useState(false);
-  const [iframeBlocked, setIframeBlocked] = useState(false);
+  // Check if workflow needs 1inch API key
+  const needs1inchAPI = workflow.nodes?.some((node: any) => 
+    ['oneInchSwap', 'oneInchQuote', 'fusionSwap', 'portfolioAPI'].includes(node.type)
+  );
 
-  // Detect browser type
-  useEffect(() => {
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isFirefoxBrowser = userAgent.includes('firefox');
-    setIsFirefox(isFirefoxBrowser);
+  const needsWalletConnect = workflow.nodes?.some((node: any) => 
+    node.type === 'walletConnector'
+  );
+
+  const handleConfigChange = (key: keyof PreviewConfig, value: any) => {
+    setConfig(prev => ({ ...prev, [key]: value }));
+  };
+
+  const validateConfiguration = () => {
+    const errors: string[] = [];
     
-    // Set iframe blocked for Firefox by default
-    if (isFirefoxBrowser) {
-      setIframeBlocked(true);
+    if (needs1inchAPI && !config.oneInchApiKey) {
+      errors.push('1inch API key is required for swap operations');
     }
-  }, []);
+    
+    if (needsWalletConnect && !config.walletConnectProjectId) {
+      errors.push('WalletConnect Project ID is required for wallet connection');
+    }
 
-  const addLog = (message: string, type: 'info' | 'error' | 'success' = 'info') => {
-    const timestamp = new Date().toLocaleTimeString();
-    setPreviewState(prev => ({
-      ...prev,
-      logs: [...prev.logs, `[${timestamp}] ${type.toUpperCase()}: ${message}`]
-    }));
+    if (config.enabledChains.length === 0) {
+      errors.push('At least one chain must be enabled');
+    }
+
+    return errors;
   };
 
-  const validateApiConfig = (): boolean => {
-    if (!apiConfig.oneInchApiKey.trim()) {
-      setPreviewState(prev => ({ ...prev, error: '1inch API key is required' }));
-      return false;
+  const startPreview = async () => {
+    const errors = validateConfiguration();
+    if (errors.length > 0) {
+      toast.error(errors.join(', '));
+      return;
     }
-    if (!apiConfig.chainId.trim()) {
-      setPreviewState(prev => ({ ...prev, error: 'Chain ID is required' }));
-      return false;
-    }
-    if (!apiConfig.rpcUrl.trim()) {
-      setPreviewState(prev => ({ ...prev, error: 'RPC URL is required' }));
-      return false;
-    }
-    return true;
-  };
 
-  const startPreviewServer = async () => {
-    if (!validateApiConfig() || !codeResult) return;
-
-    setPreviewState(prev => ({ 
-      ...prev, 
-      isRunning: true, 
-      error: null,
-      logs: []
-    }));
-
-    addLog('Starting preview server...', 'info');
+    setIsStarting(true);
+    setLogs([]);
 
     try {
-      // Call the preview server API
-      const response = await fetch('http://localhost:3002/api/preview/start', {
+      // Inject configuration into workflow nodes
+      const configuredWorkflow = {
+        ...workflow,
+        nodes: workflow.nodes.map((node: any) => ({
+          ...node,
+          data: {
+            ...node.data,
+            config: {
+              ...node.data.config,
+              // Inject API keys and configuration for live preview
+              ...(node.type === 'oneInchSwap' && {
+                apiKey: config.oneInchApiKey,
+                chainId: config.chainId,
+                rpcUrl: SUPPORTED_CHAINS[config.chainId]?.rpc
+              }),
+              ...(node.type === 'walletConnector' && {
+                walletConnectProjectId: config.walletConnectProjectId,
+                supportedChains: config.enabledChains
+              }),
+              ...(node.type === 'tokenSelector' && {
+                enabledTokens: config.defaultTokens[config.chainId] || DEFAULT_TOKENS['1'],
+                chainId: config.chainId
+              }),
+              ...(node.type === 'chainSelector' && {
+                supportedChains: config.enabledChains,
+                defaultChain: config.chainId
+              })
+            }
+          }
+        }))
+      };
+
+      const response = await fetch('/api/preview/start', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          projectName,
-          config: apiConfig,
-          codeResult
+          workflow: configuredWorkflow,
+          config: config
         })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to start preview server');
-      }
+      const result = await response.json();
 
-      const data = await response.json();
-      
-      setPreviewState(prev => ({ 
-        ...prev, 
-        previewUrl: data.previewUrl,
-        isRunning: true 
-      }));
-
-      addLog(`Preview server started at ${data.previewUrl}`, 'success');
-      addLog('Dashboard is ready for interaction!', 'success');
-      addLog(`Port ${data.port} assigned successfully`, 'info');
-
-    } catch (error: any) {
-      addLog(`Failed to start preview server: ${error.message}`, 'error');
-      
-      // Provide specific error messages for common issues
-      if (error.message.includes('port') && error.message.includes('not available')) {
-        addLog('Port conflict detected. Please try again or restart the backend server.', 'error');
-      } else if (error.message.includes('ECONNREFUSED')) {
-        addLog('Cannot connect to preview server. Please ensure backend is running.', 'error');
-      }
-      
-      setPreviewState(prev => ({ 
-        ...prev, 
-        error: error.message,
-        isRunning: false 
-      }));
-    }
-  };
-
-  const stopPreviewServer = async () => {
-    addLog('Stopping preview server...', 'info');
-    
-    try {
-      // Call the preview server API to stop
-      const response = await fetch('http://localhost:3002/api/preview/stop', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          instanceId: previewState.previewUrl?.split('/').pop() || ''
-        })
-      });
-
-      if (response.ok) {
-        addLog('Preview server stopped successfully', 'success');
+      if (result.success) {
+        setPreviewUrl(result.previewUrl);
+        setIsRunning(true);
+        toast.success('Live preview started successfully!');
+        
+        // Start listening for logs
+        connectToLogs(result.instanceId);
       } else {
-        addLog('Failed to stop preview server', 'error');
+        throw new Error(result.error || 'Failed to start preview');
       }
     } catch (error: any) {
-      addLog(`Error stopping server: ${error.message}`, 'error');
+      toast.error(error.message || 'Failed to start live preview');
+      console.error('Preview start error:', error);
+    } finally {
+      setIsStarting(false);
     }
-    
-    setPreviewState(prev => ({ 
-      ...prev, 
-      isRunning: false,
-      previewUrl: null 
-    }));
   };
 
-  useEffect(() => {
-    if (!isOpen) {
-      stopPreviewServer();
+  const stopPreview = async () => {
+    try {
+      if (previewUrl) {
+        const instanceId = previewUrl.split('/').pop();
+        await fetch(`/api/preview/stop/${instanceId}`, { method: 'POST' });
+      }
+      
+      setIsRunning(false);
+      setPreviewUrl(null);
+      setLogs([]);
+      toast.success('Preview stopped');
+    } catch (error) {
+      toast.error('Failed to stop preview');
     }
-  }, [isOpen]);
+  };
 
-  const handleApiConfigChange = (field: keyof ApiConfig, value: string) => {
-    setApiConfig(prev => ({ ...prev, [field]: value }));
-    setPreviewState(prev => ({ ...prev, error: null }));
+  const connectToLogs = (instanceId: string) => {
+    // WebSocket connection for real-time logs
+    const ws = new WebSocket(`ws://localhost:3001`);
+    
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'subscribe-logs', instanceId }));
+    };
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'log') {
+        setLogs(prev => [...prev, data.message]);
+      }
+    };
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Eye className="w-5 h-5" />
-            Live Dashboard Preview
-          </DialogTitle>
-          <DialogDescription>
-            Test your DeFi application with real API keys and wallet connections
-          </DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-2">
+            <Globe className="w-5 h-5" />
+            <h2 className="text-lg font-semibold">Live Preview</h2>
+            <Badge variant={isRunning ? "default" : "secondary"}>
+              {isRunning ? "Running" : "Stopped"}
+            </Badge>
+          </div>
+          <Button variant="ghost" onClick={onClose}>×</Button>
+        </div>
 
-        <div className="flex-1 flex flex-col">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="config" className="flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Configuration
-              </TabsTrigger>
-              <TabsTrigger value="preview" className="flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                Live Preview
-              </TabsTrigger>
-              <TabsTrigger value="logs" className="flex items-center gap-2">
-                <Code className="w-4 h-4" />
-                Logs
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="config" className="flex-1 flex flex-col">
-              <Card className="flex-1">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="w-5 h-5" />
-                    API Configuration
-                  </CardTitle>
-                  <CardDescription>
-                    Configure your API keys and network settings for live testing
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="oneInchApiKey" className="flex items-center gap-2">
-                        <Zap className="w-4 h-4" />
-                        1inch API Key
-                      </Label>
-                      <Input
-                        id="oneInchApiKey"
-                        type="password"
-                        placeholder="Enter your 1inch API key"
-                        value={apiConfig.oneInchApiKey}
-                        onChange={(e) => handleApiConfigChange('oneInchApiKey', e.target.value)}
-                      />
-                      <p className="text-sm text-gray-500 mt-1">
-                        Get your API key from{' '}
-                        <a 
-                          href="https://portal.1inch.dev/" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline"
-                        >
-                          1inch Developer Portal
-                        </a>
-                      </p>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="chainId" className="flex items-center gap-2">
-                        <Coins className="w-4 h-4" />
-                        Chain ID
-                      </Label>
-                      <Input
-                        id="chainId"
-                        placeholder="1 (Ethereum Mainnet)"
-                        value={apiConfig.chainId}
-                        onChange={(e) => handleApiConfigChange('chainId', e.target.value)}
-                      />
-                      <p className="text-sm text-gray-500 mt-1">
-                        Common chains: 1 (Ethereum), 137 (Polygon), 56 (BSC)
-                      </p>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="rpcUrl" className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4" />
-                        RPC URL
-                      </Label>
-                      <Input
-                        id="rpcUrl"
-                        placeholder="https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY"
-                        value={apiConfig.rpcUrl}
-                        onChange={(e) => handleApiConfigChange('rpcUrl', e.target.value)}
-                      />
-                      <p className="text-sm text-gray-500 mt-1">
-                        Use Alchemy, Infura, or your own RPC endpoint
-                      </p>
-                    </div>
+        <div className="flex-1 flex">
+          {/* Configuration Panel */}
+          <div className="w-80 border-r p-4 overflow-y-auto">
+            <Tabs defaultValue="config" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="config">Config</TabsTrigger>
+                <TabsTrigger value="chains">Chains</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="config" className="space-y-4">
+                {needs1inchAPI && (
+                  <div className="space-y-2">
+                    <Label htmlFor="oneinch-key">1inch API Key *</Label>
+                    <Input
+                      id="oneinch-key"
+                      type="password"
+                      placeholder="Your 1inch API key"
+                      value={config.oneInchApiKey || ''}
+                      onChange={(e) => handleConfigChange('oneInchApiKey', e.target.value)}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Get it from <a href="https://portal.1inch.dev" target="_blank" className="text-blue-500">1inch Portal</a>
+                    </p>
                   </div>
+                )}
 
-                  {previewState.error && (
-                    <Alert variant="destructive">
-                      <XCircle className="h-4 w-4" />
-                      <AlertDescription>{previewState.error}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={startPreviewServer}
-                      disabled={previewState.isRunning}
-                      className="flex-1"
-                    >
-                      {previewState.isRunning ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Starting Preview...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 mr-2" />
-                          Start Live Preview
-                        </>
-                      )}
-                    </Button>
-                    
-                    {previewState.isRunning && (
-                      <Button 
-                        onClick={stopPreviewServer}
-                        variant="outline"
-                      >
-                        Stop Preview
-                      </Button>
-                    )}
+                {needsWalletConnect && (
+                  <div className="space-y-2">
+                    <Label htmlFor="wc-project-id">WalletConnect Project ID *</Label>
+                    <Input
+                      id="wc-project-id"
+                      placeholder="Your WalletConnect project ID"
+                      value={config.walletConnectProjectId || ''}
+                      onChange={(e) => handleConfigChange('walletConnectProjectId', e.target.value)}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Get it from <a href="https://cloud.walletconnect.com" target="_blank" className="text-blue-500">WalletConnect Cloud</a>
+                    </p>
                   </div>
+                )}
 
-                  {previewState.isRunning && previewState.previewUrl && (
-                    <Alert>
-                      <CheckCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Preview server is running! Switch to the "Live Preview" tab to interact with your dashboard.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                <div className="space-y-2">
+                  <Label htmlFor="default-chain">Default Chain</Label>
+                  <Select value={config.chainId} onValueChange={(value) => handleConfigChange('chainId', value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(SUPPORTED_CHAINS).map(([id, chain]) => (
+                        <SelectItem key={id} value={id}>
+                          {chain.name} ({chain.symbol})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
 
-            <TabsContent value="preview" className="flex-1 flex flex-col">
-              {previewState.isRunning && previewState.previewUrl ? (
-                <div className="flex-1 flex flex-col">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                        Live Preview Running
-                      </Badge>
-                      <span className="text-sm text-gray-600">
-                        {previewState.previewUrl}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(previewState.previewUrl, '_blank')}
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Open in New Tab
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const url = previewState.previewUrl;
-                          if (url) {
-                            // Try to open in new window with specific features
-                            const newWindow = window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-                            if (!newWindow) {
-                              // Fallback: copy URL to clipboard
-                              navigator.clipboard.writeText(url);
-                              alert('URL copied to clipboard! Please paste it in a new tab.');
-                            }
+              <TabsContent value="chains" className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Enabled Chains</Label>
+                  {Object.entries(SUPPORTED_CHAINS).map(([id, chain]) => (
+                    <div key={id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`chain-${id}`}
+                        checked={config.enabledChains.includes(id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            handleConfigChange('enabledChains', [...config.enabledChains, id]);
+                          } else {
+                            handleConfigChange('enabledChains', config.enabledChains.filter(c => c !== id));
                           }
                         }}
-                      >
-                        <Globe className="w-4 h-4 mr-2" />
-                        Open in New Window
-                      </Button>
+                      />
+                      <label htmlFor={`chain-${id}`} className="text-sm">
+                        {chain.name} ({chain.symbol})
+                      </label>
                     </div>
-                  </div>
-                  
-                  <div className="flex-1 border rounded-lg overflow-hidden">
-                    <div className="h-full flex flex-col">
-                      {/* Browser Security Notice */}
-                      <div className="bg-yellow-50 border-b border-yellow-200 p-3">
-                        <div className="flex items-center gap-2 text-yellow-800">
-                          <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
-                          <span className="text-sm font-medium">Browser Security Notice</span>
-                        </div>
-                        <p className="text-xs text-yellow-700 mt-1">
-                          Some browsers (like Firefox) block localhost iframes for security. 
-                          Use the buttons above to open the preview in a new tab/window.
-                        </p>
-                      </div>
-                      
-                      {/* Iframe with fallback */}
-                      <div className="flex-1 relative">
-                        {!iframeBlocked ? (
-                          <iframe
-                            ref={iframeRef}
-                            src={previewState.previewUrl}
-                            className="w-full h-full"
-                            title="Live Dashboard Preview"
-                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-                            onLoad={() => {
-                              console.log('Iframe loaded successfully');
-                              setIframeBlocked(false);
-                            }}
-                            onError={() => {
-                              console.log('Iframe failed to load - showing fallback');
-                              setIframeBlocked(true);
-                            }}
-                          />
-                        ) : (
-                          <div className="absolute inset-0 bg-gray-50 flex items-center justify-center">
-                            <div className="text-center p-6">
-                              <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                {isFirefox ? 'Firefox Security Block' : 'Preview Blocked by Browser'}
-                              </h3>
-                              <p className="text-gray-600 mb-4">
-                                {isFirefox 
-                                  ? 'Firefox blocks localhost iframes for security. Please use the buttons above to open the preview.'
-                                  : 'Your browser blocked the preview for security reasons.'
-                                }
-                              </p>
-                              <div className="space-y-2">
-                                <Button
-                                  onClick={() => window.open(previewState.previewUrl, '_blank')}
-                                  className="w-full"
-                                >
-                                  <ExternalLink className="w-4 h-4 mr-2" />
-                                  Open in New Tab
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  onClick={() => {
-                                    const url = previewState.previewUrl;
-                                    if (url) {
-                                      navigator.clipboard.writeText(url);
-                                      alert('URL copied to clipboard!');
-                                    }
-                                  }}
-                                  className="w-full"
-                                >
-                                  Copy URL
-                                </Button>
-                                {!isFirefox && (
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => setIframeBlocked(false)}
-                                    className="w-full"
-                                  >
-                                    Try Iframe Again
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Quick Access Instructions */}
-                  <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <h4 className="font-medium text-blue-900 mb-2">Quick Access:</h4>
-                    <div className="text-sm text-blue-800 space-y-1">
-                      <p>• <strong>New Tab:</strong> Click "Open in New Tab" to view the full dashboard</p>
-                      <p>• <strong>New Window:</strong> Click "Open in New Window" for a dedicated preview</p>
-                      <p>• <strong>Direct URL:</strong> Copy and paste the URL in your browser</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ) : (
-                <Card className="flex-1 flex items-center justify-center">
-                  <CardContent className="text-center">
-                    <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      Preview Not Started
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      Configure your API keys and start the preview server to see your dashboard in action.
-                    </p>
-                    <Button onClick={() => setActiveTab('config')}>
-                      <Settings className="w-4 h-4 mr-2" />
-                      Go to Configuration
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
+              </TabsContent>
+            </Tabs>
 
-            <TabsContent value="logs" className="flex-1 flex flex-col">
-              <Card className="flex-1">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Code className="w-5 h-5" />
-                    Server Logs
-                  </CardTitle>
-                  <CardDescription>
-                    Real-time logs from the preview server
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-gray-900 text-green-400 p-4 rounded-lg h-64 overflow-y-auto font-mono text-sm">
-                    {previewState.logs.length === 0 ? (
-                      <div className="text-gray-500">No logs yet. Start the preview server to see logs.</div>
-                    ) : (
-                      previewState.logs.map((log, index) => (
-                        <div key={index} className="mb-1">
-                          {log}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+            <div className="mt-6 pt-4 border-t">
+              {!isRunning ? (
+                <Button
+                  onClick={startPreview}
+                  disabled={isStarting}
+                  className="w-full"
+                >
+                  {isStarting ? (
+                    <>Starting...</>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Start Live Preview
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => window.open(previewUrl, '_blank')}
+                    className="w-full"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open Preview
+                  </Button>
+                  <Button
+                    onClick={stopPreview}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    <Stop className="w-4 h-4 mr-2" />
+                    Stop Preview
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Preview Panel */}
+          <div className="flex-1 flex flex-col">
+            {previewUrl ? (
+              <iframe
+                src={previewUrl}
+                className="flex-1 border-0"
+                title="Live Preview"
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <Globe className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">Ready for Live Preview</h3>
+                  <p className="text-sm">Configure your settings and click "Start Live Preview"</p>
+                </div>
+              </div>
+            )}
+
+            {/* Logs Panel */}
+            {logs.length > 0 && (
+              <div className="h-40 border-t bg-gray-50 p-4 overflow-y-auto">
+                <h4 className="text-sm font-medium mb-2">Live Logs</h4>
+                <div className="text-xs font-mono space-y-1">
+                  {logs.map((log, index) => (
+                    <div key={index} className="text-gray-600">
+                      {log}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
-} 
+}

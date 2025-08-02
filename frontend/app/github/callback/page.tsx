@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createGitHubOAuth } from '@/lib/github-oauth';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 
-export default function GitHubCallback() {
+function GitHubCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -56,7 +56,7 @@ export default function GitHubCallback() {
         // Redirect back to the main app after a delay
         setTimeout(() => {
           // Close the popup window if opened in popup
-          if (window.opener) {
+          if (typeof window !== 'undefined' && window.opener) {
             window.opener.postMessage({
               type: 'GITHUB_AUTH_SUCCESS',
               user: userData,
@@ -75,7 +75,7 @@ export default function GitHubCallback() {
         setMessage(error.message || 'Failed to connect to GitHub');
 
         // Notify parent window if in popup
-        if (window.opener) {
+        if (typeof window !== 'undefined' && window.opener) {
           window.opener.postMessage({
             type: 'GITHUB_AUTH_ERROR',
             error: error.message
@@ -171,5 +171,26 @@ export default function GitHubCallback() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GitHubCallback() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4">
+          <div className="text-center">
+            <div className="flex justify-center mb-4">
+              <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Loading...
+            </h1>
+          </div>
+        </div>
+      </div>
+    }>
+      <GitHubCallbackContent />
+    </Suspense>
   );
 }

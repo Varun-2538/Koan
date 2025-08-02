@@ -40,6 +40,7 @@ export default function SwapAggregatorDemo() {
   const [nodeStatuses, setNodeStatuses] = useState<NodeExecutionStatus[]>([])
   const [overallProgress, setOverallProgress] = useState(0)
   const [demoResults, setDemoResults] = useState<any>(null)
+  const [isClient, setIsClient] = useState(false)
 
   const template = getTemplateById("dex-aggregator-swap")
 
@@ -53,6 +54,7 @@ export default function SwapAggregatorDemo() {
   ]
 
   useEffect(() => {
+    setIsClient(true)
     // Initialize node statuses
     const initialStatuses = nodeSequence.map(node => ({
       id: node.id,
@@ -248,6 +250,24 @@ export default function SwapAggregatorDemo() {
       case 'failed': return <AlertTriangle className="w-4 h-4 text-red-500" />
       default: return <div className="w-4 h-4 rounded-full border-2 border-gray-300" />
     }
+  }
+
+  // Don't render until client-side
+  if (!isClient) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="text-center space-y-4">
+            <h1 className="text-4xl font-bold text-gray-900">
+              DEX Aggregator Swap Demo
+            </h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Loading...
+            </p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

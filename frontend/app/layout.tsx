@@ -3,6 +3,8 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import "@/lib/execution-client" // Import execution client globally
+import { ReactFlowProvider } from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 
 export const metadata: Metadata = {
   title: 'DeFiDAO - Build and Deploy DeFi Protocols',
@@ -26,7 +28,11 @@ html {
 }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body>
+        <ReactFlowProvider>
+          {children}
+        </ReactFlowProvider>
+      </body>
     </html>
   )
 }

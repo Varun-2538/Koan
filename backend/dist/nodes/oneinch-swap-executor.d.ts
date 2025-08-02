@@ -12,6 +12,7 @@ export declare class OneInchSwapExecutor implements NodeExecutor {
         valid: boolean;
         errors: string[];
     }>;
+    private validateTemplateConfig;
     execute(inputs: Record<string, any>, context: ExecutionContext): Promise<NodeExecutionResult>;
     estimateGas(inputs: Record<string, any>, context: ExecutionContext): Promise<string>;
     private getQuote;
@@ -20,6 +21,7 @@ export declare class OneInchSwapExecutor implements NodeExecutor {
     private extractProtocols;
     private calculateGasSavings;
     private calculateAmountSavings;
+    private executeTemplateMode;
     private isValidAddress;
     private formatError;
 }

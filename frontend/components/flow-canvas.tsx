@@ -30,6 +30,7 @@ import { getTemplateById } from "@/lib/templates"
 import { OneInchCodeGenerator, type CodeGenerationResult } from "@/lib/oneinch-code-generator"
 import { CodePreviewModal } from "./code-preview-modal"
 import { GitHubPublishModal } from "./github-publish-modal"
+import { LiveDashboardPreview } from "./live-dashboard-preview"
 import { executionClient, type WorkflowDefinition } from "@/lib/execution-client"
 
 const nodeTypes: NodeTypes = CustomNodes
@@ -79,6 +80,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const [codeResult, setCodeResult] = useState<CodeGenerationResult | null>(null)
   const [showCodeModal, setShowCodeModal] = useState(false)
   const [showGitHubModal, setShowGitHubModal] = useState(false)
+  const [showLivePreviewModal, setShowLivePreviewModal] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
   
@@ -748,11 +750,22 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           setShowCodeModal(false)
           setShowGitHubModal(true)
         }}
+        onLivePreview={() => {
+          setShowCodeModal(false)
+          setShowLivePreviewModal(true)
+        }}
       />
 
       <GitHubPublishModal
         isOpen={showGitHubModal}
         onClose={() => setShowGitHubModal(false)}
+        codeResult={codeResult}
+        projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+      />
+
+      <LiveDashboardPreview
+        isOpen={showLivePreviewModal}
+        onClose={() => setShowLivePreviewModal(false)}
         codeResult={codeResult}
         projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
       />

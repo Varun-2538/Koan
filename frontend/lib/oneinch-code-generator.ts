@@ -16,7 +16,7 @@ export class OneInchCodeGenerator {
     templateInputs?: Record<string, any>
   ): CodeGenerationResult {
     
-    const files: Array<{path: string; type: string; content: string}> = [];
+    const files: Array<{path: string; type: 'frontend' | 'backend' | 'config' | 'contract'; content: string}> = [];
     const deploymentInstructions: string[] = [];
 
     // Analyze nodes to determine features
@@ -36,6 +36,18 @@ export class OneInchCodeGenerator {
       path: "package.json",
       type: "frontend",
       content: this.generateFrontendPackageJson(projectName)
+    });
+
+    files.push({
+      path: "postcss.config.js",
+      type: "frontend",
+      content: this.generatePostCSSConfig()
+    });
+
+    files.push({
+      path: "tsconfig.json",
+      type: "frontend",
+      content: this.generateTypeScriptConfig()
     });
 
     files.push({
@@ -62,6 +74,27 @@ export class OneInchCodeGenerator {
         path: "src/hooks/useWallet.ts",
         type: "frontend",
         content: this.generateWalletHook()
+      });
+
+      // Add wagmi configuration
+      files.push({
+        path: "src/config/wagmi.ts",
+        type: "frontend",
+        content: this.generateWagmiConfig()
+      });
+
+      // Add _app.tsx for wagmi provider
+      files.push({
+        path: "src/pages/_app.tsx",
+        type: "frontend",
+        content: this.generateAppWrapper()
+      });
+
+      // Add global CSS
+      files.push({
+        path: "src/styles/globals.css",
+        type: "frontend",
+        content: this.generateGlobalCSS()
       });
     }
 
@@ -267,12 +300,10 @@ Built for Unite DeFi Hackathon 🏆`
     "next": "^14.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
-    "@wagmi/core": "^1.4.0",
     "wagmi": "^1.4.0",
     "viem": "^1.19.0",
     "ethers": "^6.8.0",
     "@tanstack/react-query": "^4.36.0",
-    "@rainbow-me/rainbowkit": "^1.3.0",
     "axios": "^1.6.0",
     "react-hot-toast": "^2.4.0",
     "lucide-react": "^0.294.0",
@@ -307,24 +338,15 @@ Built for Unite DeFi Hackathon 🏆`
 }`;
   }
 
-  private static generateMainDashboard(projectName: string, features: any): string {
-    return `import { useState, useEffect } from 'react';
+  private static generateMainDashboard(projectName: string, features: anya): string {
+    return `import { useState } from 'react';
 import Head from 'next/head';
-import { WagmiConfig } from 'wagmi';
-import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
 
 ${features.hasWalletConnector ? "import { WalletConnector } from '../components/WalletConnector';" : ""}
 ${features.hasTokenSelector ? "import { TokenSelector } from '../components/TokenSelector';" : ""}
 ${features.hasOneInchSwap ? "import { SwapInterface } from '../components/SwapInterface';" : ""}
 ${features.hasLimitOrder ? "import { LimitOrderInterface } from '../components/LimitOrderInterface';" : ""}
 ${features.hasPortfolioAPI ? "import { PortfolioTracker } from '../components/PortfolioTracker';" : ""}
-
-import { wagmiConfig, chains } from '../config/wagmi';
-import '@rainbow-me/rainbowkit/styles.css';
-
-const queryClient = new QueryClient();
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('swap');
@@ -338,123 +360,198 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <WagmiConfig config={wagmiConfig}>
-        <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider chains={chains}>
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-              {/* Header */}
-              <header className="bg-white shadow-sm border-b">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="flex justify-between items-center h-16">
-                    <div className="flex items-center">
-                      <h1 className="text-2xl font-bold text-gray-900">
-                        ${projectName}
-                      </h1>
-                      <span className="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
-                        Powered by 1inch
-                      </span>
-                    </div>
-                    ${features.hasWalletConnector ? "<WalletConnector />" : ""}
-                  </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+          {/* Header */}
+          <header className="bg-white shadow-sm border-b">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center h-16">
+                <div className="flex items-center">
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    ${projectName}
+                  </h1>
+                  <span className="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
+                    Powered by 1inch
+                  </span>
                 </div>
-              </header>
-
-              {/* Navigation */}
-              <nav className="bg-white border-b">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="flex space-x-8">
-                    ${features.hasOneInchSwap ? `
-                    <button
-                      onClick={() => setActiveTab('swap')}
-                      className={\`py-4 px-1 border-b-2 font-medium text-sm \${
-                        activeTab === 'swap'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
-                      }\`}
-                    >
-                      🔄 Swap
-                    </button>` : ""}
-                    ${features.hasLimitOrder ? `
-                    <button
-                      onClick={() => setActiveTab('limit')}
-                      className={\`py-4 px-1 border-b-2 font-medium text-sm \${
-                        activeTab === 'limit'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
-                      }\`}
-                    >
-                      📝 Limit Orders
-                    </button>` : ""}
-                    ${features.hasPortfolioAPI ? `
-                    <button
-                      onClick={() => setActiveTab('portfolio')}
-                      className={\`py-4 px-1 border-b-2 font-medium text-sm \${
-                        activeTab === 'portfolio'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
-                      }\`}
-                    >
-                      📊 Portfolio
-                    </button>` : ""}
-                  </div>
-                </div>
-              </nav>
-
-              {/* Main Content */}
-              <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                  {activeTab === 'swap' && (
-                    <div className="max-w-md mx-auto">
-                      ${features.hasOneInchSwap ? "<SwapInterface />" : "<div>Swap interface not configured</div>"}
-                    </div>
-                  )}
-                  
-                  {activeTab === 'limit' && (
-                    <div className="max-w-md mx-auto">
-                      ${features.hasLimitOrder ? "<LimitOrderInterface />" : "<div>Limit orders not configured</div>"}
-                    </div>
-                  )}
-                  
-                  {activeTab === 'portfolio' && (
-                    <div className="max-w-4xl mx-auto">
-                      ${features.hasPortfolioAPI ? "<PortfolioTracker />" : "<div>Portfolio tracker not configured</div>"}
-                    </div>
-                  )}
-                </div>
-              </main>
-
-              {/* Footer */}
-              <footer className="bg-gray-50 border-t">
-                <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-                  <p className="text-center text-sm text-gray-500">
-                    Built with Unite DeFi Platform • Powered by 1inch Protocol
-                  </p>
-                </div>
-              </footer>
-
-              <Toaster position="bottom-right" />
+                ${features.hasWalletConnector ? `
+                <div className="flex items-center">
+                  <WalletConnector />
+                </div>` : ""}
+              </div>
             </div>
-          </RainbowKitProvider>
-        </QueryClientProvider>
-      </WagmiConfig>
+          </header>
+
+          {/* Navigation */}
+          <nav className="bg-white border-b">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex space-x-8">
+                ${features.hasOneInchSwap ? `
+                <button
+                  onClick={() => setActiveTab('swap')}
+                  className={\`py-4 px-1 border-b-2 font-medium text-sm \${
+                    activeTab === 'swap'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }\`}
+                >
+                  🔄 Swap
+                </button>` : ""}
+                ${features.hasLimitOrder ? `
+                <button
+                  onClick={() => setActiveTab('limit')}
+                  className={\`py-4 px-1 border-b-2 font-medium text-sm \${
+                    activeTab === 'limit'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }\`}
+                >
+                  📝 Limit Orders
+                </button>` : ""}
+                ${features.hasPortfolioAPI ? `
+                <button
+                  onClick={() => setActiveTab('portfolio')}
+                  className={\`py-4 px-1 border-b-2 font-medium text-sm \${
+                    activeTab === 'portfolio'
+                      ? 'border-blue-500 text-blue-60
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }\`}
+                >
+                  📊 Portfolio
+                </button>` : ""}
+              </div>
+            </div>
+          </nav>
+
+          {/* Main Content */}
+          <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div className="px-4 py-6 sm:px-0">
+              {activeTab === 'swap' && (
+                <div className="max-w-md mx-auto">
+                  ${features.hasOneInchSwap ? "<SwapInterface />" : "<div>Swap interface not configured</div>"}
+                </div>
+              )}
+              
+              {activeTab === 'limit' && (
+                <div className="max-w-md mx-auto">
+                  ${features.hasLimitOrder ? "<LimitOrderInterface />" : "<div>Limit orders not configured</div>"}
+                </div>
+              )}
+              
+              {activeTab === 'portfolio' && (
+                <div className="max-w-4xl mx-auto">
+                  ${features.hasPortfolioAPI ? "<PortfolioTracker />" : "<div>Portfolio tracker not configured</div>"}
+                </div>
+              )}
+            </div>
+          </main>
+
+          {/* Footer */}
+          <footer className="bg-gray-50 border-t">
+            <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+              <p className="text-center text-sm text-gray-500">
+                Built with Unite DeFi Platform • Powered by 1inch Protocol
+              </p>
+            </div>
+          </footer>
+        </div>
     </>
   );
 }`;
   }
 
   private static generateWalletConnector(): string {
-    return `import { ConnectButton } from '@rainbow-me/rainbowkit';
+    return `import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useState, useEffect } from 'react';
 
 export function WalletConnector() {
+  const { address, isConnected, isConnecting } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
+  const [showOptions, setShowOptions] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Debug: Log available connectors
+  useEffect(() => {
+    if (mounted) {
+      console.log('Available connectors:', connectors);
+      console.log('Connector names:', connectors.map(c => ({ id: c.id, name: c.name, ready: c.ready })));
+    }
+  }, [connectors, mounted]);
+
+  const handleConnect = (connector: any) => {
+    console.log('Attempting to connect with:', connector);
+    connect({ connector });
+    setShowOptions(false);
+  };
+
+  // Show loading state during SSR
+  if (!mounted) {
+    return (
+      <div className="w-full px-6 py-3 bg-gray-300 text-gray-500 rounded-lg font-medium">
+        Loading...
+      </div>
+    );
+  }
+
+  if (isConnected) {
+    return (
+      <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg">
+        <div className="flex-1">
+          <p className="text-sm text-green-600">Connected</p>
+          <p className="text-xs text-green-500 font-mono">
+            {address?.slice(0, 6)}...{address?.slice(-4)}
+          </p>
+        </div>
+        <button
+          onClick={() => disconnect()}
+          className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
+        >
+          Disconnect
+        </button>
+      </div>
+    );
+  }
+
+  const availableConnectors = connectors.filter(connector => connector.ready);
+
   return (
-    <div className="flex items-center">
-      <ConnectButton 
-        chainStatus="icon"
-        accountStatus={{
-          smallScreen: 'avatar',
-          largeScreen: 'full',
-        }}
-      />
+    <div className="relative">
+      <button
+        onClick={() => setShowOptions(!showOptions)}
+        disabled={isConnecting}
+        className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+      >
+        {isConnecting ? 'Connecting...' : \`Connect Wallet (\${availableConnectors.length} available)\`}
+      </button>
+      
+      {showOptions && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+          <div className="p-2">
+            {availableConnectors.length > 0 ? (
+              availableConnectors.map((connector) => (
+                <button
+                  key={connector.id}
+                  onClick={() => handleConnect(connector)}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg flex items-center gap-3"
+                >
+                  <div className="w-6 h-6 bg-blue-500 rounded"></div>
+                  <span className="font-medium">{connector.name}</span>
+                  <span className="text-xs text-gray-500">({connector.id})</span>
+                </button>
+              ))
+            ) : (
+              <div className="px-4 py-3 text-gray-500 text-sm">
+                No wallets available. Please install MetaMask or another wallet extension.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }`;
@@ -514,30 +611,18 @@ export function WalletConnector() {
     return `# 1inch API Configuration
 ONEINCH_API_KEY=your_1inch_api_key_here
 
-# Server Configuration
-PORT=3001
-NODE_ENV=development
+# Blockchain Configuration
+CHAIN_ID=1
+RPC_URL=https://eth-mainnet.g.alchemy.com/v2/your_alchemy_key
 
-# Frontend URL
-FRONTEND_URL=http://localhost:3000
+# WalletConnect Configuration (Optional)
+NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_wallet_connect_project_id
 
-# Database (Optional)
-DATABASE_URL=postgresql://username:password@localhost:5432/database_name
+# Backend Configuration
+NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 
-# Redis (Optional)
-REDIS_URL=redis://localhost:6379
-
-# Blockchain RPC URLs
-ETHEREUM_RPC_URL=https://mainnet.infura.io/v3/your_infura_key
-POLYGON_RPC_URL=https://polygon-mainnet.infura.io/v3/your_infura_key
-ARBITRUM_RPC_URL=https://arbitrum-mainnet.infura.io/v3/your_infura_key
-
-# Security
-JWT_SECRET=your_jwt_secret_here
-ENCRYPTION_KEY=your_32_character_encryption_key
-
-# Monitoring (Optional)
-SENTRY_DSN=your_sentry_dsn_here`;
+# Environment
+NODE_ENV=development`;
   }
 
   private static generateReadme(projectName: string, features: any): string {
@@ -817,9 +902,6 @@ volumes:
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  experimental: {
-    appDir: true,
-  },
   env: {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
   },
@@ -1624,9 +1706,10 @@ export default router;`;
 
   // Add more helper methods for generating other components...
   private static generateSwapInterface(hasFusion: boolean, hasClassic: boolean): string {
-    return `import { useState } from 'react';
-import { useAccount } from 'wagmi';
+    return `import { useState, useEffect } from 'react';
+import { useAccount, useBalance } from 'wagmi';
 import { toast } from 'react-hot-toast';
+import { formatEther, parseEther } from 'viem';
 
 export function SwapInterface() {
   const { address, isConnected } = useAccount();
@@ -1635,6 +1718,23 @@ export function SwapInterface() {
   const [amount, setAmount] = useState('');
   const [swapMode, setSwapMode] = useState('${hasFusion ? 'fusion' : 'classic'}');
   const [loading, setLoading] = useState(false);
+
+  // Fetch ETH balance
+  const { data: ethBalance, isLoading: balanceLoading } = useBalance({
+    address,
+    watch: true,
+  });
+
+  // Format balance for display
+  const formatBalance = (balance: any) => {
+    if (!balance || balanceLoading) return 'Loading...';
+    try {
+      const formatted = formatEther(balance.value);
+      return parseFloat(formatted).toFixed(4);
+    } catch (error) {
+      return '0.00';
+    }
+  };
 
   const handleSwap = async () => {
     if (!isConnected) {
@@ -1691,7 +1791,9 @@ export function SwapInterface() {
         <div className="border rounded-lg p-4">
           <div className="flex justify-between mb-2">
             <span className="text-sm text-gray-500">From</span>
-            <span className="text-sm text-gray-500">Balance: 0.00</span>
+            <span className="text-sm text-gray-500">
+              Balance: {fromToken === 'ETH' ? formatBalance(ethBalance) : '0.00'} {fromToken}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <input
@@ -1725,7 +1827,9 @@ export function SwapInterface() {
         <div className="border rounded-lg p-4">
           <div className="flex justify-between mb-2">
             <span className="text-sm text-gray-500">To</span>
-            <span className="text-sm text-gray-500">Balance: 0.00</span>
+            <span className="text-sm text-gray-500">
+              Balance: {toToken === 'ETH' ? formatBalance(ethBalance) : '0.00'} {toToken}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <input
@@ -1758,6 +1862,139 @@ export function SwapInterface() {
       </div>
     </div>
   );
+}`;
+  }
+
+  private static generateWagmiConfig(): string {
+    return `import { configureChains, createConfig } from 'wagmi';
+import { mainnet, polygon, arbitrum, optimism } from 'wagmi/chains';
+import { publicProvider } from 'wagmi/providers/public';
+import { MetaMaskConnector } from 'wagmi/connectors/metaMask';
+import { WalletConnectConnector } from 'wagmi/connectors/walletConnect';
+import { CoinbaseWalletConnector } from 'wagmi/connectors/coinbaseWallet';
+
+export const { chains, publicClient } = configureChains(
+  [mainnet, polygon, arbitrum, optimism],
+  [publicProvider()]
+);
+
+// Create connectors with better error handling
+const connectors = [
+  new MetaMaskConnector({
+    chains,
+    options: {
+      shimDisconnect: true,
+    },
+  }),
+  new WalletConnectConnector({
+    chains,
+    options: {
+      projectId: 'c4f79cc821944d9680842e34466bfbd9', // Default project ID for testing
+    },
+  }),
+  new CoinbaseWalletConnector({
+    chains,
+    options: {
+      appName: '1inch DeFi Suite',
+    },
+  }),
+];
+
+// Debug: Log connector configuration
+console.log('Wagmi config - Available chains:', chains);
+console.log('Wagmi config - Connectors:', connectors.map(c => ({ id: c.id, name: c.name })));
+
+export const wagmiConfig = createConfig({
+  autoConnect: false, // Disable autoConnect to prevent hydration issues
+  publicClient,
+  connectors,
+});`;
+  }
+
+  private static generateAppWrapper(): string {
+    return `import '@/styles/globals.css';
+import { WagmiConfig } from 'wagmi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
+import { useState, useEffect } from 'react';
+
+import { wagmiConfig } from '../config/wagmi';
+
+function ClientOnly({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading DeFi Suite...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+export default function App({ Component, pageProps }: any) {
+  return (
+    <ClientOnly>
+      <WagmiConfig config={wagmiConfig}>
+        <QueryClientProvider client={new QueryClient()}>
+          <Component {...pageProps} />
+          <Toaster position="bottom-right" />
+        </QueryClientProvider>
+      </WagmiConfig>
+    </ClientOnly>
+  );
+}`;
+  }
+
+  private static generateGlobalCSS(): string {
+    return `@tailwind base;
+@tailwind components;
+@tailwind utilities;`;
+  }
+
+  private static generatePostCSSConfig(): string {
+    return `module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}`;
+  }
+
+  private static generateTypeScriptConfig(): string {
+    return `{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "*": ["node_modules/*"],
+      "@/*": ["./src/*"]
+    },
+    "types": ["node"],
+    "lib": ["dom", "dom.iterable", "esnext"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }`;
   }
 }

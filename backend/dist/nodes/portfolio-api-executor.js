@@ -89,7 +89,7 @@ class PortfolioAPIExecutor {
             return {
                 success: false,
                 outputs: {},
-                errors: [error.message],
+                error: error.message,
                 logs: [`❌ Failed to fetch portfolio: ${error.message}`],
                 executionTime: Date.now() - startTime
             };

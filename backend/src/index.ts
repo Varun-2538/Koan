@@ -7,6 +7,9 @@ import winston from 'winston'
 import dotenv from 'dotenv'
 import { v4 as uuidv4 } from 'uuid'
 
+// Import 1inch routes
+import oneInchRoutes from './routes/oneinch'
+
 import { DeFiExecutionEngine } from '@/engine/execution-engine'
 import { OneInchSwapExecutor } from '@/nodes/oneinch-swap-executor'
 import { FusionPlusExecutor } from './nodes/fusion-plus-executor';
@@ -22,6 +25,7 @@ import { OneInchQuoteExecutor } from './nodes/oneinch-quote-executor';
 import { FusionSwapExecutor } from './nodes/fusion-swap-executor';
 import { LimitOrderExecutor } from './nodes/limit-order-executor';
 import { DeFiDashboardExecutor } from './nodes/defi-dashboard-executor';
+import './preview-server';
 import {
   WorkflowDefinition,
   ExecutionContext,
@@ -214,14 +218,19 @@ executionEngine.on('execution.event', (event: ExecutionEvent) => {
 // REST API Routes
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    oneInchApiKey: process.env.ONEINCH_API_KEY ? 'configured' : 'missing'
   })
 })
+
+// API Routes
+app.use('/api/1inch', oneInchRoutes)
 
 // Get engine configuration
 app.get('/api/config', (req, res) => {

@@ -22,6 +22,7 @@ export declare class WalletConnectorExecutor implements NodeExecutor {
     private getSecurityRecommendations;
     private getSupportedOperations;
     private calculateTotalValue;
+    private isValidChainId;
     private getMaxGasLimit;
 }
 //# sourceMappingURL=wallet-connector-executor.d.ts.map

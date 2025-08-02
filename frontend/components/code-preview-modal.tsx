@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Copy, Download, Github, ExternalLink } from "lucide-react"
+import { Copy, Download, Github, ExternalLink, Eye } from "lucide-react"
 import type { CodeGenerationResult } from "@/lib/oneinch-code-generator"
 
 interface CodePreviewModalProps {
@@ -13,9 +13,10 @@ interface CodePreviewModalProps {
   result: CodeGenerationResult | null
   projectName: string
   onPublishToGitHub?: () => void
+  onLivePreview?: () => void
 }
 
-export function CodePreviewModal({ isOpen, onClose, result, projectName, onPublishToGitHub }: CodePreviewModalProps) {
+export function CodePreviewModal({ isOpen, onClose, result, projectName, onPublishToGitHub, onLivePreview }: CodePreviewModalProps) {
   const [copiedFile, setCopiedFile] = useState<string | null>(null)
 
   if (!result) return null
@@ -168,6 +169,12 @@ export function CodePreviewModal({ isOpen, onClose, result, projectName, onPubli
             <Download className="w-4 h-4 mr-2" />
             Download Code
           </Button>
+          {onLivePreview && (
+            <Button onClick={onLivePreview} className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white">
+              <Eye className="w-4 h-4 mr-2" />
+              Live Preview
+            </Button>
+          )}
           {onPublishToGitHub && (
             <Button onClick={onPublishToGitHub} className="bg-black text-white hover:bg-gray-800">
               <Github className="w-4 h-4 mr-2" />

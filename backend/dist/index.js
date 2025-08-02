@@ -23,6 +23,11 @@ const token_selector_executor_1 = require("./nodes/token-selector-executor");
 const price_impact_calculator_executor_1 = require("./nodes/price-impact-calculator-executor");
 const transaction_monitor_executor_1 = require("./nodes/transaction-monitor-executor");
 const portfolio_api_executor_1 = require("./nodes/portfolio-api-executor");
+const oneinch_quote_executor_1 = require("./nodes/oneinch-quote-executor");
+const fusion_swap_executor_1 = require("./nodes/fusion-swap-executor");
+const limit_order_executor_1 = require("./nodes/limit-order-executor");
+const defi_dashboard_executor_1 = require("./nodes/defi-dashboard-executor");
+require("./preview-server");
 // Load environment variables
 dotenv_1.default.config();
 // Create logger
@@ -113,6 +118,10 @@ executionEngine.registerNodeExecutor(new token_selector_executor_1.TokenSelector
 executionEngine.registerNodeExecutor(new price_impact_calculator_executor_1.PriceImpactCalculatorExecutor());
 executionEngine.registerNodeExecutor(new transaction_monitor_executor_1.TransactionMonitorExecutor());
 executionEngine.registerNodeExecutor(new portfolio_api_executor_1.PortfolioAPIExecutor(logger));
+executionEngine.registerNodeExecutor(new oneinch_quote_executor_1.OneInchQuoteExecutor(logger, config.apis.oneInch.apiKey));
+executionEngine.registerNodeExecutor(new fusion_swap_executor_1.FusionSwapExecutor(logger, config.apis.oneInch.apiKey));
+executionEngine.registerNodeExecutor(new limit_order_executor_1.LimitOrderExecutor(logger, config.apis.oneInch.apiKey));
+executionEngine.registerNodeExecutor(new defi_dashboard_executor_1.DeFiDashboardExecutor(logger));
 // Track WebSocket connections
 const connectedClients = new Map();
 // WebSocket connection handling

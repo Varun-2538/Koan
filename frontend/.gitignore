@@ -2,10 +2,11 @@
 
 # dependencies
 /node_modules
-
+/frontend/claude
 # next.js
 /.next/
 /out/
+/claude
 
 # production
 /build

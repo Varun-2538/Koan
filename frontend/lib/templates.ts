@@ -14,33 +14,35 @@ export interface FlowTemplate {
     key: string
     label: string
     description: string
-    type: "string" | "number" | "boolean" | "select"
-    options?: string[]
+    type: "string" | "number" | "boolean" | "select" | "multiselect" | "json"
+    options?: Array<{ value: string; label: string }>
     required: boolean
     defaultValue?: any
+    livePreviewOnly?: boolean
   }[]
 }
 
 // Unite DeFi Hackathon Templates - Optimized for 1inch Integration
 export const FLOW_TEMPLATES: FlowTemplate[] = [
   {
-    id: "dex-aggregator-swap",
+    id: "oneinch-powered-defi-suite",
     name: "1inch-Powered DeFi Suite",
-    description: "Complete DeFi application suite using multiple 1inch APIs - Swap, Fusion, Limit Orders, Portfolio tracking, and advanced analytics. Perfect for Unite DeFi hackathon!",
+    description: "Complete multi-chain DeFi application with 1inch integration, supporting swaps, limit orders, and portfolio tracking across 12+ blockchains",
     category: "defi",
     difficulty: "intermediate",
     estimatedTime: "45 minutes",
     features: [
-      "🔥 1inch Classic Swap API integration",
-      "⚡ 1inch Fusion gasless swaps",
-      "🌉 1inch Fusion+ cross-chain swaps",
-      "📊 1inch Limit Order Protocol",
-      "💰 1inch Portfolio & Balance APIs",
-      "📈 1inch Spot Price & History APIs",
+      "🔥 Multi-chain 1inch Classic Swap API integration",
+      "⚡ Multi-chain 1inch Fusion gasless swaps",
+      "🌉 Cross-chain swaps with 1inch Fusion+",
+      "📊 Multi-chain 1inch Limit Order Protocol",
+      "💰 Multi-chain 1inch Portfolio & Balance APIs",
+      "📈 Real-time price feeds across 12+ chains",
       "🛡️ MEV protection with Fusion mode",
-      "📱 Professional trading interface",
+      "📱 Professional multi-chain trading interface",
       "🔍 Real-time transaction monitoring",
-      "💎 Advanced DeFi analytics"
+      "💎 Advanced multi-chain DeFi analytics",
+      "🌐 Support for Ethereum, Polygon, BSC, Arbitrum, Optimism, Avalanche"
     ],
     nodes: [
       {
@@ -48,11 +50,12 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         type: "walletConnector",
         position: { x: 100, y: 100 },
         data: {
-          label: "Wallet Connection",
+          label: "Multi-Chain Wallet Connection",
           config: {
             supportedWallets: ["MetaMask", "WalletConnect", "Coinbase Wallet"],
             autoConnect: true,
-            networkChainId: "1"
+            supportedChains: ["1", "137", "56", "42161", "10", "43114"],
+            defaultChain: "1"
           }
         }
       },
@@ -61,13 +64,15 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         type: "tokenSelector",
         position: { x: 100, y: 280 },
         data: {
-          label: "Token Selector",
+          label: "Multi-Chain Token Selector",
           config: {
             defaultFromToken: "ETH",
             defaultToToken: "USDC",
-            enabledTokens: ["ETH", "USDC", "WBTC", "USDT", "DAI", "1INCH"],
-            includeMetadata: true,
-            priceSource: "1inch"
+            defaultTokens: ["ETH", "USDC", "USDT", "DAI", "WBTC"],
+            allowCustomTokens: true,
+            showBalances: true,
+            priceSource: "1inch",
+            supportedChains: ["1", "137", "56", "42161", "10", "43114"]
           }
         }
       },
@@ -76,14 +81,15 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         type: "oneInchQuote",
         position: { x: 400, y: 280 },
         data: {
-          label: "1inch Quote Engine",
+          label: "Multi-Chain 1inch Quote Engine",
           config: {
             apiKey: "",
             slippage: 1,
             includeGas: true,
             includeProtocols: true,
             enablePathfinder: true,
-            gasOptimization: "balanced"
+            gasOptimization: "balanced",
+            supportedChains: ["1", "137", "56", "42161", "10", "43114"]
           }
         }
       },
@@ -92,12 +98,13 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         type: "fusionSwap",
         position: { x: 700, y: 450 },
         data: {
-          label: "1inch Fusion (Gasless)",
+          label: "Multi-Chain 1inch Fusion (Gasless)",
           config: {
             apiKey: "",
             enableGaslessSwaps: true,
             auctionDuration: "auto",
-            enableMEVProtection: true
+            enableMEVProtection: true,
+            supportedChains: ["1", "137", "56", "42161", "10", "43114"]
           }
         }
       },
@@ -106,11 +113,12 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         type: "limitOrder",
         position: { x: 1000, y: 450 },
         data: {
-          label: "1inch Limit Orders",
+          label: "Multi-Chain 1inch Limit Orders",
           config: {
             apiKey: "",
             orderType: "limit",
-            enableAdvancedStrategies: true
+            enableAdvancedStrategies: true,
+            supportedChains: ["1", "137", "56", "42161", "10", "43114"]
           }
         }
       },
@@ -119,11 +127,12 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         type: "portfolioAPI",
         position: { x: 1300, y: 100 },
         data: {
-          label: "1inch Portfolio API",
+          label: "Multi-Chain 1inch Portfolio API",
           config: {
             apiKey: "",
             trackHistory: true,
-            enableAnalytics: true
+            enableAnalytics: true,
+            supportedChains: ["1", "137", "56", "42161", "10", "43114"]
           }
         }
       },
@@ -146,12 +155,14 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         type: "oneInchSwap",
         position: { x: 1000, y: 280 },
         data: {
-          label: "1inch Swap Executor",
+          label: "Multi-Chain 1inch Swap Executor",
           config: {
             apiKey: "",
             enableMEVProtection: true,
             useFusion: false,
-            gasOptimization: "balanced"
+            gasOptimization: "balanced",
+            supportedChains: ["1", "137", "56", "42161", "10", "43114"],
+            slippage: 1
           }
         }
       },
@@ -175,14 +186,15 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         type: "defiDashboard",
         position: { x: 700, y: 100 },
         data: {
-          label: "1inch DeFi Dashboard",
+          label: "Multi-Chain 1inch DeFi Dashboard",
           config: {
             title: "1inch-Powered DeFi Suite",
             enableMultiSwap: true,
             showPortfolio: true,
             enableLimitOrders: true,
             showAnalytics: true,
-            theme: "1inch-branded"
+            theme: "1inch-branded",
+            supportedChains: ["1", "137", "56", "42161", "10", "43114"]
           }
         }
       }
@@ -210,20 +222,56 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     ],
     requiredInputs: [
       {
+        key: "oneInchApiKey",
+        label: "1inch API Key (Live Preview Only)",
+        description: "Your 1inch API key for live preview testing. Generated code uses environment variables.",
+        type: "string",
+        required: false,
+        livePreviewOnly: true
+      },
+      {
+        key: "supportedChains",
+        label: "Supported Blockchains",
+        description: "Which blockchains to support in your application",
+        type: "multiselect",
+        options: [
+          { value: "1", label: "Ethereum" },
+          { value: "137", label: "Polygon" },
+          { value: "56", label: "BSC" },
+          { value: "42161", label: "Arbitrum" },
+          { value: "10", label: "Optimism" },
+          { value: "43114", label: "Avalanche" }
+        ],
+        defaultValue: ["1", "137", "56"],
+        required: true
+      },
+      {
+        key: "defaultTokens",
+        label: "Default Tokens per Chain",
+        description: "Default token list for each supported chain",
+        type: "json",
+        defaultValue: {
+          "1": ["ETH", "USDC", "USDT", "DAI", "WBTC"],
+          "137": ["MATIC", "USDC", "USDT", "DAI", "WETH"],
+          "56": ["BNB", "USDT", "BUSD", "CAKE"]
+        },
+        required: true
+      },
+      {
+        key: "enableFusion",
+        label: "Enable Fusion Mode",
+        description: "Enable 1inch Fusion for gasless swaps with MEV protection",
+        type: "boolean",
+        defaultValue: true,
+        required: false
+      },
+      {
         key: "appName",
         label: "DeFi Suite Name",
         description: "Name for your 1inch-powered DeFi application",
         type: "string",
         required: false,
         defaultValue: "My 1inch DeFi Suite"
-      },
-      {
-        key: "hackathonMode",
-        label: "Unite DeFi Hackathon Mode",
-        description: "Enable hackathon-specific features and 1inch API showcase",
-        type: "boolean",
-        required: false,
-        defaultValue: true
       }
     ]
   },
@@ -347,7 +395,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         label: "Supported Chains",
         description: "Which chains to support for swapping",
         type: "select",
-        options: ["Ethereum Only", "Multi-Chain (ETH+Polygon+BSC)", "All Supported Chains"],
+        options: [
+          { value: "ethereum-only", label: "Ethereum Only" },
+          { value: "multi-chain", label: "Multi-Chain (ETH+Polygon+BSC)" },
+          { value: "all-chains", label: "All Supported Chains" }
+        ],
         required: true,
         defaultValue: "Multi-Chain (ETH+Polygon+BSC)"
       },
@@ -433,7 +485,12 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         label: "Bridge Chains",
         description: "Which chains to support for bridging",
         type: "select",
-        options: ["ETH-Polygon", "ETH-BSC", "ETH-Solana", "All Chains"],
+        options: [
+          { value: "eth-polygon", label: "ETH-Polygon" },
+          { value: "eth-bsc", label: "ETH-BSC" },
+          { value: "eth-solana", label: "ETH-Solana" },
+          { value: "all-chains", label: "All Chains" }
+        ],
         required: true,
         defaultValue: "ETH-Polygon"
       }
@@ -484,7 +541,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         label: "Supported Order Types",
         description: "Which order types to enable",
         type: "select",
-        options: ["Limit Orders Only", "Limit + Stop Loss", "All Order Types"],
+        options: [
+          { value: "limit-only", label: "Limit Orders Only" },
+          { value: "limit-stop-loss", label: "Limit + Stop Loss" },
+          { value: "all-order-types", label: "All Order Types" }
+        ],
         required: true,
         defaultValue: "All Order Types"
       }
@@ -528,7 +589,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         label: "Supported Protocols",
         description: "Which DeFi protocols to aggregate",
         type: "select",
-        options: ["Aave + Compound", "Aave + Compound + Curve", "All Protocols"],
+        options: [
+          { value: "aave-compound", label: "Aave + Compound" },
+          { value: "aave-compound-curve", label: "Aave + Compound + Curve" },
+          { value: "all-protocols", label: "All Protocols" }
+        ],
         required: true,
         defaultValue: "Aave + Compound + Curve"
       }
@@ -580,7 +645,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         label: "Voting Period",
         description: "How long proposals remain open for voting",
         type: "select",
-        options: ["3 days", "7 days", "14 days"],
+        options: [
+          { value: "3-days", label: "3 days" },
+          { value: "7-days", label: "7 days" },
+          { value: "14-days", label: "14 days" }
+        ],
         required: true,
         defaultValue: "7 days"
       }

@@ -95,7 +95,7 @@ class TemplateDemo {
     
     await this.wait(2000)
 
-    const template = getTemplateById('dex-aggregator-swap')
+    const template = getTemplateById('oneinch-powered-defi-suite')
     if (!template) {
       console.log('❌ Template not found')
       return

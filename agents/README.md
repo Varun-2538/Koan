@@ -1,11 +1,21 @@
-# Unite DeFi Agents
+# 🤖 Unite DeFi Agents
 
 ## Overview
 
-This folder contains the agentic workflow components for Unite DeFi - an intelligent system designed to automate and optimize DeFi interactions. The agents will handle various tasks including:
+This folder contains the agentic workflow components for Unite DeFi - an intelligent system designed to automate and optimize DeFi interactions. 
 
+**🎯 Current Implementation**: A Python AI agent system that takes natural language input, generates DeFi workflows using **agno-agi**, and executes them by calling the existing TypeScript backend APIs.
+
+### Features
+- ✅ **Natural Language Processing**: "Create a swap application for ETH, USDC, WBTC with slippage protection"
+- ✅ **AI-Powered Architecture Mapping**: Uses agno-agi to understand DeFi requirements
+- ✅ **Workflow Generation**: Converts requirements to executable workflow definitions
+- ✅ **Backend Integration**: Communicates with TypeScript DeFi Execution Engine
+- ✅ **Real-time Monitoring**: Live progress updates and execution feedback
+
+### Agent Capabilities
 - Smart contract interactions and monitoring
-- DeFi protocol analysis and strategy execution
+- DeFi protocol analysis and strategy execution  
 - Automated portfolio management
 - Risk assessment and mitigation
 - Cross-chain operations coordination
@@ -143,6 +153,90 @@ python -m src.risk_analyzer
 
 # Run with specific configurations
 python main.py --config production.yml
+```
+
+## 🚀 Quick Start (New Implementation)
+
+### 1. Test Components
+
+Test the AI agent system without requiring the TypeScript backend:
+
+```bash
+python test_system.py
+```
+
+This will verify:
+- ✅ ArchitectureMapperAgent (agno-agi integration)
+- ✅ WorkflowGenerator (requirement to workflow conversion)
+- ✅ DeFiBackendClient (API client structure)
+
+### 2. Start TypeScript Backend
+
+In a separate terminal, start the DeFi Execution Engine:
+
+```bash
+cd ../backend
+npm run dev
+```
+
+The backend should be running on `http://localhost:3001`
+
+### 3. Run the Agent System
+
+```bash
+# Using the main entry point
+python main.py
+```
+
+### 4. Example Usage
+
+```bash
+$ python main.py
+
+> Enter your DeFi request: I want to create a swap application for my DeFi protocol that supports ETH, USDC, and WBTC with slippage protection
+
+🤖 Processing with AI agents...
+[AGENT CALL] ArchitectureMapper analyzing request...
+[AGENT CALL] Detected pattern: DEX Aggregator
+[AGENT CALL] Tokens identified: ETH, USDC, WBTC
+[AGENT CALL] Feature required: slippage protection
+[AGENT CALL] Generating workflow definition...
+
+📡 Calling TypeScript backend APIs...
+[API CALL] POST /api/workflows/execute
+[API RESPONSE] Execution started: exec_12345
+
+🚀 Workflow executing on backend...
+[BACKEND] ✅ walletConnector completed (0.2s)
+[BACKEND] ✅ tokenSelector completed (0.1s)  
+[BACKEND] ✅ oneInchQuote completed (0.8s)
+[BACKEND] ✅ priceImpactCalculator completed (0.1s)
+[BACKEND] ✅ oneInchSwap completed (2.1s)
+[BACKEND] ✅ transactionMonitor completed (3.2s)
+
+🎉 Workflow completed successfully!
+```
+
+### 5. Supported Patterns
+
+The AI agent recognizes these DeFi patterns:
+
+- **"swap application"** → DEX Aggregator workflow
+- **"cross-chain bridge"** → Bridge workflow with Fusion+
+- **"portfolio dashboard"** → Portfolio tracking workflow
+- **"yield farming"** → Automated yield strategies
+- **"governance"** → DAO voting and proposals
+
+### 6. Expected Backend APIs
+
+The system expects these endpoints on your TypeScript backend:
+
+```
+POST /api/workflows/execute     # Execute workflow
+GET  /api/executions/{id}       # Get execution status
+GET  /api/executions/{id}/logs  # Get execution logs
+POST /api/executions/{id}/cancel # Cancel execution
+GET  /api/health                # Health check
 ```
 
 ## Current Dependencies

@@ -73,6 +73,20 @@ const getDefaultNodeConfig = (nodeType: string) => {
         enableGasless: true,
         defaultTimeout: 30
       }
+    case "fusionMonadBridge":
+      return {
+        template_creation_mode: true,
+        api_key: "",
+        bridge_direction: "eth_to_monad",
+        source_token: "ETH",
+        destination_token: "ETH",
+        amount: "1.0",
+        source_address: "",
+        destination_address: "",
+        timeout_hours: 24,
+        slippage: 1,
+        enableMEVProtection: true
+      }
     case "walletConnector":
       return {
         template_creation_mode: true,
@@ -207,6 +221,13 @@ const getNodeTypeInfo = (nodeType: string) => {
       requiredFields: ["apiKey"],
       documentation: "https://docs.1inch.dev/docs/fusion-plus/introduction"
     },
+    fusionMonadBridge: {
+      name: "Fusion Monad Bridge",
+      description: "Atomic swaps between Ethereum and Monad using HTLCs with 1inch Fusion+ integration",
+      category: "Bridge Executable",
+      requiredFields: ["api_key", "bridge_direction", "source_token", "destination_token", "amount"],
+      documentation: "https://docs.monad.xyz/bridge"
+    },
     walletConnector: {
       name: "Wallet Connector",
       description: "Connect to Web3 wallets like MetaMask, WalletConnect, and Coinbase Wallet",
@@ -255,24 +276,24 @@ const getNodeTypeInfo = (nodeType: string) => {
 
 export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanelProps) {
   const [config, setConfig] = useState(() => {
-    if (!node) return {}
-    return { ...getDefaultNodeConfig(node.type), ...node.data.config }
+    if (!node || !node.type) return {}
+    return { ...getDefaultNodeConfig(node.type), ...(node.data?.config || {}) }
   })
   
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
-  if (!node) return null
+  if (!node || !node.type) return null
 
   const nodeInfo = getNodeTypeInfo(node.type)
 
   const handleConfigChange = (key: string, value: any) => {
-    setConfig(prev => ({ ...prev, [key]: value }))
+    setConfig((prev: Record<string, any>) => ({ ...prev, [key]: value }))
     setHasUnsavedChanges(true)
     
     // Clear validation error for this field
     if (validationErrors[key]) {
-      setValidationErrors(prev => {
+      setValidationErrors((prev: Record<string, string>) => {
         const newErrors = { ...prev }
         delete newErrors[key]
         return newErrors
@@ -281,21 +302,28 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
   }
 
   const validateConfig = () => {
+    if (!node || !node.type) return true
+    
     const errors: Record<string, string> = {}
     
     // Essential validation for 1inch nodes
-    if (node.type === "oneInchSwap" || node.type === "oneInchQuote" || node.type === "fusionPlus") {
-      if (!config.apiKey || config.apiKey.trim() === "") {
+    if (node.type === "oneInchSwap" || node.type === "oneInchQuote" || node.type === "fusionPlus" || node.type === "fusionMonadBridge") {
+      if (!config.apiKey && !config.api_key) {
         errors.apiKey = "1inch API key is required for execution"
       }
     }
 
+    if (node.type === "fusionMonadBridge") {
+      if (!config.bridge_direction) errors.bridge_direction = "Bridge direction is required"
+      if (!config.source_token) errors.source_token = "Source token is required"
+      if (!config.destination_token) errors.destination_token = "Destination token is required"
+      if (!config.amount || parseFloat(config.amount) <= 0) errors.amount = "Valid amount is required"
+    }
+
     if (node.type === "fusionPlus") {
-      if (!config.sourceChain) errors.sourceChain = "Source chain is required"
-      if (!config.destinationChain) errors.destinationChain = "Destination chain is required"
       if (!config.fromToken) errors.fromToken = "From token is required"
       if (!config.toToken) errors.toToken = "To token is required"
-      if (!config.amount || config.amount <= 0) errors.amount = "Valid amount is required"
+      if (!config.amount || parseFloat(config.amount) <= 0) errors.amount = "Valid amount is required"
     }
 
     setValidationErrors(errors)
@@ -311,8 +339,9 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
   }
 
   const handleReset = () => {
+    if (!node || !node.type) return
     const defaultConfig = getDefaultNodeConfig(node.type)
-    setConfig({ ...defaultConfig, ...node.data.config })
+    setConfig({ ...defaultConfig, ...(node.data?.config || {}) })
     setHasUnsavedChanges(false)
     setValidationErrors({})
   }
@@ -338,7 +367,7 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
         )
 
       case "select":
-        const options = getSelectOptions(key, node.type)
+        const options = (node && node.type) ? getSelectOptions(key, node.type) : []
         return (
           <div className="space-y-2">
             <Label htmlFor={key} className="text-sm font-medium">
@@ -367,7 +396,7 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
         )
 
       case "multiselect":
-        const multiselectOptions = getSelectOptions(key, node.type)
+        const multiselectOptions = (node && node.type) ? getSelectOptions(key, node.type) : []
         const selectedValues = Array.isArray(value) ? value : []
   return (
       <div className="space-y-2">
@@ -539,10 +568,19 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
       ]
     }
 
+    if (key === "bridge_direction") {
+      return [
+        { value: "eth_to_monad", label: "Ethereum → Monad" },
+        { value: "monad_to_eth", label: "Monad → Ethereum" }
+      ]
+    }
+
     return []
   }
 
   const renderNodeConfiguration = () => {
+    if (!node || !node.type) return null
+    
     switch (node.type) {
       case "oneInchSwap":
         return (
@@ -572,6 +610,25 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
             {renderConfigField("quoteRefreshInterval", config.quoteRefreshInterval, "Refresh Interval (seconds)", "number")}
             {renderConfigField("showPriceChart", config.showPriceChart, "Show Price Chart", "boolean")}
             {renderConfigField("showGasEstimate", config.showGasEstimate, "Show Gas Estimate", "boolean")}
+          </div>
+        )
+
+      case "fusionMonadBridge":
+        return (
+          <div className="space-y-4">
+            {renderConfigField("api_key", config.api_key, "1inch API Key", "password")}
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <p className="text-xs text-purple-700">
+                🌉 Cross-chain bridge between Ethereum and Monad using HTLCs
+              </p>
+            </div>
+            {renderConfigField("bridge_direction", config.bridge_direction, "Bridge Direction", "select")}
+            {renderConfigField("source_token", config.source_token, "Source Token", "text")}
+            {renderConfigField("destination_token", config.destination_token, "Destination Token", "text")}
+            {renderConfigField("amount", config.amount, "Amount", "text")}
+            {renderConfigField("timeout_hours", config.timeout_hours, "Timeout (hours)", "number")}
+            {renderConfigField("slippage", config.slippage, "Slippage (%)", "number")}
+            {renderConfigField("enableMEVProtection", config.enableMEVProtection, "MEV Protection", "boolean")}
           </div>
         )
 
@@ -641,18 +698,18 @@ case "tokenSelector":
   }
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full">
+    <div className="w-full sm:w-80 bg-white border-l border-gray-200 flex flex-col h-full shadow-lg">
       {/* Header */}
-      <div className="p-4 border-b">
+      <div className="p-3 sm:p-4 border-b">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-semibold">Node Configuration</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Node Configuration</h3>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
       </div>
 
-        <div className="flex items-center gap-2 mb-3">
-          <Badge variant="outline">{nodeInfo.category}</Badge>
+        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+          <Badge variant="outline" className="text-xs">{nodeInfo.category}</Badge>
           {hasUnsavedChanges && (
             <Badge variant="destructive" className="text-xs">
               Unsaved changes
@@ -667,14 +724,14 @@ case "tokenSelector":
       </div>
 
       {/* Configuration Form */}
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-3 sm:p-4">
         <Tabs defaultValue="config" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="config">Config</TabsTrigger>
-            <TabsTrigger value="info">Info</TabsTrigger>
+            <TabsTrigger value="config" className="text-xs sm:text-sm">Config</TabsTrigger>
+            <TabsTrigger value="info" className="text-xs sm:text-sm">Info</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="config" className="space-y-4 mt-4">
+          <TabsContent value="config" className="space-y-3 sm:space-y-4 mt-4">
             {renderNodeConfiguration()}
           </TabsContent>
 

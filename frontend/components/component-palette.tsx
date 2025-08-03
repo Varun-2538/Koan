@@ -54,6 +54,13 @@ const COMPONENTS: ComponentItem[] = [
     icon: <Zap className="w-4 h-4" />
   },
   {
+    id: "fusionMonadBridge",
+    name: "Fusion Monad Bridge",
+    description: "Atomic swaps between Ethereum and Monad using HTLCs",
+    category: "Bridge",
+    icon: <ArrowLeftRight className="w-4 h-4" />
+  },
+  {
     id: "chainSelector",
     name: "Chain Selector",
     description: "Select blockchain networks for operations",
@@ -116,13 +123,6 @@ const COMPONENTS: ComponentItem[] = [
     icon: <Zap className="w-4 h-4" />
   },
   {
-    id: "fusionMonadBridge",
-    name: "Fusion+ Monad Bridge",
-    description: "Atomic swaps between Ethereum and Monad using HTLCs",
-    category: "Cross-Chain",
-    icon: <ArrowLeftRight className="w-4 h-4" />
-  },
-  {
     id: "limitOrder",
     name: "Limit Order",
     description: "Place limit orders on DEX",
@@ -166,7 +166,7 @@ const COMPONENTS: ComponentItem[] = [
   }
 ]
 
-const CATEGORIES = ["All", "DeFi", "Cross-Chain", "UI", "Infrastructure", "Analytics"]
+const CATEGORIES = ["All", "DeFi", "Bridge", "UI", "Infrastructure", "Analytics"]
 
 export function ComponentPalette() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -201,23 +201,23 @@ export function ComponentPalette() {
   }, {} as Record<string, ComponentItem[]>)
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold mb-3">Components</h2>
+    <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col h-full max-h-screen">
+      <div className="p-2 sm:p-4 border-b">
+        <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Components</h2>
         
         {/* Search */}
-        <div className="relative mb-3">
+        <div className="relative mb-2 sm:mb-3">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             placeholder="Search components..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 text-sm"
           />
         </div>
 
         {/* Category Filters */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1 sm:gap-2">
           {CATEGORIES.map(category => (
             <Badge
               key={category}
@@ -231,11 +231,11 @@ export function ComponentPalette() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
         {selectedCategory === "All" ? (
           // Show grouped by category
           Object.entries(groupedComponents).map(([category, components]) => (
-            <div key={category} className="space-y-2">
+            <div key={category} className="space-y-1 sm:space-y-2">
               <button
                 onClick={() => toggleCategory(category)}
                 className="flex items-center gap-2 w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900"
@@ -249,7 +249,7 @@ export function ComponentPalette() {
               </button>
               
               {expandedCategories.has(category) && (
-                <div className="pl-6 space-y-2">
+                <div className="pl-6 space-y-1 sm:space-y-2">
                   {components.map(component => (
                     <ComponentCard
                       key={component.id}
@@ -263,7 +263,7 @@ export function ComponentPalette() {
           ))
         ) : (
           // Show flat list for specific category
-          <div className="space-y-2">
+          <div className="space-y-1 sm:space-y-2">
             {filteredComponents.map(component => (
               <ComponentCard
                 key={component.id}
@@ -275,8 +275,8 @@ export function ComponentPalette() {
         )}
 
         {filteredComponents.length === 0 && (
-          <div className="text-center text-gray-500 py-8">
-            <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <div className="text-center text-gray-500 py-4 sm:py-8">
+            <Search className="w-6 sm:w-8 h-6 sm:h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No components found</p>
             <p className="text-xs">Try adjusting your search or filters</p>
           </div>
@@ -284,12 +284,14 @@ export function ComponentPalette() {
       </div>
 
       {/* Instructions */}
-      <div className="p-4 border-t bg-gray-50">
+      <div className="p-2 sm:p-4 border-t bg-gray-50">
         <div className="text-xs text-gray-600 space-y-1">
           <div className="font-medium">💡 How to use:</div>
-          <div>• Drag components to the canvas</div>
-          <div>• Connect nodes to create workflows</div>
-          <div>• Click nodes to configure them</div>
+          <div className="hidden sm:block">• Drag components to the canvas</div>
+          <div className="hidden sm:block">• Connect nodes to create workflows</div>
+          <div className="hidden sm:block">• Click nodes to configure them</div>
+          <div className="sm:hidden">• Tap components to add</div>
+          <div className="sm:hidden">• Long press to configure</div>
         </div>
       </div>
     </div>
@@ -309,19 +311,19 @@ function ComponentCard({
       draggable
       onDragStart={(event) => onDragStart(event, component.id)}
     >
-      <CardContent className="p-3">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 p-2 bg-blue-50 rounded-lg">
+      <CardContent className="p-2 sm:p-3">
+        <div className="flex items-start gap-2 sm:gap-3">
+          <div className="flex-shrink-0 p-1.5 sm:p-2 bg-blue-50 rounded-lg">
             {component.icon}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-sm text-gray-900 mb-1">
+            <h3 className="font-medium text-xs sm:text-sm text-gray-900 mb-1 truncate">
               {component.name}
             </h3>
-            <p className="text-xs text-gray-600 leading-relaxed">
+            <p className="text-xs text-gray-600 leading-relaxed line-clamp-2 sm:line-clamp-none">
               {component.description}
             </p>
-            <Badge variant="outline" className="mt-2 text-xs">
+            <Badge variant="outline" className="mt-1 sm:mt-2 text-xs">
               {component.category}
             </Badge>
           </div>

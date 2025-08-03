@@ -6,6 +6,14 @@ export interface CodeGenerationResult {
   }>;
   deploymentInstructions: string[];
   gitCommitMessage: string;
+  projectName?: string;
+  description?: string;
+  framework?: string;
+  features?: string[];
+  dependencies?: {
+    dependencies: Record<string, string>;
+    devDependencies: Record<string, string>;
+  };
 }
 
 export class OneInchCodeGenerator {
@@ -279,8 +287,43 @@ Features:
 - Professional UI/UX
 - Docker deployment ready
 
-Built for Unite DeFi Hackathon 🏆`
-    };
+Built for Unite DeFi Hackathon 🏆`,
+      projectName,
+      description: "Complete DeFi application powered by 1inch with swap aggregation, limit orders, and portfolio tracking",
+      framework: "Next.js 14 + TypeScript",
+      features: [
+        hasWalletConnector && "Wallet Connection",
+        hasOneInchSwap && "Token Swaps",
+        hasOneInchQuote && "Price Quotes",
+        hasFusionSwap && "Gasless Swaps",
+        hasLimitOrder && "Limit Orders",
+        hasPortfolioAPI && "Portfolio Tracking",
+        hasTransactionMonitor && "Transaction Monitor",
+        hasPriceImpact && "Price Impact Analysis",
+        hasDashboard && "Analytics Dashboard"
+      ].filter(Boolean) as string[],
+      dependencies: {
+        dependencies: {
+          "next": "14.0.4",
+          "react": "^18.2.0",
+          "react-dom": "^18.2.0",
+          "@tanstack/react-query": "^5.8.4",
+          "ethers": "^6.8.1",
+          "wagmi": "^2.0.8",
+          "@rainbow-me/rainbowkit": "^2.0.0",
+          "tailwindcss": "^3.3.6",
+          "lucide-react": "^0.294.0"
+        },
+        devDependencies: {
+          "@types/node": "^20.9.0",
+          "@types/react": "^18.2.37",
+          "@types/react-dom": "^18.2.15",
+          "typescript": "^5.2.2",
+          "autoprefixer": "^10.4.16",
+          "postcss": "^8.4.31"
+        }
+      }
+    }
   }
 
   private static generateFrontendPackageJson(projectName: string): string {

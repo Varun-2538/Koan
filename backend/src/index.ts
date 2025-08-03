@@ -198,76 +198,6 @@ io.on('connection', (socket) => {
   })
 
   // Handle execution status requests
-  socket.on('get-execution-status', async (data: { executionId: string }) => {
-    try {
-      const execution = executionEngine.getExecution(data.executionId)
-      socket.emit('execution-status', execution)
-    } catch (error: any) {
-      socket.emit('execution-error', {
-        executionId: data.executionId,
-        error: error.message
-      })
-    }
-  })
-
-  // Handle atomic swap monitoring requests
-  socket.on('monitor-atomic-swap', async (data: { contractId: string }) => {
-    try {
-      const { contractId } = data
-      logger.info(`Starting atomic swap monitoring for contract: ${contractId}`)
-      
-      // Join the monitoring room for this contract
-      socket.join(`atomic-swap-${contractId}`)
-      
-      // Start monitoring (this would integrate with your HTLC monitoring system)
-      const monitoringInterval = setInterval(async () => {
-        try {
-          // Mock status update - replace with actual HTLC status checking
-          const status = {
-            contractId,
-            phase: ['created', 'locked', 'revealed', 'completed'][Math.floor(Math.random() * 4)],
-            ethereum_tx: '0x' + 'e'.repeat(64),
-            monad_tx: '0x' + 'm'.repeat(64),
-            timeRemaining: 24 * 60 * 60 * 1000 - Math.random() * 1000000,
-            timestamp: new Date().toISOString()
-          }
-          
-          // Emit to all clients monitoring this contract
-          io.to(`atomic-swap-${contractId}`).emit('atomic-swap-status', status)
-          
-          // Stop monitoring if completed or failed
-          if (status.phase === 'completed' || status.phase === 'failed') {
-            clearInterval(monitoringInterval)
-            socket.leave(`atomic-swap-${contractId}`)
-          }
-        } catch (error) {
-          logger.error(`Error monitoring atomic swap ${contractId}:`, error)
-          clearInterval(monitoringInterval)
-        }
-      }, 10000) // Update every 10 seconds
-      
-      // Clean up on disconnect
-      socket.on('disconnect', () => {
-        clearInterval(monitoringInterval)
-        socket.leave(`atomic-swap-${contractId}`)
-      })
-      
-      socket.emit('atomic-swap-monitoring-started', { contractId })
-      
-    } catch (error: any) {
-      logger.error('Failed to start atomic swap monitoring:', error)
-      socket.emit('atomic-swap-error', {
-        contractId: data.contractId,
-        error: error.message
-      })
-    }
-  })
-
-  // Handle stop monitoring requests
-  socket.on('stop-atomic-swap-monitoring', (data: { contractId: string }) => {
-    socket.leave(`atomic-swap-${data.contractId}`)
-    socket.emit('atomic-swap-monitoring-stopped', { contractId: data.contractId })
-  })
   socket.on('get-execution-status', (data: { executionId: string }) => {
     const execution = executionEngine.getExecution(data.executionId)
     const stats = executionEngine.getExecutionStats(data.executionId)
@@ -329,7 +259,7 @@ app.post('/api/workflows/execute', async (req, res) => {
       environment: 'production'
     })
     
-    return res.json({
+    res.json({
       executionId: execution.id,
       status: execution.status,
       startTime: execution.startTime
@@ -337,7 +267,7 @@ app.post('/api/workflows/execute', async (req, res) => {
     
   } catch (error: any) {
     logger.error('REST: Workflow execution failed', error)
-    return res.status(500).json({
+    res.status(500).json({
       error: error.message,
       type: error.constructor.name
     })
@@ -355,7 +285,7 @@ app.get('/api/executions/:executionId', (req, res) => {
   
   const stats = executionEngine.getExecutionStats(executionId)
   
-  return res.json({
+  res.json({
     execution: {
       id: execution.id,
       workflowId: execution.workflowId,
@@ -391,7 +321,7 @@ app.get('/api/executions/:executionId/logs', (req, res) => {
     }
   }
   
-  return res.json({ logs })
+  res.json({ logs })
 })
 
 // Return generated code artifacts (if any) for an execution
@@ -434,7 +364,7 @@ app.get('/api/executions/:executionId/code', async (req, res) => {
     return res.status(404).json({ error: 'No generated code available for this execution' })
   }
 
-  return res.json({ executionId, generated })
+  res.json({ executionId, generated })
 })
 
 // Cancel execution
@@ -443,9 +373,9 @@ app.post('/api/executions/:executionId/cancel', async (req, res) => {
   
   try {
     const cancelled = await executionEngine.cancelExecution(executionId)
-    return res.json({ cancelled })
+    res.json({ cancelled })
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    res.status(500).json({ error: error.message })
   }
 })
 
@@ -484,7 +414,7 @@ app.post('/api/test/oneinch', async (req, res) => {
       secrets: {}
     })
     
-    return res.json({
+    res.json({
       success: true,
       chainId,
       fromToken,
@@ -496,7 +426,7 @@ app.post('/api/test/oneinch', async (req, res) => {
     
   } catch (error: any) {
     logger.error('1inch API test failed', error)
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: error.message,
       apiConnected: false
@@ -523,10 +453,10 @@ app.get('/api/nodes', (req, res) => {
     },
     {
       type: 'fusionMonadBridge',
-      name: 'Fusion+ Monad Bridge',
-      description: 'Atomic swaps between Ethereum and Monad using HTLCs with 1inch Fusion+',
-      category: 'cross-chain',
-      tags: ['1inch', 'fusion+', 'monad', 'ethereum', 'htlc', 'atomic-swap', 'cross-chain']
+      name: 'Fusion Monad Bridge',
+      description: 'Atomic swaps between Ethereum and Monad using HTLCs',
+      category: 'bridge',
+      tags: ['1inch', 'fusion', 'monad', 'htlc', 'cross-chain', 'ethereum']
     },
     {
       type: 'chainSelector',
@@ -551,7 +481,7 @@ app.get('/api/nodes', (req, res) => {
     }
   ]
   
-  return res.json({ nodeTypes })
+  res.json({ nodeTypes })
 })
 
 // Error handling middleware

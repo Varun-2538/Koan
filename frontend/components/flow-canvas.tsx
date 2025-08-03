@@ -25,16 +25,17 @@ import { NodeConfigPanel } from "./node-config-panel"
 import { FlowToolbar } from "./flow-toolbar"
 import { CustomNodes } from "./custom-nodes"
 import { Button } from "@/components/ui/button"
-import { Save, Play, Zap, Trash2 } from "lucide-react"
+import { Save, Play, Zap, Trash2, Menu, X } from "lucide-react"
 import { getTemplateById } from "@/lib/templates"
-import { OneInchCodeGenerator, type CodeGenerationResult } from "@/lib/oneinch-code-generator"
+import { OneInchCodeGenerator, type CodeGenerationResult as OneInchCodeResult } from "@/lib/oneinch-code-generator"
 import { CodePreviewModal } from "./code-preview-modal"
 import { GitHubPublishModal } from "./github-publish-modal"
 import { LiveDashboardPreview } from "./live-dashboard-preview"
 import { AIChatbotPanel } from "./ai-chatbot-panel"
-import { executionClient, type WorkflowDefinition } from "@/lib/execution-client"
-import { workflowExecutionClient, type ExecutionStatus } from "@/lib/workflow-execution-client"
+import { executionClient } from "@/lib/execution-client"
+import { workflowExecutionClient, type ExecutionStatus, type WorkflowDefinition } from "@/lib/workflow-execution-client"
 import { workflowCodeGenerator, type CodeGenerationResult } from "@/lib/workflow-code-generator"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const nodeTypes: NodeTypes = CustomNodes
 
@@ -80,9 +81,14 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [templateLoaded, setTemplateLoaded] = useState(false)
-  const [codeResult, setCodeResult] = useState<CodeGenerationResult | null>(null)
+  const [codeResult, setCodeResult] = useState<CodeGenerationResult | OneInchCodeResult | null>(null)
   const [showCodeModal, setShowCodeModal] = useState(false)
   const [showGitHubModal, setShowGitHubModal] = useState(false)
+  const [autoConnect, setAutoConnect] = useState(true)
+  
+  // Mobile responsiveness
+  const isMobile = useIsMobile()
+  const [showMobilePalette, setShowMobilePalette] = useState(false)
 
   // Add validation and direct deploy function
   const deployToGitHub = async () => {
@@ -177,7 +183,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
 
     try {
       // Convert React Flow nodes to workflow definition
-      const workflowDefinition = {
+      const workflowDefinition: WorkflowDefinition = {
         id: `workflow-${Date.now()}`,
         name: `Canvas Workflow`,
         description: 'Workflow generated from canvas',
@@ -185,17 +191,18 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           id: node.id,
           type: node.type || 'unknown',
           position: node.position,
-          data: node.data
+          data: {
+            label: typeof node.data?.label === 'string' ? node.data.label : (node.type || 'Node'),
+            config: node.data?.config || {}
+          }
         })),
         edges: edges.map(edge => ({
           id: edge.id,
           source: edge.source,
-          target: edge.target
-        })),
-        metadata: {
-          created: new Date().toISOString(),
-          source: 'canvas'
-        }
+          target: edge.target,
+          ...(edge.sourceHandle && { sourceHandle: edge.sourceHandle }),
+          ...(edge.targetHandle && { targetHandle: edge.targetHandle })
+        }))
       }
 
       // Validate workflow
@@ -303,6 +310,147 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
 
   const onConnect = useCallback((params: Connection) => setEdges((eds) => addEdge(params, eds)), [setEdges])
 
+  // Auto-connection logic for newly dropped nodes
+  const createAutoConnections = useCallback((newNode: Node, existingNodes: Node[]) => {
+    const connections: Edge[] = []
+    
+    // Define logical connection patterns
+    const connectionRules: Record<string, { canConnectTo: string[], canConnectFrom: string[] }> = {
+      // Infrastructure nodes
+      walletConnector: {
+        canConnectTo: ["tokenSelector", "tokenInput", "chainSelector", "oneInchQuote", "oneInchSwap"],
+        canConnectFrom: []
+      },
+      chainSelector: {
+        canConnectTo: ["tokenSelector", "oneInchSwap", "oneInchQuote", "fusionPlus", "fusionMonadBridge"],
+        canConnectFrom: ["walletConnector"]
+      },
+      
+      // Input nodes
+      tokenSelector: {
+        canConnectTo: ["oneInchQuote", "oneInchSwap", "fusionPlus", "fusionMonadBridge", "portfolioAPI"],
+        canConnectFrom: ["walletConnector", "chainSelector"]
+      },
+      tokenInput: {
+        canConnectTo: ["oneInchQuote", "slippageControl"],
+        canConnectFrom: ["walletConnector"]
+      },
+      slippageControl: {
+        canConnectTo: ["oneInchSwap"],
+        canConnectFrom: ["tokenInput", "oneInchQuote"]
+      },
+      
+      // DeFi execution nodes
+      oneInchQuote: {
+        canConnectTo: ["priceImpactCalculator", "oneInchSwap", "fusionPlus", "slippageControl"],
+        canConnectFrom: ["walletConnector", "tokenSelector", "tokenInput", "chainSelector"]
+      },
+      oneInchSwap: {
+        canConnectTo: ["limitOrder", "portfolioAPI", "transactionMonitor", "swapInterface"],
+        canConnectFrom: ["oneInchQuote", "priceImpactCalculator", "slippageControl", "chainSelector", "tokenSelector"]
+      },
+      fusionPlus: {
+        canConnectTo: ["limitOrder", "transactionMonitor"],
+        canConnectFrom: ["oneInchQuote", "tokenSelector", "chainSelector"]
+      },
+      fusionMonadBridge: {
+        canConnectTo: ["transactionMonitor", "portfolioAPI"],
+        canConnectFrom: ["tokenSelector", "chainSelector"]
+      },
+      
+      // Advanced DeFi nodes
+      priceImpactCalculator: {
+        canConnectTo: ["oneInchSwap"],
+        canConnectFrom: ["oneInchQuote"]
+      },
+      limitOrder: {
+        canConnectTo: ["transactionMonitor"],
+        canConnectFrom: ["oneInchSwap", "fusionPlus"]
+      },
+      
+      // API and monitoring nodes
+      portfolioAPI: {
+        canConnectTo: ["defiDashboard", "dashboard"],
+        canConnectFrom: ["oneInchSwap", "tokenSelector", "fusionMonadBridge"]
+      },
+      transactionMonitor: {
+        canConnectTo: ["defiDashboard", "dashboard"],
+        canConnectFrom: ["oneInchSwap", "limitOrder", "fusionPlus", "fusionMonadBridge"]
+      },
+      
+      // UI nodes
+      swapInterface: {
+        canConnectTo: [],
+        canConnectFrom: ["oneInchSwap"]
+      },
+      defiDashboard: {
+        canConnectTo: [],
+        canConnectFrom: ["portfolioAPI", "transactionMonitor"]
+      },
+      dashboard: {
+        canConnectTo: [],
+        canConnectFrom: ["portfolioAPI", "transactionMonitor", "oneInchSwap"]
+      }
+    }
+
+    const newNodeType = newNode.type
+    const rules = connectionRules[newNodeType!]
+    
+    if (!rules) return connections
+
+    // Find best connection candidates
+    const candidatesForInput = existingNodes.filter(node => 
+      rules.canConnectFrom.includes(node.type!) && 
+      !edges.some(edge => edge.source === node.id && edge.target === newNode.id)
+    )
+    
+    const candidatesForOutput = existingNodes.filter(node => 
+      rules.canConnectTo.includes(node.type!) && 
+      !edges.some(edge => edge.source === newNode.id && edge.target === node.id)
+    )
+
+    // Create input connections (nodes that should connect TO this new node)
+    if (candidatesForInput.length > 0) {
+      // Find the most recent or closest node
+      const bestInputCandidate = candidatesForInput.reduce((best, current) => {
+        const bestDistance = Math.abs(best.position.x - newNode.position.x) + Math.abs(best.position.y - newNode.position.y)
+        const currentDistance = Math.abs(current.position.x - newNode.position.x) + Math.abs(current.position.y - newNode.position.y)
+        return currentDistance < bestDistance ? current : best
+      })
+
+      connections.push({
+        id: `e-${bestInputCandidate.id}-${newNode.id}`,
+        source: bestInputCandidate.id,
+        target: newNode.id,
+        type: "default"
+      })
+    }
+
+    // Create output connections (nodes this new node should connect TO)
+    if (candidatesForOutput.length > 0) {
+      // For output connections, prioritize certain types
+      const priorityOrder = ["oneInchSwap", "fusionPlus", "fusionMonadBridge", "defiDashboard", "dashboard", "swapInterface"]
+      
+      let bestOutputCandidate = candidatesForOutput[0]
+      for (const priorityType of priorityOrder) {
+        const priorityCandidate = candidatesForOutput.find(node => node.type === priorityType)
+        if (priorityCandidate) {
+          bestOutputCandidate = priorityCandidate
+          break
+        }
+      }
+
+      connections.push({
+        id: `e-${newNode.id}-${bestOutputCandidate.id}`,
+        source: newNode.id,
+        target: bestOutputCandidate.id,
+        type: "default"
+      })
+    }
+
+    return connections
+  }, [edges])
+
   // Handle node deletion with keyboard
   const onNodesDelete = useCallback((deletedNodes: Node[]) => {
     // Close config panel if deleted node was selected
@@ -359,9 +507,25 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         },
       }
 
-      setNodes((nds) => nds.concat(newNode))
+      // Add the new node
+      setNodes((nds) => {
+        const updatedNodes = nds.concat(newNode)
+        
+        // Create auto-connections if enabled and there are existing nodes
+        if (autoConnect && nds.length > 0) {
+          const autoConnections = createAutoConnections(newNode, nds)
+          if (autoConnections.length > 0) {
+            // Add connections after a small delay to ensure node is added first
+            setTimeout(() => {
+              setEdges((eds) => [...eds, ...autoConnections])
+            }, 100)
+          }
+        }
+        
+        return updatedNodes
+      })
     },
-    [reactFlowInstance, setNodes],
+    [reactFlowInstance, setNodes, setEdges, createAutoConnections, autoConnect],
   )
 
   const getDefaultConfig = (type: string) => {
@@ -668,21 +832,47 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const generateCode = async () => {
     setGenerating(true)
     try {
-      // Use the new 1inch code generator
       const projectName = isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"
-      const result = OneInchCodeGenerator.generateFromWorkflow(
-        nodes, 
-        edges, 
-        projectName,
-        { 
-          network: "Ethereum",
-          hackathonMode: true,
-          oneInchApiKey: "template-mode-no-key-needed"
-        }
-      )
       
-      // Show the code preview modal
-      setCodeResult(result)
+      if (isTemplateProject) {
+        // Use 1inch code generator for template projects
+        const result = OneInchCodeGenerator.generateFromWorkflow(
+          nodes, 
+          edges, 
+          projectName,
+          { 
+            network: "Ethereum",
+            hackathonMode: true,
+            oneInchApiKey: "template-mode-no-key-needed"
+          }
+        )
+        setCodeResult(result)
+      } else {
+        // For custom workflows with new nodes, check if there's execution data
+        if (workflowExecutionStatus && workflowExecutionStatus.status === 'completed') {
+          // Use workflow code generator for executed workflows
+          const result = await workflowCodeGenerator.generateApplicationFromWorkflow(
+            workflowExecutionStatus,
+            projectName
+          )
+          setCodeResult(result)
+        } else {
+          // For unexecuted workflows, generate based on node configuration
+          const result = await workflowCodeGenerator.generateFromNodes(
+            nodes,
+            edges,
+            projectName,
+            {
+              framework: "Next.js 14",
+              generateAPI: true,
+              generateUI: true,
+              generateTests: false
+            }
+          )
+          setCodeResult(result)
+        }
+      }
+      
       setShowCodeModal(true)
       
     } catch (error) {
@@ -720,7 +910,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         description: "Executing DeFi workflow from visual canvas",
         nodes: nodes.map(node => {
           // Prepare config for backend
-          const backendConfig = { ...node.data?.config }
+          const backendConfig: any = node.data?.config ? { ...node.data.config } : {}
           
           // For 1inch nodes, inject the API key from template inputs
           if (node.type === "oneInchSwap" || node.type === "oneInchQuote" || node.type === "portfolioAPI") {
@@ -859,7 +1049,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
             type: node.type || 'default',
             position: node.position,
             data: {
-              label: node.data?.label || node.type || 'Node',
+              label: typeof node.data?.label === 'string' ? node.data.label : (node.type || 'Node'),
               config: backendConfig
             }
           }
@@ -868,8 +1058,8 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           id: edge.id,
           source: edge.source,
           target: edge.target,
-          sourceHandle: edge.sourceHandle,
-          targetHandle: edge.targetHandle
+          ...(edge.sourceHandle && { sourceHandle: edge.sourceHandle }),
+          ...(edge.targetHandle && { targetHandle: edge.targetHandle })
         }))
       }
 
@@ -883,28 +1073,28 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
       })
 
       // Set up execution event listeners
-      executionClient.on('execution.started', (data) => {
+      executionClient.on('execution.started', (data: any) => {
         setExecutionStatus(`Execution started: ${data.executionId}`)
         console.log('🚀 Execution started:', data)
       })
 
-      executionClient.on('node.started', (data) => {
+      executionClient.on('node.started', (data: any) => {
         setExecutionStatus(`Executing node: ${data.nodeId}`)
         console.log('⚡ Node started:', data)
       })
 
-      executionClient.on('node.completed', (data) => {
+      executionClient.on('node.completed', (data: any) => {
         setExecutionStatus(`Node completed: ${data.nodeId}`)
         console.log('✅ Node completed:', data)
       })
 
-      executionClient.on('execution.completed', (data) => {
+      executionClient.on('execution.completed', (data: any) => {
         setExecutionStatus("Execution completed successfully!")
         setExecutionResult(data)
         console.log('🎉 Execution completed:', data)
       })
 
-      executionClient.on('execution.failed', (data) => {
+      executionClient.on('execution.failed', (data: any) => {
         setExecutionStatus("Execution failed")
         setExecutionError(data.error || 'Unknown error')
         console.error('❌ Execution failed:', data)
@@ -945,12 +1135,32 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   }
 
   return (
-    <div className="h-screen flex">
-      <ComponentPalette />
-
-      <div className="flex-1 relative">
-        <ReactFlowProvider>
-          <div className="h-full" ref={reactFlowWrapper}>
+    <div className="h-screen flex flex-col">
+      {/* Mobile Component Palette Overlay */}
+      {isMobile && showMobilePalette && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50">
+          <div className="h-full w-80 bg-white">
+            <ComponentPalette />
+            <div className="absolute top-4 right-4">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowMobilePalette(false)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="flex flex-1 min-h-0">
+        {/* Desktop Component Palette */}
+        {!isMobile && <ComponentPalette />}
+        
+        <div className="flex-1 relative">
+          <ReactFlowProvider>
+            <div className="h-full" ref={reactFlowWrapper}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -973,7 +1183,24 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
               <Background gap={12} size={1} />
 
               <Panel position="top-left">
-                <FlowToolbar projectId={projectId} />
+                {/* Mobile Menu Button */}
+                {isMobile && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowMobilePalette(true)}
+                    className="mb-2"
+                  >
+                    <Menu className="w-4 h-4 mr-2" />
+                    Components
+                  </Button>
+                )}
+                
+                <FlowToolbar 
+                  projectId={projectId} 
+                  autoConnect={autoConnect}
+                  setAutoConnect={setAutoConnect}
+                />
               </Panel>
 
               {/* Execution Status Panel */}
@@ -995,20 +1222,21 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 max-w-sm shadow-sm">
+                  <div className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3 max-w-xs sm:max-w-sm shadow-sm">
                     <div className="text-xs text-gray-600 space-y-1">
                       <div className="font-medium text-gray-800 mb-2">💡 Quick Tips:</div>
-                      <div>• Use AI chatbot to generate workflows</div>
+                      <div className="hidden sm:block">• Use AI chatbot to generate workflows</div>
                       <div>• Click a node to select it</div>
-                      <div>• Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Delete</kbd> to delete nodes</div>
-                      <div>• Execute workflows to generate code</div>
+                      <div className="hidden sm:block">• Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Delete</kbd> to delete nodes</div>
+                      <div className="hidden sm:block">• Execute workflows to generate code</div>
+                      <div className="sm:hidden">• Tap nodes to configure</div>
                     </div>
                   </div>
                 )}
               </Panel>
 
               <Panel position="top-right">
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                   {selectedNode && (
                     <Button 
                       onClick={() => {
@@ -1021,32 +1249,37 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                       size="sm"
                       variant="destructive"
                       title="Delete selected node (Delete key)"
+                      className="text-xs"
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete Node
+                      <Trash2 className="w-3 sm:w-4 h-3 sm:h-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Delete Node</span>
+                      <span className="sm:hidden">Delete</span>
                     </Button>
                   )}
-                  <Button onClick={saveFlow} disabled={saving} size="sm">
-                    <Save className="w-4 h-4 mr-2" />
-                    {saving ? "Saving..." : "Save"}
+                  <Button onClick={saveFlow} disabled={saving} size="sm" className="text-xs">
+                    <Save className="w-3 sm:w-4 h-3 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">{saving ? "Saving..." : "Save"}</span>
+                    <span className="sm:hidden">{saving ? "..." : "Save"}</span>
                   </Button>
                   <Button 
                     onClick={executeWorkflow}
                     disabled={executing || nodes.length === 0} 
                     size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white text-xs"
                   >
-                    <Zap className="w-4 h-4 mr-2" />
-                    {executing ? "Executing..." : "Execute Flow"}
+                    <Zap className="w-3 sm:w-4 h-3 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">{executing ? "Executing..." : "Execute Flow"}</span>
+                    <span className="sm:hidden">{executing ? "..." : "Run"}</span>
                   </Button>
                   <Button 
                     onClick={isTemplateProject ? deployToGitHub : generateCode}
                     disabled={generating} 
                     size="sm"
-                    className={isTemplateProject ? "bg-blue-600 hover:bg-blue-700 text-white" : ""}
+                    className={`text-xs ${isTemplateProject ? "bg-blue-600 hover:bg-blue-700 text-white" : ""}`}
                   >
-                    <Play className="w-4 h-4 mr-2" />
-                    {generating ? "Generating..." : isTemplateProject ? "Deploy to GitHub" : "Generate Code"}
+                    <Play className="w-3 sm:w-4 h-3 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">{generating ? "Generating..." : isTemplateProject ? "Deploy to GitHub" : "Generate Code"}</span>
+                    <span className="sm:hidden">{generating ? "..." : isTemplateProject ? "Deploy" : "Generate"}</span>
                   </Button>
                 </div>
               </Panel>
@@ -1109,41 +1342,35 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           </div>
         </ReactFlowProvider>
       </div>
-
-      {selectedNode && (
-        <NodeConfigPanel
-          node={selectedNode}
-          onConfigChange={(config) => updateNodeConfig(selectedNode.id, config)}
-          onClose={() => setSelectedNode(null)}
-        />
-      )}
+        
+        {/* Node Configuration Panel */}
+        {selectedNode && (
+          <NodeConfigPanel
+            node={selectedNode}
+            onUpdateNode={(nodeId: string, config: any) => updateNodeConfig(nodeId, config)}
+            onClose={() => setSelectedNode(null)}
+          />
+        )}
+      </div>
 
       <CodePreviewModal
         isOpen={showCodeModal}
         onClose={() => setShowCodeModal(false)}
-        result={codeResult}
+        codeResult={codeResult as OneInchCodeResult | null}
         projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
-        onPublishToGitHub={() => {
-          setShowCodeModal(false)
-          setShowGitHubModal(true)
-        }}
-        onLivePreview={() => {
-          setShowCodeModal(false)
-          setShowLivePreviewModal(true)
-        }}
       />
 
       <GitHubPublishModal
         isOpen={showGitHubModal}
         onClose={() => setShowGitHubModal(false)}
-        codeResult={codeResult}                    // ✅ Correct prop
+        codeResult={codeResult as OneInchCodeResult | null}                    // ✅ Correct prop
         projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
       />
 
       <LiveDashboardPreview
         isOpen={showLivePreviewModal}
         onClose={() => setShowLivePreviewModal(false)}
-        codeResult={codeResult}
+        codeResult={codeResult as any}
         projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
       />
 

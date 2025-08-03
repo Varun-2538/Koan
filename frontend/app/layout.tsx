@@ -20,15 +20,35 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <style>{`
 html {
   font-family: ${GeistSans.style.fontFamily};
   --font-sans: ${GeistSans.variable};
   --font-mono: ${GeistMono.variable};
 }
+
+/* Safe area handling for mobile devices */
+@media screen and (max-width: 768px) {
+  :root {
+    --vh: 1vh;
+  }
+}
+
+/* Smooth scrolling for better UX */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better focus handling on mobile */
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
         `}</style>
       </head>
-      <body>
+      <body className="antialiased">
         <ReactFlowProvider>
           {children}
         </ReactFlowProvider>

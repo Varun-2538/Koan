@@ -181,7 +181,7 @@ export function CodePreviewModal({ isOpen, onClose, codeResult, projectName = 'D
                       <div>
                         <label className="text-sm font-medium">Features</label>
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {codeResult.features?.map(feature => (
+                          {codeResult.features?.map((feature: string) => (
                             <Badge key={feature} variant="outline">{feature}</Badge>
                           ))}
                         </div>
@@ -220,7 +220,7 @@ export function CodePreviewModal({ isOpen, onClose, codeResult, projectName = 'D
                               {Object.entries(codeResult.dependencies.dependencies || {}).map(([name, version]) => (
                                 <div key={name} className="flex justify-between text-sm">
                                   <span>{name}</span>
-                                  <span className="text-gray-500">{version}</span>
+                                  <span className="text-gray-500">{version as string}</span>
                                 </div>
                               ))}
                             </div>
@@ -231,7 +231,7 @@ export function CodePreviewModal({ isOpen, onClose, codeResult, projectName = 'D
                               {Object.entries(codeResult.dependencies.devDependencies || {}).map(([name, version]) => (
                                 <div key={name} className="flex justify-between text-sm">
                                   <span>{name}</span>
-                                  <span className="text-gray-500">{version}</span>
+                                  <span className="text-gray-500">{version as string}</span>
                                 </div>
                               ))}
                             </div>

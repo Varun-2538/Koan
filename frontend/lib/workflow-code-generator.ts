@@ -13,6 +13,13 @@ export interface CodeGenerationResult {
   files: CodeFile[]
   deploymentInfo: DeploymentInfo
   generatedAt: string
+  projectName?: string
+  framework?: string
+  features?: string[]
+  dependencies?: {
+    dependencies: Record<string, string>
+    devDependencies: Record<string, string>
+  }
 }
 
 export interface CodeFile {
@@ -76,7 +83,175 @@ export class WorkflowCodeGenerator {
       description: `Generated application based on ${analysis.pattern} workflow`,
       files,
       deploymentInfo,
-      generatedAt: timestamp
+      generatedAt: timestamp,
+      projectName: workflowName,
+      framework: "Next.js 14 + TypeScript",
+      features: analysis.features,
+      dependencies: {
+        dependencies: {
+          "next": "14.0.4",
+          "react": "^18.2.0",
+          "react-dom": "^18.2.0",
+          "@tanstack/react-query": "^5.8.4",
+          "ethers": "^6.8.1",
+          "wagmi": "^2.0.8",
+          "@rainbow-me/rainbowkit": "^2.0.0",
+          "tailwindcss": "^3.3.6",
+          "lucide-react": "^0.294.0"
+        },
+        devDependencies: {
+          "@types/node": "^20.9.0",
+          "@types/react": "^18.2.37",
+          "@types/react-dom": "^18.2.15",
+          "typescript": "^5.2.2",
+          "autoprefixer": "^10.4.16",
+          "postcss": "^8.4.31"
+        }
+      }
+    }
+  }
+
+  /**
+   * Generate application from visual workflow nodes (without execution)
+   */
+  async generateFromNodes(
+    nodes: any[],
+    edges: any[],
+    projectName: string = 'Custom DeFi App',
+    options: {
+      framework?: string
+      generateAPI?: boolean
+      generateUI?: boolean
+      generateTests?: boolean
+    } = {}
+  ): Promise<CodeGenerationResult> {
+    
+    const timestamp = new Date().toISOString()
+    const appId = `app-${Date.now()}`
+    
+    // Analyze nodes to determine application structure
+    const analysis = this.analyzeNodesConfiguration(nodes, edges)
+    
+    // Generate code files
+    const files: CodeFile[] = []
+    
+    if (options.generateAPI !== false) {
+      files.push(...this.generateBackendFiles(analysis))
+    }
+    
+    if (options.generateUI !== false) {
+      files.push(...this.generateFrontendFiles(analysis))
+    }
+    
+    // Generate configuration files
+    files.push(...this.generateConfigFiles(analysis))
+    
+    // Generate deployment info
+    const deploymentInfo = this.generateDeploymentInfo(analysis)
+    
+    return {
+      id: appId,
+      name: projectName,
+      description: `Generated application based on custom workflow with ${analysis.nodeTypes.length} nodes`,
+      files,
+      deploymentInfo,
+      generatedAt: timestamp,
+      projectName,
+      framework: options.framework || "Next.js 14 + TypeScript",
+      features: analysis.features,
+      dependencies: {
+        dependencies: {
+          "next": "14.0.4",
+          "react": "^18.2.0",
+          "react-dom": "^18.2.0",
+          "@tanstack/react-query": "^5.8.4",
+          "ethers": "^6.8.1",
+          "wagmi": "^2.0.8",
+          "@rainbow-me/rainbowkit": "^2.0.0",
+          "tailwindcss": "^3.3.6",
+          "lucide-react": "^0.294.0"
+        },
+        devDependencies: {
+          "@types/node": "^20.9.0",
+          "@types/react": "^18.2.37",
+          "@types/react-dom": "^18.2.15",
+          "typescript": "^5.2.2",
+          "autoprefixer": "^10.4.16",
+          "postcss": "^8.4.31"
+        }
+      }
+    }
+  }
+
+  /**
+   * Analyze nodes configuration to determine application structure
+   */
+  private analyzeNodesConfiguration(nodes: any[], edges: any[]) {
+    const nodeTypes = nodes.map(node => node.type)
+    const uniqueNodeTypes = [...new Set(nodeTypes)]
+    
+    // Determine application pattern based on node types
+    let pattern = 'Custom DeFi Application'
+    let features: string[] = []
+    
+    if (uniqueNodeTypes.includes('oneInchSwap') || uniqueNodeTypes.includes('fusionSwap')) {
+      pattern = 'DEX Aggregator'
+      features.push('Token Swapping')
+    }
+    
+    if (uniqueNodeTypes.includes('fusionPlus') || uniqueNodeTypes.includes('fusionMonadBridge')) {
+      pattern = 'Cross-Chain Bridge'
+      features.push('Cross-Chain Transfers')
+      if (uniqueNodeTypes.includes('fusionMonadBridge')) {
+        features.push('Ethereum ↔ Monad Bridge')
+      }
+    }
+    
+    if (uniqueNodeTypes.includes('portfolioAPI')) {
+      features.push('Portfolio Tracking')
+    }
+    
+    if (uniqueNodeTypes.includes('limitOrder')) {
+      features.push('Limit Orders')
+    }
+    
+    if (uniqueNodeTypes.includes('priceImpactCalculator')) {
+      features.push('Price Impact Analysis')
+    }
+    
+    if (uniqueNodeTypes.includes('walletConnector')) {
+      features.push('Wallet Integration')
+    }
+    
+    if (uniqueNodeTypes.includes('tokenSelector')) {
+      features.push('Token Selection')
+    }
+    
+    if (uniqueNodeTypes.includes('chainSelector')) {
+      features.push('Multi-Chain Support')
+    }
+    
+    if (uniqueNodeTypes.includes('transactionMonitor')) {
+      features.push('Transaction Monitoring')
+    }
+    
+    if (uniqueNodeTypes.includes('defiDashboard')) {
+      features.push('DeFi Analytics Dashboard')
+    }
+    
+    // If no specific pattern detected, use a comprehensive approach
+    if (features.length === 0) {
+      features.push('Custom Workflow Integration')
+    }
+    
+    return {
+      pattern,
+      features,
+      nodeTypes: uniqueNodeTypes,
+      nodes,
+      edges,
+      nodeCount: nodes.length,
+      edgeCount: edges.length
     }
   }
   
@@ -96,13 +271,6 @@ export class WorkflowCodeGenerator {
     if (uniqueNodeTypes.includes('fusionPlus')) {
       pattern = 'Cross-Chain Bridge'
       features.push('Cross-Chain Transfers')
-    }
-    
-    if (uniqueNodeTypes.includes('fusionMonadBridge')) {
-      pattern = 'Ethereum-Monad Atomic Bridge'
-      features.push('Atomic Cross-Chain Swaps')
-      features.push('HTLC Implementation')
-      features.push('MEV Protection')
     }
     
     if (uniqueNodeTypes.includes('portfolioAPI')) {
@@ -146,26 +314,28 @@ export class WorkflowCodeGenerator {
       })
     }
     
-    if (analysis.nodeTypes.includes('fusionMonadBridge')) {
+    if (analysis.nodeTypes.includes('portfolioAPI')) {
       files.push({
-        path: 'backend/src/routes/atomic-bridge.ts',
-        content: this.generateAtomicBridgeRoutes(),
-        type: 'backend',
-        language: 'typescript'
-      })
-      
-      files.push({
-        path: 'backend/src/services/htlc-service.ts',
-        content: this.generateHTLCService(),
+        path: 'backend/src/routes/portfolio.ts',
+        content: this.generatePortfolioRoutes(),
         type: 'backend',
         language: 'typescript'
       })
     }
     
-    if (analysis.nodeTypes.includes('portfolioAPI')) {
+    if (analysis.nodeTypes.includes('fusionMonadBridge')) {
       files.push({
-        path: 'backend/src/routes/portfolio.ts',
-        content: this.generatePortfolioRoutes(),
+        path: 'backend/src/routes/bridge.ts',
+        content: this.generateBridgeRoutes(),
+        type: 'backend',
+        language: 'typescript'
+      })
+    }
+    
+    if (analysis.nodeTypes.includes('transactionMonitor')) {
+      files.push({
+        path: 'backend/src/routes/monitor.ts',
+        content: this.generateMonitorRoutes(),
         type: 'backend',
         language: 'typescript'
       })
@@ -203,26 +373,37 @@ export class WorkflowCodeGenerator {
       })
     }
     
-    if (analysis.nodeTypes.includes('fusionMonadBridge')) {
+    if (analysis.nodeTypes.includes('portfolioAPI')) {
       files.push({
-        path: 'frontend/src/components/AtomicBridgeInterface.tsx',
-        content: this.generateAtomicBridgeInterface(),
-        type: 'frontend',
-        language: 'typescript'
-      })
-      
-      files.push({
-        path: 'frontend/src/components/HTLCMonitor.tsx',
-        content: this.generateHTLCMonitor(),
+        path: 'frontend/src/components/PortfolioDashboard.tsx',
+        content: this.generatePortfolioDashboard(),
         type: 'frontend',
         language: 'typescript'
       })
     }
     
-    if (analysis.nodeTypes.includes('portfolioAPI')) {
+    if (analysis.nodeTypes.includes('fusionMonadBridge')) {
       files.push({
-        path: 'frontend/src/components/PortfolioDashboard.tsx',
-        content: this.generatePortfolioDashboard(),
+        path: 'frontend/src/components/BridgeInterface.tsx',
+        content: this.generateBridgeInterface(),
+        type: 'frontend',
+        language: 'typescript'
+      })
+    }
+    
+    if (analysis.nodeTypes.includes('transactionMonitor')) {
+      files.push({
+        path: 'frontend/src/components/TransactionMonitor.tsx',
+        content: this.generateTransactionMonitorComponent(),
+        type: 'frontend',
+        language: 'typescript'
+      })
+    }
+    
+    if (analysis.nodeTypes.includes('walletConnector')) {
+      files.push({
+        path: 'frontend/src/components/WalletConnector.tsx',
+        content: this.generateWalletConnectorComponent(),
         type: 'frontend',
         language: 'typescript'
       })
@@ -274,8 +455,9 @@ export class WorkflowCodeGenerator {
 import cors from 'cors'
 import dotenv from 'dotenv'
 ${analysis.nodeTypes.includes('oneInchSwap') ? "import swapRoutes from './routes/swap'" : ''}
-${analysis.nodeTypes.includes('fusionMonadBridge') ? "import atomicBridgeRoutes from './routes/atomic-bridge'" : ''}
 ${analysis.nodeTypes.includes('portfolioAPI') ? "import portfolioRoutes from './routes/portfolio'" : ''}
+${analysis.nodeTypes.includes('fusionMonadBridge') ? "import bridgeRoutes from './routes/bridge'" : ''}
+${analysis.nodeTypes.includes('transactionMonitor') ? "import monitorRoutes from './routes/monitor'" : ''}
 
 dotenv.config()
 
@@ -293,8 +475,9 @@ app.get('/api/health', (req, res) => {
 
 // Routes
 ${analysis.nodeTypes.includes('oneInchSwap') ? "app.use('/api/swap', swapRoutes)" : ''}
-${analysis.nodeTypes.includes('fusionMonadBridge') ? "app.use('/api/atomic-bridge', atomicBridgeRoutes)" : ''}
 ${analysis.nodeTypes.includes('portfolioAPI') ? "app.use('/api/portfolio', portfolioRoutes)" : ''}
+${analysis.nodeTypes.includes('fusionMonadBridge') ? "app.use('/api/bridge', bridgeRoutes)" : ''}
+${analysis.nodeTypes.includes('transactionMonitor') ? "app.use('/api/monitor', monitorRoutes)" : ''}
 
 app.listen(PORT, () => {
   console.log(\`🚀 ${analysis.pattern} API server running on port \${PORT}\`)
@@ -380,11 +563,148 @@ export default router
 `
   }
   
+  private generateBridgeRoutes(): string {
+    return `import { Router } from 'express'
+
+const router = Router()
+
+// Get bridge quote for cross-chain transfer
+router.post('/quote', async (req, res) => {
+  try {
+    const { fromChain, toChain, fromToken, toToken, amount } = req.body
+    
+    // Mock bridge quote
+    const quote = {
+      fromChain,
+      toChain,
+      fromToken,
+      toToken,
+      amount,
+      estimatedOutput: amount * 0.995, // Bridge fee
+      estimatedTime: '10-15 minutes',
+      bridgeFee: amount * 0.005,
+      gasEstimate: '250000'
+    }
+    
+    res.json(quote)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get bridge quote' })
+  }
+})
+
+// Execute cross-chain bridge
+router.post('/execute', async (req, res) => {
+  try {
+    const { fromChain, toChain, fromToken, toToken, amount, recipientAddress } = req.body
+    
+    // Implementation would execute actual bridge
+    const result = {
+      bridgeId: 'bridge-' + Math.random().toString(36).slice(2, 10),
+      sourceTxHash: '0x' + Math.random().toString(16).slice(2, 66),
+      status: 'pending',
+      estimatedCompletion: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    }
+    
+    res.json(result)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to execute bridge' })
+  }
+})
+
+// Check bridge status
+router.get('/status/:bridgeId', async (req, res) => {
+  try {
+    const { bridgeId } = req.params
+    
+    // Mock bridge status
+    const status = {
+      bridgeId,
+      status: 'completed',
+      sourceTxHash: '0x' + Math.random().toString(16).slice(2, 66),
+      destinationTxHash: '0x' + Math.random().toString(16).slice(2, 66),
+      completedAt: new Date().toISOString()
+    }
+    
+    res.json(status)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check bridge status' })
+  }
+})
+
+export default router
+`
+  }
+  
+  private generateMonitorRoutes(): string {
+    return `import { Router } from 'express'
+
+const router = Router()
+
+// Get transaction status
+router.get('/tx/:txHash', async (req, res) => {
+  try {
+    const { txHash } = req.params
+    
+    // Mock transaction data
+    const transaction = {
+      hash: txHash,
+      status: 'confirmed',
+      blockNumber: 18500000 + Math.floor(Math.random() * 1000),
+      confirmations: 12,
+      gasUsed: '150000',
+      timestamp: new Date().toISOString()
+    }
+    
+    res.json(transaction)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch transaction' })
+  }
+})
+
+// Monitor wallet activity
+router.get('/wallet/:address', async (req, res) => {
+  try {
+    const { address } = req.params
+    
+    // Mock wallet monitoring data
+    const activity = {
+      address,
+      recentTransactions: [
+        {
+          hash: '0x' + Math.random().toString(16).slice(2, 66),
+          type: 'swap',
+          timestamp: new Date().toISOString(),
+          status: 'confirmed'
+        },
+        {
+          hash: '0x' + Math.random().toString(16).slice(2, 66),
+          type: 'bridge',
+          timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+          status: 'confirmed'
+        }
+      ],
+      pendingTransactions: [],
+      lastUpdate: new Date().toISOString()
+    }
+    
+    res.json(activity)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to monitor wallet' })
+  }
+})
+
+export default router
+`
+  }
+  
   private generateMainApp(analysis: any): string {
     return `import React from 'react'
 import './App.css'
 ${analysis.nodeTypes.includes('oneInchSwap') ? "import SwapInterface from './components/SwapInterface'" : ''}
 ${analysis.nodeTypes.includes('portfolioAPI') ? "import PortfolioDashboard from './components/PortfolioDashboard'" : ''}
+${analysis.nodeTypes.includes('fusionMonadBridge') ? "import BridgeInterface from './components/BridgeInterface'" : ''}
+${analysis.nodeTypes.includes('transactionMonitor') ? "import TransactionMonitor from './components/TransactionMonitor'" : ''}
+${analysis.nodeTypes.includes('walletConnector') ? "import WalletConnector from './components/WalletConnector'" : ''}
 
 function App() {
   return (
@@ -395,8 +715,11 @@ function App() {
       </header>
       
       <main>
+        ${analysis.nodeTypes.includes('walletConnector') ? '<WalletConnector />' : ''}
         ${analysis.nodeTypes.includes('oneInchSwap') ? '<SwapInterface />' : ''}
+        ${analysis.nodeTypes.includes('fusionMonadBridge') ? '<BridgeInterface />' : ''}
         ${analysis.nodeTypes.includes('portfolioAPI') ? '<PortfolioDashboard />' : ''}
+        ${analysis.nodeTypes.includes('transactionMonitor') ? '<TransactionMonitor />' : ''}
       </main>
     </div>
   )
@@ -525,6 +848,280 @@ const PortfolioDashboard = () => {
 }
 
 export default PortfolioDashboard
+`
+  }
+  
+  private generateBridgeInterface(): string {
+    return `import React, { useState } from 'react'
+
+const BridgeInterface = () => {
+  const [fromChain, setFromChain] = useState('Ethereum')
+  const [toChain, setToChain] = useState('Monad')
+  const [fromToken, setFromToken] = useState('ETH')
+  const [toToken, setToToken] = useState('MONAD')
+  const [amount, setAmount] = useState('')
+  const [quote, setQuote] = useState(null)
+  
+  const handleGetQuote = async () => {
+    try {
+      const response = await fetch('/api/bridge/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromChain, toChain, fromToken, toToken, amount })
+      })
+      
+      const quoteData = await response.json()
+      setQuote(quoteData)
+    } catch (error) {
+      console.error('Quote failed:', error)
+    }
+  }
+  
+  const handleBridge = async () => {
+    try {
+      const response = await fetch('/api/bridge/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          fromChain, 
+          toChain, 
+          fromToken, 
+          toToken, 
+          amount,
+          recipientAddress: '0x...' // Would be from wallet
+        })
+      })
+      
+      const result = await response.json()
+      console.log('Bridge result:', result)
+    } catch (error) {
+      console.error('Bridge failed:', error)
+    }
+  }
+  
+  return (
+    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px', margin: '10px' }}>
+      <h3>Cross-Chain Bridge</h3>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div>
+          <h4>From</h4>
+          <select value={fromChain} onChange={(e) => setFromChain(e.target.value)}>
+            <option value="Ethereum">Ethereum</option>
+            <option value="Polygon">Polygon</option>
+            <option value="BSC">BSC</option>
+          </select>
+          <select value={fromToken} onChange={(e) => setFromToken(e.target.value)}>
+            <option value="ETH">ETH</option>
+            <option value="USDC">USDC</option>
+            <option value="WBTC">WBTC</option>
+          </select>
+        </div>
+        
+        <div>
+          <h4>To</h4>
+          <select value={toChain} onChange={(e) => setToChain(e.target.value)}>
+            <option value="Monad">Monad</option>
+            <option value="Arbitrum">Arbitrum</option>
+            <option value="Optimism">Optimism</option>
+          </select>
+          <select value={toToken} onChange={(e) => setToToken(e.target.value)}>
+            <option value="MONAD">MONAD</option>
+            <option value="USDC">USDC</option>
+            <option value="WETH">WETH</option>
+          </select>
+        </div>
+      </div>
+      
+      <div style={{ margin: '20px 0' }}>
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="Amount to bridge"
+          style={{ width: '200px', marginRight: '10px' }}
+        />
+        <button onClick={handleGetQuote} disabled={!amount}>
+          Get Quote
+        </button>
+      </div>
+      
+      {quote && (
+        <div style={{ backgroundColor: '#f5f5f5', padding: '15px', borderRadius: '5px' }}>
+          <h4>Bridge Quote</h4>
+          <p>You will receive: {quote.estimatedOutput} {toToken}</p>
+          <p>Bridge fee: {quote.bridgeFee} {fromToken}</p>
+          <p>Estimated time: {quote.estimatedTime}</p>
+          <button onClick={handleBridge} style={{ marginTop: '10px' }}>
+            Execute Bridge
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default BridgeInterface
+`
+  }
+  
+  private generateTransactionMonitorComponent(): string {
+    return `import React, { useState, useEffect } from 'react'
+
+const TransactionMonitor = () => {
+  const [txHash, setTxHash] = useState('')
+  const [txData, setTxData] = useState(null)
+  const [walletAddress, setWalletAddress] = useState('')
+  const [walletActivity, setWalletActivity] = useState(null)
+  
+  const monitorTransaction = async () => {
+    if (!txHash) return
+    
+    try {
+      const response = await fetch(\`/api/monitor/tx/\${txHash}\`)
+      const data = await response.json()
+      setTxData(data)
+    } catch (error) {
+      console.error('Failed to monitor transaction:', error)
+    }
+  }
+  
+  const monitorWallet = async () => {
+    if (!walletAddress) return
+    
+    try {
+      const response = await fetch(\`/api/monitor/wallet/\${walletAddress}\`)
+      const data = await response.json()
+      setWalletActivity(data)
+    } catch (error) {
+      console.error('Failed to monitor wallet:', error)
+    }
+  }
+  
+  return (
+    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px', margin: '10px' }}>
+      <h3>Transaction Monitor</h3>
+      
+      <div style={{ marginBottom: '20px' }}>
+        <h4>Monitor Transaction</h4>
+        <input
+          type="text"
+          value={txHash}
+          onChange={(e) => setTxHash(e.target.value)}
+          placeholder="Enter transaction hash"
+          style={{ width: '400px', marginRight: '10px' }}
+        />
+        <button onClick={monitorTransaction}>Monitor</button>
+        
+        {txData && (
+          <div style={{ marginTop: '10px', backgroundColor: '#f5f5f5', padding: '10px' }}>
+            <p><strong>Status:</strong> {txData.status}</p>
+            <p><strong>Block:</strong> {txData.blockNumber}</p>
+            <p><strong>Confirmations:</strong> {txData.confirmations}</p>
+            <p><strong>Gas Used:</strong> {txData.gasUsed}</p>
+          </div>
+        )}
+      </div>
+      
+      <div>
+        <h4>Monitor Wallet Activity</h4>
+        <input
+          type="text"
+          value={walletAddress}
+          onChange={(e) => setWalletAddress(e.target.value)}
+          placeholder="Enter wallet address"
+          style={{ width: '400px', marginRight: '10px' }}
+        />
+        <button onClick={monitorWallet}>Monitor</button>
+        
+        {walletActivity && (
+          <div style={{ marginTop: '10px', backgroundColor: '#f5f5f5', padding: '10px' }}>
+            <h5>Recent Transactions:</h5>
+            {walletActivity.recentTransactions.map((tx, index) => (
+              <div key={index} style={{ margin: '5px 0', padding: '5px', border: '1px solid #ddd' }}>
+                <p><strong>Type:</strong> {tx.type}</p>
+                <p><strong>Status:</strong> {tx.status}</p>
+                <p><strong>Hash:</strong> {tx.hash.slice(0, 10)}...</p>
+                <p><strong>Time:</strong> {new Date(tx.timestamp).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default TransactionMonitor
+`
+  }
+  
+  private generateWalletConnectorComponent(): string {
+    return `import React, { useState, useEffect } from 'react'
+
+const WalletConnector = () => {
+  const [isConnected, setIsConnected] = useState(false)
+  const [account, setAccount] = useState('')
+  const [balance, setBalance] = useState('')
+  const [network, setNetwork] = useState('')
+  
+  const connectWallet = async () => {
+    try {
+      if (window.ethereum) {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+        setAccount(accounts[0])
+        setIsConnected(true)
+        
+        // Get balance
+        const balance = await window.ethereum.request({
+          method: 'eth_getBalance',
+          params: [accounts[0], 'latest']
+        })
+        setBalance((parseInt(balance, 16) / 1e18).toFixed(4))
+        
+        // Get network
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' })
+        setNetwork(chainId === '0x1' ? 'Ethereum' : \`Chain \${chainId}\`)
+      } else {
+        alert('Please install MetaMask!')
+      }
+    } catch (error) {
+      console.error('Failed to connect wallet:', error)
+    }
+  }
+  
+  const disconnectWallet = () => {
+    setIsConnected(false)
+    setAccount('')
+    setBalance('')
+    setNetwork('')
+  }
+  
+  return (
+    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px', margin: '10px' }}>
+      <h3>Wallet Connection</h3>
+      
+      {!isConnected ? (
+        <button onClick={connectWallet} style={{ padding: '10px 20px', fontSize: '16px' }}>
+          Connect Wallet
+        </button>
+      ) : (
+        <div>
+          <div style={{ backgroundColor: '#e8f5e8', padding: '15px', borderRadius: '5px' }}>
+            <p><strong>Connected Account:</strong> {account}</p>
+            <p><strong>Balance:</strong> {balance} ETH</p>
+            <p><strong>Network:</strong> {network}</p>
+            <button onClick={disconnectWallet} style={{ marginTop: '10px' }}>
+              Disconnect
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default WalletConnector
 `
   }
   
@@ -684,533 +1281,12 @@ ${analysis.features.map((f: string) => `### ${f}\\n\\nImplemented using the ${an
 
 - \`GET /api/health\` - Health check
 ${analysis.nodeTypes.includes('oneInchSwap') ? '- `POST /api/swap/quote` - Get swap quote\\n- `POST /api/swap/execute` - Execute swap' : ''}
-${analysis.nodeTypes.includes('fusionMonadBridge') ? '- `POST /api/atomic-bridge/quote` - Get atomic swap quote\\n- `POST /api/atomic-bridge/create-htlc` - Create HTLC\\n- `POST /api/atomic-bridge/claim/:contractId` - Claim funds\\n- `GET /api/atomic-bridge/status/:contractId` - Check HTLC status' : ''}
 ${analysis.nodeTypes.includes('portfolioAPI') ? '- `GET /api/portfolio/:address` - Get portfolio data' : ''}
 
 ## Generated Files
 
 This application was automatically generated based on successful workflow execution.
 `
-  }
-
-  // New methods for Fusion+ Monad Bridge code generation
-  private generateAtomicBridgeRoutes(): string {
-    return `import express from 'express';
-import { HTLCService } from '../services/htlc-service';
-
-const router = express.Router();
-const htlcService = new HTLCService();
-
-// Get atomic swap quote
-router.post('/quote', async (req, res) => {
-  try {
-    const { bridge_direction, source_token, destination_token, amount } = req.body;
-    
-    // Calculate cross-chain quote with bridge fees
-    const bridgeFeePercent = 0.005; // 0.5%
-    const destinationAmount = amount * (1 - bridgeFeePercent);
-    
-    const quote = {
-      source_token,
-      destination_token,
-      source_amount: amount,
-      destination_amount: destinationAmount,
-      bridge_fee: amount * bridgeFeePercent,
-      estimated_time: '10-15 minutes',
-      gas_estimates: {
-        ethereum: bridge_direction === 'eth_to_monad' ? '150000' : '80000',
-        monad: bridge_direction === 'eth_to_monad' ? '7500' : '4000'
-      },
-      mev_protection: true,
-      atomic_guarantee: true
-    };
-    
-    res.json({ success: true, quote });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Create Hash Time Locked Contract
-router.post('/create-htlc', async (req, res) => {
-  try {
-    const { quote_id, from_address, timelock_duration = 24 } = req.body;
-    
-    // Generate HTLC parameters
-    const contractId = \`htlc_\${Date.now()}_\${Math.random().toString(36)}\`;
-    const secret = \`0x\${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}\`;
-    const hashlock = \`0x\${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}\`;
-    const timelock = Math.floor(Date.now() / 1000) + (timelock_duration * 3600);
-    
-    // Create HTLC on both chains (mock implementation)
-    const result = {
-      contract_id: contractId,
-      hashlock,
-      timelock,
-      status: 'htlc_created',
-      ethereum_tx: \`0x\${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}\`,
-      monad_tx: \`0x\${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}\`,
-      monitoring_url: \`/api/atomic-bridge/status/\${contractId}\`
-    };
-    
-    res.json({ success: true, htlc: result });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Claim funds with secret
-router.post('/claim/:contractId', async (req, res) => {
-  try {
-    const { contractId } = req.params;
-    const { secret, to_address } = req.body;
-    
-    // Mock claiming funds
-    const result = {
-      contract_id: contractId,
-      status: 'funds_claimed',
-      claim_tx: \`0x\${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}\`,
-      to_address,
-      timestamp: new Date().toISOString()
-    };
-    
-    res.json({ success: true, claim: result });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Get HTLC status
-router.get('/status/:contractId', async (req, res) => {
-  try {
-    const { contractId } = req.params;
-    
-    // Mock status check
-    const status = {
-      contract_id: contractId,
-      phase: 'locked',
-      ethereum_status: {
-        locked: true,
-        claimed: false,
-        refunded: false
-      },
-      monad_status: {
-        locked: true,
-        claimed: false,
-        refunded: false
-      },
-      time_remaining: 24 * 60 * 60 * 1000, // 24 hours
-      last_updated: new Date().toISOString()
-    };
-    
-    res.json({ success: true, status });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-export default router;`;
-  }
-
-  private generateHTLCService(): string {
-    return `// HTLC Service for Ethereum-Monad atomic swaps
-import { ethers } from 'ethers';
-
-export class HTLCService {
-  private ethereumProvider: ethers.Provider;
-  private monadProvider: ethers.Provider;
-
-  constructor() {
-    this.ethereumProvider = new ethers.JsonRpcProvider(
-      process.env.ETHEREUM_RPC_URL || 'https://mainnet.infura.io/v3/YOUR-PROJECT-ID'
-    );
-    
-    this.monadProvider = new ethers.JsonRpcProvider(
-      process.env.MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'
-    );
-  }
-
-  async createHTLC(params: any) {
-    // Implementation for creating HTLCs on both chains
-    return {
-      contractId: params.contractId,
-      ethereumTx: 'mock-eth-tx',
-      monadTx: 'mock-monad-tx'
-    };
-  }
-
-  async monitorHTLC(contractId: string) {
-    // Implementation for monitoring HTLC status
-    return {
-      status: 'locked',
-      timeRemaining: 24 * 60 * 60 * 1000
-    };
-  }
-}`;
-  }
-
-  private generateAtomicBridgeInterface(): string {
-    return `'use client';
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeftRight, Clock, Shield, Zap } from 'lucide-react';
-
-interface AtomicBridgeInterfaceProps {
-  onBridgeInitiated?: (result: any) => void;
-}
-
-export default function AtomicBridgeInterface({ onBridgeInitiated }: AtomicBridgeInterfaceProps) {
-  const [bridgeDirection, setBridgeDirection] = useState<'eth_to_monad' | 'monad_to_eth'>('eth_to_monad');
-  const [sourceToken, setSourceToken] = useState('ETH');
-  const [destinationToken, setDestinationToken] = useState('MONAD');
-  const [amount, setAmount] = useState('1.0');
-  const [isLoading, setIsLoading] = useState(false);
-  const [quote, setQuote] = useState<any>(null);
-
-  const getQuote = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/atomic-bridge/quote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bridge_direction: bridgeDirection,
-          source_token: sourceToken,
-          destination_token: destinationToken,
-          amount: parseFloat(amount)
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setQuote(data.quote);
-      }
-    } catch (error) {
-      console.error('Failed to get quote:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const initiateBridge = async () => {
-    if (!quote) return;
-    
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/atomic-bridge/create-htlc', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          quote_id: 'quote_123',
-          from_address: '0x...',
-          timelock_duration: 24
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success && onBridgeInitiated) {
-        onBridgeInitiated(data.htlc);
-      }
-    } catch (error) {
-      console.error('Failed to initiate bridge:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ArrowLeftRight className="h-5 w-5" />
-          Fusion+ Monad Bridge
-          <Badge variant="secondary">Atomic Swaps</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Bridge Direction */}
-        <div className="flex gap-2">
-          <Button 
-            variant={bridgeDirection === 'eth_to_monad' ? 'default' : 'outline'}
-            onClick={() => setBridgeDirection('eth_to_monad')}
-            className="flex-1"
-          >
-            Ethereum → Monad
-          </Button>
-          <Button 
-            variant={bridgeDirection === 'monad_to_eth' ? 'default' : 'outline'}
-            onClick={() => setBridgeDirection('monad_to_eth')}
-            className="flex-1"
-          >
-            Monad → Ethereum
-          </Button>
-        </div>
-
-        {/* Token Inputs */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium">From Token</label>
-            <Input 
-              value={sourceToken}
-              onChange={(e) => setSourceToken(e.target.value)}
-              placeholder="ETH"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">To Token</label>
-            <Input 
-              value={destinationToken}
-              onChange={(e) => setDestinationToken(e.target.value)}
-              placeholder="MONAD"
-            />
-          </div>
-        </div>
-
-        {/* Amount */}
-        <div>
-          <label className="text-sm font-medium">Amount</label>
-          <Input 
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="1.0"
-            step="0.000001"
-          />
-        </div>
-
-        {/* Get Quote */}
-        <Button 
-          onClick={getQuote} 
-          disabled={isLoading || !amount}
-          className="w-full"
-        >
-          {isLoading ? 'Getting Quote...' : 'Get Quote'}
-        </Button>
-
-        {/* Quote Display */}
-        {quote && (
-          <Alert>
-            <AlertDescription>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>You send:</span>
-                  <span className="font-medium">{quote.source_amount} {sourceToken}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>You receive:</span>
-                  <span className="font-medium">{quote.destination_amount} {destinationToken}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Bridge fee:</span>
-                  <span className="text-sm">{quote.bridge_fee} {sourceToken}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Estimated time:</span>
-                  <span className="text-sm">{quote.estimated_time}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-green-600">
-                  <Shield className="h-4 w-4" />
-                  <span>MEV Protected</span>
-                  <Clock className="h-4 w-4 ml-2" />
-                  <span>Atomic Guarantee</span>
-                </div>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Initiate Bridge */}
-        {quote && (
-          <Button 
-            onClick={initiateBridge}
-            disabled={isLoading}
-            className="w-full"
-            size="lg"
-          >
-            <Zap className="h-4 w-4 mr-2" />
-            {isLoading ? 'Creating HTLC...' : 'Initiate Atomic Bridge'}
-          </Button>
-        )}
-
-        {/* Security Features */}
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-          <div className="text-center">
-            <Shield className="h-8 w-8 mx-auto mb-2 text-green-500" />
-            <div className="text-sm font-medium">Trustless</div>
-            <div className="text-xs text-gray-500">No custodial risk</div>
-          </div>
-          <div className="text-center">
-            <Clock className="h-8 w-8 mx-auto mb-2 text-blue-500" />
-            <div className="text-sm font-medium">Time Locked</div>
-            <div className="text-xs text-gray-500">Automatic refunds</div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}`;
-  }
-
-  private generateHTLCMonitor(): string {
-    return `'use client';
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
-
-interface HTLCMonitorProps {
-  contractId: string;
-  autoRefresh?: boolean;
-}
-
-export default function HTLCMonitor({ contractId, autoRefresh = true }: HTLCMonitorProps) {
-  const [status, setStatus] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchStatus = async () => {
-    try {
-      const response = await fetch(\`/api/atomic-bridge/status/\${contractId}\`);
-      const data = await response.json();
-      if (data.success) {
-        setStatus(data.status);
-      }
-    } catch (error) {
-      console.error('Failed to fetch HTLC status:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStatus();
-    
-    if (autoRefresh) {
-      const interval = setInterval(fetchStatus, 10000); // Update every 10 seconds
-      return () => clearInterval(interval);
-    }
-  }, [contractId, autoRefresh]);
-
-  const getPhaseColor = (phase: string) => {
-    switch (phase) {
-      case 'created': return 'bg-yellow-500';
-      case 'locked': return 'bg-blue-500';
-      case 'revealed': return 'bg-purple-500';
-      case 'completed': return 'bg-green-500';
-      case 'refunded': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const formatTimeRemaining = (ms: number) => {
-    const hours = Math.floor(ms / (1000 * 60 * 60));
-    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-    return \`\${hours}h \${minutes}m\`;
-  };
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading HTLC status...</span>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!status) {
-    return (
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>Failed to load HTLC status</AlertDescription>
-      </Alert>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>HTLC Monitor</span>
-          <Badge className={\`\${getPhaseColor(status.phase)} text-white\`}>
-            {status.phase.toUpperCase()}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Contract ID */}
-        <div>
-          <label className="text-sm font-medium">Contract ID</label>
-          <div className="font-mono text-sm bg-gray-100 p-2 rounded">
-            {status.contract_id}
-          </div>
-        </div>
-
-        {/* Time Remaining */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Time Remaining</span>
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            <span className="font-mono">
-              {formatTimeRemaining(status.time_remaining)}
-            </span>
-          </div>
-        </div>
-
-        {/* Chain Status */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="border rounded-lg p-3">
-            <div className="text-sm font-medium mb-2">Ethereum</div>
-            <div className="space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span>Locked:</span>
-                <CheckCircle className={\`h-4 w-4 \${status.ethereum_status.locked ? 'text-green-500' : 'text-gray-300'}\`} />
-              </div>
-              <div className="flex justify-between">
-                <span>Claimed:</span>
-                <CheckCircle className={\`h-4 w-4 \${status.ethereum_status.claimed ? 'text-green-500' : 'text-gray-300'}\`} />
-              </div>
-              <div className="flex justify-between">
-                <span>Refunded:</span>
-                <CheckCircle className={\`h-4 w-4 \${status.ethereum_status.refunded ? 'text-red-500' : 'text-gray-300'}\`} />
-              </div>
-            </div>
-          </div>
-
-          <div className="border rounded-lg p-3">
-            <div className="text-sm font-medium mb-2">Monad</div>
-            <div className="space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span>Locked:</span>
-                <CheckCircle className={\`h-4 w-4 \${status.monad_status.locked ? 'text-green-500' : 'text-gray-300'}\`} />
-              </div>
-              <div className="flex justify-between">
-                <span>Claimed:</span>
-                <CheckCircle className={\`h-4 w-4 \${status.monad_status.claimed ? 'text-green-500' : 'text-gray-300'}\`} />
-              </div>
-              <div className="flex justify-between">
-                <span>Refunded:</span>
-                <CheckCircle className={\`h-4 w-4 \${status.monad_status.refunded ? 'text-red-500' : 'text-gray-300'}\`} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Last Updated */}
-        <div className="text-xs text-gray-500 text-center">
-          Last updated: {new Date(status.last_updated).toLocaleTimeString()}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}`;
   }
   
   private generateDeploymentInfo(analysis: any): DeploymentInfo {

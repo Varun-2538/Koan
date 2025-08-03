@@ -21,17 +21,17 @@ export function FloatingPanel() {
         <div className="space-y-2">
           <label className="text-sm text-gray-400">Input</label>
           <Input
-            placeholder="Type something..."
-            className="bg-gray-800/50 border-gray-600 text-white placeholder-gray-500"
+            disabled
+            className="bg-gray-800/50 border-gray-600 text-white"
           />
         </div>
 
         {/* Model Selection */}
         <div className="space-y-2">
           <label className="text-sm text-gray-400">Protocol</label>
-          <Select>
+          <Select disabled>
             <SelectTrigger className="bg-gray-800/50 border-gray-600 text-white">
-              <SelectValue placeholder="uniswap-v3" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-600">
               <SelectItem value="uniswap-v3">uniswap-v3</SelectItem>
@@ -46,8 +46,8 @@ export function FloatingPanel() {
           <label className="text-sm text-gray-400">API Key</label>
           <Input
             type="password"
-            placeholder="Type something..."
-            className="bg-gray-800/50 border-gray-600 text-white placeholder-gray-500"
+            disabled
+            className="bg-gray-800/50 border-gray-600 text-white"
           />
         </div>
 

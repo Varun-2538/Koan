@@ -4,67 +4,18 @@ import type React from "react"
 import { Handle, Position, type NodeProps } from "@xyflow/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Coins, Vote, Layout, Server, Bot, Repeat, Link, Clock, Database, Wallet, TrendingUp, Activity, Search, Zap, ArrowLeftRight } from "lucide-react"
+import { Coins, Vote, Layout, Server, Bot, Repeat, Link, Clock, Database, Wallet, TrendingUp, Activity, Search, Zap } from "lucide-react"
 import { ExecutableNode } from "./nodes/executable-node"
 import { OneInchSwapComponent, OneInchQuoteComponent } from "@/lib/components/defi/oneinch-swap"
 import { FusionPlusComponent, ChainSelectorComponent } from "@/lib/components/defi/fusion-plus"
 import { FusionMonadBridgeComponent } from "@/lib/components/defi/fusion-monad-bridge"
 
-// Type definitions for node configurations
-interface NodeConfig {
-  // Token and swap related
-  fromToken?: string
-  toToken?: string
-  amount?: string
-  slippage?: string
-  autoSlippage?: boolean
-  supportedChains?: string[]
-  
-  // Wallet related
-  supportedWallets?: string[]
-  autoConnect?: boolean
-  
-  // UI related
-  title?: string
-  theme?: string
-  components?: string[]
-  
-  // Token creation
-  name?: string
-  symbol?: string
-  totalSupply?: string
-  
-  // Trading features
-  enableGaslessSwaps?: boolean
-  enableMEVProtection?: boolean
-  orderType?: string
-  enableAdvancedStrategies?: boolean
-  
-  // Analytics and monitoring
-  trackHistory?: boolean
-  enableAnalytics?: boolean
-  showPortfolio?: boolean
-  maxTransactions?: string
-  showPendingTx?: boolean
-  realTimeUpdates?: boolean
-  
-  // API and services
-  endpoints?: any[]
-  rateLimit?: string
-  dataProviders?: string[]
-  cacheDuration?: string
-  
-  // Price impact
-  maxImpactThreshold?: string
-}
-
-interface CustomNodeData {
-  config?: NodeConfig
-  [key: string]: any
-}
-
-interface CustomNodeProps extends Omit<NodeProps, 'data'> {
-  data: CustomNodeData
+// Extended NodeProps with proper config typing
+interface CustomNodeProps extends NodeProps {
+  data: {
+    config?: Record<string, any>
+    [key: string]: any
+  }
 }
 
 const NodeWrapper = ({ children, selected }: { children: React.ReactNode; selected?: boolean }) => (
@@ -74,28 +25,28 @@ const NodeWrapper = ({ children, selected }: { children: React.ReactNode; select
 )
 
 // New DeFi Executable Nodes for Unite Hackathon
-export const OneInchSwapNode = (props: NodeProps) => {
+export const OneInchSwapNode = (props: CustomNodeProps) => {
   const component = new OneInchSwapComponent()
   return <ExecutableNode {...props} component={component} />
 }
 
-export const OneInchQuoteNode = (props: NodeProps) => {
+export const OneInchQuoteNode = (props: CustomNodeProps) => {
   const component = new OneInchQuoteComponent()
   return <ExecutableNode {...props} component={component} />
 }
 
-export const FusionPlusNode = (props: NodeProps) => {
+export const FusionPlusNode = (props: CustomNodeProps) => {
   const component = new FusionPlusComponent()
   return <ExecutableNode {...props} component={component} />
 }
 
-export const FusionMonadBridgeNode = (props: NodeProps) => {
-  const component = new FusionMonadBridgeComponent()
+export const ChainSelectorNode = (props: CustomNodeProps) => {
+  const component = new ChainSelectorComponent()
   return <ExecutableNode {...props} component={component} />
 }
 
-export const ChainSelectorNode = (props: NodeProps) => {
-  const component = new ChainSelectorComponent()
+export const FusionMonadBridgeNode = (props: CustomNodeProps) => {
+  const component = new FusionMonadBridgeComponent()
   return <ExecutableNode {...props} component={component} />
 }
 

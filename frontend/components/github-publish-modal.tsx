@@ -266,15 +266,15 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
   // Success state
   if (publishComplete) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg w-full max-w-md p-6">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg w-full max-w-md mx-auto p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
             </div>
             
             <div>
-              <h2 className="text-xl font-semibold mb-2">Repository Created!</h2>
+              <h2 className="text-lg sm:text-xl font-semibold mb-2">Repository Created!</h2>
               <p className="text-gray-600 text-sm">
                 Your DeFi application has been successfully published to GitHub.
               </p>
@@ -311,20 +311,20 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-6xl h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg w-full max-w-7xl mx-auto h-[95vh] sm:h-[90vh] flex flex-col max-h-screen">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-              <Github className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between p-3 sm:p-6 border-b">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-black rounded-lg flex items-center justify-center flex-shrink-0">
+              <Github className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold">Publish to GitHub</h2>
-              <p className="text-sm text-gray-600">Review code and create a new repository</p>
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-semibold truncate">Publish to GitHub</h2>
+              <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">Review code and create a new repository</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleClose}>
+          <Button variant="ghost" size="sm" onClick={handleClose} className="flex-shrink-0">
             <X className="w-4 h-4" />
           </Button>
         </div>
@@ -332,41 +332,47 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
         {/* Content */}
         <div className="flex-1 flex overflow-hidden">
           <Tabs defaultValue="repository" className="flex-1 flex flex-col">
-            <TabsList className="mx-6 mt-4 grid w-full grid-cols-2">
-              <TabsTrigger value="repository">Repository Settings</TabsTrigger>
-              <TabsTrigger value="code-preview">Code Preview</TabsTrigger>
+            <TabsList className="mx-3 sm:mx-6 mt-2 sm:mt-4 grid w-full grid-cols-2">
+              <TabsTrigger value="repository" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Repository Settings</span>
+                <span className="sm:hidden">Settings</span>
+              </TabsTrigger>
+              <TabsTrigger value="code-preview" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Code Preview</span>
+                <span className="sm:hidden">Preview</span>
+              </TabsTrigger>
             </TabsList>
 
             {/* Repository Settings Tab */}
-            <TabsContent value="repository" className="flex-1 overflow-y-auto p-6 space-y-6">
+            <TabsContent value="repository" className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
               {/* Error Display */}
               {publishError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-                    <div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0">
                       <h4 className="font-medium text-red-900">Error</h4>
-                      <p className="text-sm text-red-800 mt-1">{publishError}</p>
+                      <p className="text-sm text-red-800 mt-1 break-words">{publishError}</p>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* GitHub Connection */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Github className="w-5 h-5" />
-                    <div>
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <Github className="w-5 h-5 flex-shrink-0" />
+                    <div className="min-w-0">
                       <h4 className="font-medium">GitHub Account</h4>
                       {githubUser ? (
                         <div className="flex items-center gap-2 mt-1">
                           <img 
                             src={githubUser.avatar_url} 
                             alt={githubUser.login}
-                            className="w-5 h-5 rounded-full"
+                            className="w-4 h-4 sm:w-5 sm:h-5 rounded-full"
                           />
-                          <span className="text-sm text-gray-600">@{githubUser.login}</span>
+                          <span className="text-sm text-gray-600 truncate">@{githubUser.login}</span>
                         </div>
                       ) : (
                         <p className="text-sm text-gray-600">Connect your GitHub account to publish</p>
@@ -375,25 +381,29 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
                   </div>
                   
                   {githubUser ? (
-                    <Button variant="outline" size="sm" onClick={handleDisconnect}>
+                    <Button variant="outline" size="sm" onClick={handleDisconnect} className="flex-shrink-0">
                       <LogOut className="w-4 h-4 mr-2" />
-                      Disconnect
+                      <span className="hidden sm:inline">Disconnect</span>
+                      <span className="sm:hidden">Sign Out</span>
                     </Button>
                   ) : (
                     <Button 
                       onClick={handleGitHubConnect} 
                       disabled={isConnecting}
                       size="sm"
+                      className="flex-shrink-0"
                     >
                       {isConnecting ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Connecting...
+                          <span className="hidden sm:inline">Connecting...</span>
+                          <span className="sm:hidden">...</span>
                         </>
                       ) : (
                         <>
                           <User className="w-4 h-4 mr-2" />
-                          Connect GitHub
+                          <span className="hidden sm:inline">Connect GitHub</span>
+                          <span className="sm:hidden">Connect</span>
                         </>
                       )}
                     </Button>
@@ -426,14 +436,14 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
                   <div className="space-y-0.5">
                     <Label>Repository Visibility</Label>
                     <div className="text-sm text-gray-600">
                       {repoConfig.isPrivate ? "Only you can see this repository" : "Anyone can see this repository"}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 justify-start sm:justify-end">
                     <Globe className="w-4 h-4 text-gray-400" />
                     <Switch
                       checked={repoConfig.isPrivate}
@@ -444,7 +454,7 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
                 </div>
 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
                     <Label>Include README.md</Label>
                     <Switch
                       checked={repoConfig.includeReadme}
@@ -452,7 +462,7 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
                     />
                   </div>
                   
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
                     <Label>Auto-deploy to Vercel</Label>
                     <Switch
                       checked={repoConfig.autoDeployVercel}
@@ -463,20 +473,22 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
               </div>
 
               {/* Preview */}
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Github className="w-4 h-4" />
-                  <span className="font-medium">{githubUser?.login || 'your-username'}/{repoConfig.name}</span>
-                  <Badge variant={repoConfig.isPrivate ? "secondary" : "outline"}>
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Github className="w-4 h-4 flex-shrink-0" />
+                    <span className="font-medium truncate">{githubUser?.login || 'your-username'}/{repoConfig.name}</span>
+                  </div>
+                  <Badge variant={repoConfig.isPrivate ? "secondary" : "outline"} className="self-start sm:self-auto">
                     {repoConfig.isPrivate ? "Private" : "Public"}
                   </Badge>
                 </div>
                 
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 break-words">
                   {repoConfig.description}
                 </p>
 
-                <div className="flex items-center gap-4 text-xs text-gray-500">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-gray-500">
                   <span>TypeScript</span>
                   <span>React</span>
                   <span>Next.js</span>
@@ -490,7 +502,7 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
                       {filesArray.slice(0, 5).map(file => (
                         <div key={file.path} className="text-xs text-gray-600 font-mono flex items-center gap-2">
                           {getFileIcon(file.path)}
-                          {file.path}
+                          <span className="truncate">{file.path}</span>
                         </div>
                       ))}
                       {filesArray.length > 5 && (
@@ -507,10 +519,10 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
             {/* Code Preview Tab */}
             <TabsContent value="code-preview" className="flex-1 flex flex-col overflow-hidden">
               {filesArray.length > 0 ? (
-                <div className="flex-1 flex overflow-hidden">
+                <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
                   {/* File List */}
-                  <div className="w-80 border-r bg-gray-50 overflow-y-auto">
-                    <div className="p-4 border-b">
+                  <div className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r bg-gray-50 overflow-y-auto max-h-48 lg:max-h-full">
+                    <div className="p-3 sm:p-4 border-b">
                       <h3 className="font-medium text-sm">Generated Files ({filesArray.length})</h3>
                     </div>
                     <div className="p-2">
@@ -523,11 +535,11 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
                           }}
                         >
                           {getFileIcon(file.path)}
-                          <span className="truncate">{file.path}</span>
+                          <span className="truncate flex-1">{file.path}</span>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="opacity-0 group-hover:opacity-100 ml-auto h-6 w-6 p-0"
+                            className="opacity-0 group-hover:opacity-100 ml-auto h-6 w-6 p-0 flex-shrink-0"
                             onClick={(e) => {
                               e.stopPropagation()
                               handleCopyFile(file.path, file.content)
@@ -547,16 +559,16 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
                   {/* File Content */}
                   <div className="flex-1 overflow-hidden">
                     <ScrollArea className="h-full">
-                      <div className="p-4">
-                        <div className="space-y-6">
+                      <div className="p-2 sm:p-4">
+                        <div className="space-y-4 sm:space-y-6">
                           {filesArray.map((file, index) => (
                             <div key={index} className="border rounded-lg overflow-hidden">
-                              <div className="bg-gray-50 px-4 py-2 border-b flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                              <div className="bg-gray-50 px-3 sm:px-4 py-2 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
                                   {getFileIcon(file.path)}
-                                  <span className="font-mono text-sm">{file.path}</span>
+                                  <span className="font-mono text-sm truncate">{file.path}</span>
                                   {file.type && (
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge variant="outline" className="text-xs flex-shrink-0">
                                       {file.type}
                                     </Badge>
                                   )}
@@ -565,21 +577,22 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleCopyFile(file.path, file.content)}
+                                  className="self-start sm:self-auto flex-shrink-0"
                                 >
                                   {copiedFile === file.path ? (
                                     <>
                                       <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                      Copied!
+                                      <span className="hidden sm:inline">Copied!</span>
                                     </>
                                   ) : (
                                     <>
                                       <Copy className="w-4 h-4 mr-2" />
-                                      Copy
+                                      <span className="hidden sm:inline">Copy</span>
                                     </>
                                   )}
                                 </Button>
                               </div>
-                              <pre className="p-4 text-sm overflow-x-auto bg-gray-50 max-h-96">
+                              <pre className="p-3 sm:p-4 text-xs sm:text-sm overflow-x-auto bg-gray-50 max-h-64 sm:max-h-96">
                                 <code>{file.content}</code>
                               </pre>
                             </div>
@@ -603,32 +616,35 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t bg-gray-50">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+        <div className="p-3 sm:p-6 border-t bg-gray-50">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="text-xs sm:text-sm text-gray-600 order-2 sm:order-1">
               {githubUser ? (
                 `Repository will be created under @${githubUser.login}`
               ) : (
                 "Connect GitHub to publish your repository"
               )}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleClose} disabled={isPublishing}>
+            <div className="flex gap-2 order-1 sm:order-2">
+              <Button variant="outline" onClick={handleClose} disabled={isPublishing} className="flex-1 sm:flex-none">
                 Cancel
               </Button>
               <Button 
                 onClick={handlePublish} 
                 disabled={isPublishing || !repoConfig.name || !codeResult || !githubUser}
+                className="flex-1 sm:flex-none"
               >
                 {isPublishing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Publishing...
+                    <span className="hidden sm:inline">Publishing...</span>
+                    <span className="sm:hidden">...</span>
                   </>
                 ) : (
                   <>
                     <Github className="w-4 h-4 mr-2" />
-                    Create Repository
+                    <span className="hidden sm:inline">Create Repository</span>
+                    <span className="sm:hidden">Create</span>
                   </>
                 )}
               </Button>

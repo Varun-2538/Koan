@@ -9,6 +9,7 @@ import { ExecutableNode } from "./nodes/executable-node"
 import { OneInchSwapComponent, OneInchQuoteComponent } from "@/lib/components/defi/oneinch-swap"
 import { FusionPlusComponent, ChainSelectorComponent } from "@/lib/components/defi/fusion-plus"
 import { FusionMonadBridgeComponent } from "@/lib/components/defi/fusion-monad-bridge"
+import { FusionSwapComponent } from "@/lib/components/defi/fusion-swap"
 
 // Extended NodeProps with proper config typing
 interface CustomNodeProps extends NodeProps {
@@ -47,6 +48,11 @@ export const ChainSelectorNode = (props: CustomNodeProps) => {
 
 export const FusionMonadBridgeNode = (props: CustomNodeProps) => {
   const component = new FusionMonadBridgeComponent()
+  return <ExecutableNode {...props} component={component} />
+}
+
+export const FusionSwapExecutableNode = (props: CustomNodeProps) => {
+  const component = new FusionSwapComponent()
   return <ExecutableNode {...props} component={component} />
 }
 
@@ -360,7 +366,7 @@ export const CustomNodes = {
   defiDashboard: DefiDashboardNode,
   
   // Additional nodes referenced in getDefaultConfig
-  fusionSwap: FusionSwapNode,
+  fusionSwap: FusionSwapExecutableNode,
   limitOrder: LimitOrderNode,
   portfolioAPI: PortfolioAPINode,
   transactionHistory: TransactionHistoryNode,

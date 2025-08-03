@@ -9,6 +9,8 @@ import { ExecutableNode } from "./nodes/executable-node"
 import { OneInchSwapComponent, OneInchQuoteComponent } from "@/lib/components/defi/oneinch-swap"
 import { FusionPlusComponent, ChainSelectorComponent } from "@/lib/components/defi/fusion-plus"
 import { FusionMonadBridgeComponent } from "@/lib/components/defi/fusion-monad-bridge"
+import { FusionSwapComponent } from "@/lib/components/defi/fusion-swap"
+import { FusionPlusExecutableComponent } from "@/lib/components/defi/fusion-plus-executable"
 
 // Extended NodeProps with proper config typing
 interface CustomNodeProps extends NodeProps {
@@ -40,6 +42,11 @@ export const FusionPlusNode = (props: CustomNodeProps) => {
   return <ExecutableNode {...props} component={component} />
 }
 
+export const FusionPlusExecutableNode = (props: CustomNodeProps) => {
+  const component = new FusionPlusExecutableComponent()
+  return <ExecutableNode {...props} component={component} />
+}
+
 export const ChainSelectorNode = (props: CustomNodeProps) => {
   const component = new ChainSelectorComponent()
   return <ExecutableNode {...props} component={component} />
@@ -47,6 +54,11 @@ export const ChainSelectorNode = (props: CustomNodeProps) => {
 
 export const FusionMonadBridgeNode = (props: CustomNodeProps) => {
   const component = new FusionMonadBridgeComponent()
+  return <ExecutableNode {...props} component={component} />
+}
+
+export const FusionSwapExecutableNode = (props: CustomNodeProps) => {
+  const component = new FusionSwapComponent()
   return <ExecutableNode {...props} component={component} />
 }
 
@@ -339,7 +351,7 @@ export const CustomNodes = {
   // Executable DeFi nodes (using ExecutableNode wrapper)
   oneInchSwap: OneInchSwapNode,
   oneInchQuote: OneInchQuoteNode,
-  fusionPlus: FusionPlusNode,
+  fusionPlus: FusionPlusExecutableNode,
   fusionMonadBridge: FusionMonadBridgeNode,
   chainSelector: ChainSelectorNode,
   
@@ -360,7 +372,7 @@ export const CustomNodes = {
   defiDashboard: DefiDashboardNode,
   
   // Additional nodes referenced in getDefaultConfig
-  fusionSwap: FusionSwapNode,
+  fusionSwap: FusionSwapExecutableNode,
   limitOrder: LimitOrderNode,
   portfolioAPI: PortfolioAPINode,
   transactionHistory: TransactionHistoryNode,

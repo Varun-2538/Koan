@@ -229,8 +229,8 @@ export function FunctionalPreviewPanel({
           return {
             success: true,
             outputs: {
-              fromTokenAmount: inputs.amount || '1000000000000000000',
-              toTokenAmount: '2456780000', // Mock USDC amount (6 decimals)
+              fromTokenAmount: inputs.amount || '100000000000000000', // 0.1 ETH instead of 1 ETH
+              toTokenAmount: '245678000', // Mock USDC amount (6 decimals) - adjusted for smaller amount
               estimatedGas: '150000',
               protocols: [['UNISWAP_V3', 'SUSHISWAP']],
               priceImpact: '0.02'

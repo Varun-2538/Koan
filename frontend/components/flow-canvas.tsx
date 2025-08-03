@@ -774,6 +774,31 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           auctionDuration: "auto",
           enableMEVProtection: true
         }
+      case "fusionMonadBridge":
+        return {
+          api_key: "",
+          bridge_direction: "eth_to_monad",
+          source_token: "ETH",
+          destination_token: "ETH",
+          amount: "1.0",
+          timelock_duration: 24,
+          enable_partial_fills: true,
+          enable_mev_protection: true,
+          slippage_tolerance: 1,
+          gas_optimization: "balanced",
+          relayer_config: {
+            auto_relay: true,
+            timeout_minutes: 30,
+            max_retries: 3
+          },
+          ui_config: {
+            theme: "modern",
+            show_atomic_status: true,
+            show_timelock_countdown: true,
+            show_gas_estimates: true,
+            enable_advanced_options: false
+          }
+        }
       case "limitOrder":
         return {
           apiKey: "",
@@ -958,8 +983,23 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
             if (node.type === "oneInchQuote") {
               backendConfig.from_token = backendConfig.from_token || "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
               backendConfig.to_token = backendConfig.to_token || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-              backendConfig.amount = backendConfig.amount || "1000000000000000000"
+              // Use a smaller default amount for template mode to avoid large transaction amounts
+              // Only set default if no amount is provided
+              if (!backendConfig.amount) {
+                backendConfig.amount = "100000000000000000" // 0.1 ETH instead of 1 ETH
+              }
               backendConfig.chain_id = backendConfig.chain_id || "1"
+            }
+            
+            // For oneInchSwap, ensure we use the same amount as the quote
+            if (node.type === "oneInchSwap") {
+              // Don't override the amount if it's already set (should come from quote)
+              backendConfig.from_token = backendConfig.from_token || "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+              backendConfig.to_token = backendConfig.to_token || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+              backendConfig.chain_id = backendConfig.chain_id || "1"
+              // Note: amount should be passed from the quote node, not set as default
+              // The backend execution engine will automatically pass the amount from the quote node
+              // to the swap node through the collectStepInputs method
             }
           }
 

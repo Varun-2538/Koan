@@ -39,6 +39,7 @@ import { executionClient } from "@/lib/execution-client"
 import { workflowExecutionClient, type ExecutionStatus, type WorkflowDefinition } from "@/lib/workflow-execution-client"
 import { workflowCodeGenerator, type CodeGenerationResult } from "@/lib/workflow-code-generator"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useToast } from "@/hooks/use-toast"
 
 const nodeTypes: NodeTypes = CustomNodes
 
@@ -92,18 +93,40 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   // Mobile responsiveness
   const isMobile = useIsMobile()
   const [showMobilePalette, setShowMobilePalette] = useState(false)
+  const { toast } = useToast()
 
   // Add validation and direct deploy function
   const deployToGitHub = async () => {
-    if (!codeResult) {
+    let currentCodeResult = codeResult
+    
+    if (!currentCodeResult) {
       // Generate code first if not available
-      await generateCode()
+      try {
+        currentCodeResult = await generateCodeAndReturn()
+        if (currentCodeResult) {
+          setCodeResult(currentCodeResult)
+        }
+      } catch (error) {
+        console.error('Failed to generate code for GitHub deployment:', error)
+        toast({
+          title: "Code Generation Failed",
+          description: "Please try generating code again before deploying to GitHub.",
+          variant: "destructive"
+        })
+        return
+      }
     }
-    if (codeResult) {
+    
+    // Open modal if we have the code result
+    if (currentCodeResult) {
       setShowGitHubModal(true)
     } else {
-      console.error('Failed to generate code for GitHub deployment')
-      // You can add a toast notification here
+      console.error('Failed to generate code for GitHub deployment - no code result available')
+      toast({
+        title: "Code Generation Failed",
+        description: "Please try generating code again before deploying to GitHub.",
+        variant: "destructive"
+      })
     }
   }
   const [showLivePreviewModal, setShowLivePreviewModal] = useState(false)
@@ -834,52 +857,63 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     setSaving(false)
   }
 
+  // Helper function that generates code and returns the result
+  const generateCodeAndReturn = async (): Promise<CodeGenerationResult | OneInchCodeResult | null> => {
+    const projectName = isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"
+    
+    if (isTemplateProject) {
+      // Always use 1inch code generator for template projects, regardless of execution status
+      console.log('🎯 Generating code for template project using OneInchCodeGenerator')
+      const result = OneInchCodeGenerator.generateFromWorkflow(
+        nodes, 
+        edges, 
+        projectName,
+        { 
+          network: "Ethereum",
+          hackathonMode: true,
+          oneInchApiKey: "template-mode-no-key-needed"
+        }
+      )
+      return result
+    } else {
+      // For custom workflows with new nodes, check if there's execution data
+      if (workflowExecutionStatus && workflowExecutionStatus.status === 'completed') {
+        // Use workflow code generator for executed workflows
+        console.log('🎯 Generating code for executed workflow using workflowCodeGenerator.generateApplicationFromWorkflow')
+        const result = await workflowCodeGenerator.generateApplicationFromWorkflow(
+          workflowExecutionStatus,
+          projectName
+        )
+        return result
+      } else {
+        // For unexecuted workflows, generate based on node configuration
+        console.log('🎯 Generating code for unexecuted workflow using workflowCodeGenerator.generateFromNodes')
+        const result = await workflowCodeGenerator.generateFromNodes(
+          nodes,
+          edges,
+          projectName,
+          {
+            framework: "Next.js 14",
+            generateAPI: true,
+            generateUI: true,
+            generateTests: false
+          }
+        )
+        return result
+      }
+    }
+  }
+
   const generateCode = async () => {
     setGenerating(true)
     try {
-      const projectName = isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"
-      
-      if (isTemplateProject) {
-        // Use 1inch code generator for template projects
-        const result = OneInchCodeGenerator.generateFromWorkflow(
-          nodes, 
-          edges, 
-          projectName,
-          { 
-            network: "Ethereum",
-            hackathonMode: true,
-            oneInchApiKey: "template-mode-no-key-needed"
-          }
-        )
+      const result = await generateCodeAndReturn()
+      if (result) {
         setCodeResult(result)
+        setShowCodeModal(true)
       } else {
-        // For custom workflows with new nodes, check if there's execution data
-        if (workflowExecutionStatus && workflowExecutionStatus.status === 'completed') {
-          // Use workflow code generator for executed workflows
-          const result = await workflowCodeGenerator.generateApplicationFromWorkflow(
-            workflowExecutionStatus,
-            projectName
-          )
-          setCodeResult(result)
-        } else {
-          // For unexecuted workflows, generate based on node configuration
-          const result = await workflowCodeGenerator.generateFromNodes(
-            nodes,
-            edges,
-            projectName,
-            {
-              framework: "Next.js 14",
-              generateAPI: true,
-              generateUI: true,
-              generateTests: false
-            }
-          )
-          setCodeResult(result)
-        }
+        throw new Error('Failed to generate code')
       }
-      
-      setShowCodeModal(true)
-      
     } catch (error) {
       console.error("Error generating code:", error)
       alert("❌ Error generating code. Please check the console for details.")

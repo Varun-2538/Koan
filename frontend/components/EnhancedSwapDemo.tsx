@@ -221,23 +221,40 @@ export function EnhancedSwapDemo() {
       // Convert amount to wei/token units
       const amountInWei = parseUnits(amount, fromTokenData.decimals).toString();
 
-      // Get quote from backend API
-      const response = await axios.get('/api/1inch/quote', {
+      // Get quote from fixed 1inch proxy API
+      const response = await axios.get('/api/oneinch-proxy', {
+        headers: {
+          'x-api-key': process.env.NEXT_PUBLIC_ONEINCH_API_KEY || 'IBbEIN4jebemuGceiCR7IDeOOgj1U1ip'
+        },
         params: {
           chainId: 1, // Ethereum mainnet
+          endpoint: 'quote',
           src: fromTokenData.address,
           dst: toTokenData.address,
           amount: amountInWei,
-          from: address,
-          slippage: slippage
+          from: address
         }
       });
 
       const quoteData = response.data;
-      setQuote(quoteData);
+      console.log('Quote response:', quoteData);
+      
+      // Handle v6.0 API response format
+      const outputAmount = quoteData.dstAmount || quoteData.toTokenAmount || quoteData.toAmount;
+      const gasEstimate = quoteData.gas || quoteData.estimatedGas;
+      
+      if (!outputAmount) {
+        throw new Error('Invalid quote response - no output amount');
+      }
+      
+      setQuote({
+        ...quoteData,
+        toAmount: outputAmount,
+        estimatedGas: gasEstimate || '0'
+      });
       
       // Format the to amount for display
-      const toAmountFormatted = formatUnits(BigInt(quoteData.toAmount), toTokenData.decimals);
+      const toAmountFormatted = formatUnits(BigInt(outputAmount), toTokenData.decimals);
       setToAmount(parseFloat(toAmountFormatted).toFixed(6));
 
     } catch (error: any) {
@@ -317,14 +334,20 @@ export function EnhancedSwapDemo() {
       // Convert amount to wei/token units
       const amountInWei = parseUnits(amount, fromTokenData.decimals).toString();
 
-      // Get swap transaction data from backend
-      const response = await axios.post('/api/1inch/swap', {
-        chainId: 1,
-        src: fromTokenData.address,
-        dst: toTokenData.address,
-        amount: amountInWei,
-        from: address,
-        slippage: slippage
+      // Get swap transaction data from fixed 1inch proxy
+      const response = await axios.get('/api/oneinch-proxy', {
+        headers: {
+          'x-api-key': process.env.NEXT_PUBLIC_ONEINCH_API_KEY || 'IBbEIN4jebemuGceiCR7IDeOOgj1U1ip'
+        },
+        params: {
+          chainId: 1,
+          endpoint: 'swap',
+          src: fromTokenData.address,
+          dst: toTokenData.address,
+          amount: amountInWei,
+          from: address,
+          slippage: slippage
+        }
       });
 
       const swapData = response.data;

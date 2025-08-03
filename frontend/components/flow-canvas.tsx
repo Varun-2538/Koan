@@ -31,6 +31,9 @@ import { OneInchCodeGenerator, type CodeGenerationResult } from "@/lib/oneinch-c
 import { CodePreviewModal } from "./code-preview-modal"
 import { GitHubPublishModal } from "./github-publish-modal"
 import { LiveDashboardPreview } from "./live-dashboard-preview"
+import { EmbeddedPreviewPanel } from "./embedded-preview-panel"
+import { FunctionalPreviewPanel } from "./functional-preview-panel"
+import { RealTestnetPreview } from "./real-testnet-preview"
 import { AIChatbotPanel } from "./ai-chatbot-panel"
 import { executionClient, type WorkflowDefinition } from "@/lib/execution-client"
 import { workflowExecutionClient, type ExecutionStatus } from "@/lib/workflow-execution-client"
@@ -98,6 +101,8 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     }
   }
   const [showLivePreviewModal, setShowLivePreviewModal] = useState(false)
+  const [showEmbeddedPreview, setShowEmbeddedPreview] = useState(false)
+  const [previewMode, setPreviewMode] = useState<'static' | 'functional' | 'testnet'>('testnet')
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
   
@@ -948,9 +953,10 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     <div className="h-screen flex">
       <ComponentPalette />
 
-      <div className="flex-1 relative">
-        <ReactFlowProvider>
-          <div className="h-full" ref={reactFlowWrapper}>
+      <div className="flex-1 relative flex">
+        <div className={`${showEmbeddedPreview ? 'flex-1' : 'w-full'} relative`}>
+          <ReactFlowProvider>
+            <div className="h-full" ref={reactFlowWrapper}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -973,7 +979,13 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
               <Background gap={12} size={1} />
 
               <Panel position="top-left">
-                <FlowToolbar projectId={projectId} />
+                <FlowToolbar 
+                  projectId={projectId} 
+                  showPreview={showEmbeddedPreview}
+                  onTogglePreview={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
+                  previewMode={previewMode}
+                  onPreviewModeChange={setPreviewMode}
+                />
               </Panel>
 
               {/* Execution Status Panel */}
@@ -1106,8 +1118,39 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                 </Panel>
               )}
             </ReactFlow>
-          </div>
-        </ReactFlowProvider>
+            </div>
+          </ReactFlowProvider>
+        </div>
+
+        {/* Embedded Preview Panel */}
+        {previewMode === 'static' ? (
+          <EmbeddedPreviewPanel
+            nodes={nodes}
+            edges={edges}
+            projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+            isVisible={showEmbeddedPreview}
+            onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
+            codeResult={codeResult}
+          />
+        ) : previewMode === 'functional' ? (
+          <FunctionalPreviewPanel
+            nodes={nodes}
+            edges={edges}
+            projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+            isVisible={showEmbeddedPreview}
+            onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
+            codeResult={codeResult}
+          />
+        ) : (
+          <RealTestnetPreview
+            nodes={nodes}
+            edges={edges}
+            projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+            isVisible={showEmbeddedPreview}
+            onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
+            codeResult={codeResult}
+          />
+        )}
       </div>
 
       {selectedNode && (
@@ -1129,7 +1172,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         }}
         onLivePreview={() => {
           setShowCodeModal(false)
-          setShowLivePreviewModal(true)
+          setShowEmbeddedPreview(true)
         }}
       />
 

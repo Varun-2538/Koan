@@ -40,17 +40,9 @@ export async function GET(request: NextRequest) {
             (value === '0x0000000000000000000000000000000000001010' || value === '0x0000000000000000000000000000000000000000')) {
           forwardParams.append(key, NATIVE_TOKEN_ADDRESSES[chainId] || '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE');
         }
-        // Ensure minimum amounts for testing
-        else if (key === 'amount' && endpoint === 'quote') {
-          const amount = value;
-          const minAmount = MIN_AMOUNTS[chainId] || '100000000000000000';
-          // If amount is too small, use minimum amount
-          if (BigInt(amount) < BigInt(minAmount)) {
-            console.log(`Adjusting amount from ${amount} to ${minAmount} for better liquidity`);
-            forwardParams.append(key, minAmount);
-          } else {
-            forwardParams.append(key, value);
-          }
+        // Pass amount as-is without adjustment
+        else if (key === 'amount') {
+          forwardParams.append(key, value);
         }
         else {
           forwardParams.append(key, value);
@@ -58,8 +50,9 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Use consistent API version v6.0 for all endpoints as per latest documentation
-    const oneInchUrl = `https://api.1inch.dev/swap/v6.0/${chainId}/${endpoint}?${forwardParams.toString()}`;
+    // Use API version v5.2 for swap endpoints as per 1inch documentation
+    const apiVersion = endpoint === 'swap' ? 'v5.2' : 'v6.0';
+    const oneInchUrl = `https://api.1inch.dev/swap/${apiVersion}/${chainId}/${endpoint}?${forwardParams.toString()}`;
     
     console.log('1inch API request:', {
       url: oneInchUrl,
@@ -126,8 +119,12 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Use consistent API version v6.0 for all endpoints
-    const oneInchUrl = `https://api.1inch.dev/swap/v6.0/${chainId}/${endpoint}`;
+    // Pass amount as-is without adjustment in POST body
+    // params.amount is already correct from the frontend
+
+    // Use API version v5.2 for swap endpoints as per 1inch documentation
+    const apiVersion = endpoint === 'swap' ? 'v5.2' : 'v6.0';
+    const oneInchUrl = `https://api.1inch.dev/swap/${apiVersion}/${chainId}/${endpoint}`;
     
     const response = await fetch(oneInchUrl, {
       method: 'POST',

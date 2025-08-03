@@ -83,9 +83,23 @@ const getDefaultNodeConfig = (nodeType: string) => {
         amount: "1.0",
         source_address: "",
         destination_address: "",
-        timeout_hours: 24,
-        slippage: 1,
-        enableMEVProtection: true
+        timelock_duration: 24,
+        slippage_tolerance: 1,
+        enable_partial_fills: true,
+        enable_mev_protection: true,
+        gas_optimization: "balanced",
+        relayer_config: {
+          auto_relay: true,
+          timeout_minutes: 30,
+          max_retries: 3
+        },
+        ui_config: {
+          theme: "modern",
+          show_atomic_status: true,
+          show_timelock_countdown: true,
+          show_gas_estimates: true,
+          enable_advanced_options: false
+        }
       }
     case "walletConnector":
       return {
@@ -575,6 +589,14 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
       ]
     }
 
+    if (key === "gas_optimization") {
+      return [
+        { value: "low", label: "Low Gas (Slower)" },
+        { value: "balanced", label: "Balanced" },
+        { value: "fast", label: "Fast (Higher Gas)" }
+      ]
+    }
+
     return []
   }
 
@@ -617,18 +639,46 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
         return (
           <div className="space-y-4">
             {renderConfigField("api_key", config.api_key, "1inch API Key", "password")}
-            <div className="bg-purple-50 p-3 rounded-lg">
-              <p className="text-xs text-purple-700">
-                🌉 Cross-chain bridge between Ethereum and Monad using HTLCs
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-3 rounded-lg border border-purple-200">
+              <p className="text-xs text-purple-700 font-medium">
+                🌉 Fusion+ Monad Bridge - Atomic Swaps with HTLCs
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Trustless cross-chain swaps between Ethereum and Monad using Hash Time Locked Contracts
               </p>
             </div>
-            {renderConfigField("bridge_direction", config.bridge_direction, "Bridge Direction", "select")}
-            {renderConfigField("source_token", config.source_token, "Source Token", "text")}
-            {renderConfigField("destination_token", config.destination_token, "Destination Token", "text")}
-            {renderConfigField("amount", config.amount, "Amount", "text")}
-            {renderConfigField("timeout_hours", config.timeout_hours, "Timeout (hours)", "number")}
-            {renderConfigField("slippage", config.slippage, "Slippage (%)", "number")}
-            {renderConfigField("enableMEVProtection", config.enableMEVProtection, "MEV Protection", "boolean")}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {renderConfigField("bridge_direction", config.bridge_direction, "Bridge Direction", "select")}
+              {renderConfigField("amount", config.amount, "Amount", "number")}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {renderConfigField("source_token", config.source_token, "Source Token", "text")}
+              {renderConfigField("destination_token", config.destination_token, "Destination Token", "text")}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {renderConfigField("timelock_duration", config.timelock_duration, "Timelock (hours)", "number")}
+              {renderConfigField("slippage_tolerance", config.slippage_tolerance, "Slippage (%)", "number")}
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Advanced Options</span>
+                <span className="text-xs text-gray-500">Click to expand</span>
+              </div>
+              {renderConfigField("enable_partial_fills", config.enable_partial_fills, "Enable Partial Fills", "boolean")}
+              {renderConfigField("enable_mev_protection", config.enable_mev_protection, "MEV Protection", "boolean")}
+              {renderConfigField("gas_optimization", config.gas_optimization, "Gas Optimization", "select")}
+            </div>
+            
+            <div className="bg-blue-50 p-2 rounded text-xs text-blue-700">
+              <strong>Contract Addresses:</strong><br/>
+              Ethereum HTLC: 0xE6DC9225E4C76f9c0b002Ab2782F687e35cc7666<br/>
+              Monad HTLC: 0xE6DC9225E4C76f9c0b002Ab2782F687e35cc7666<br/>
+              Fusion Adapter: 0x135336371a3C6Db17400Ec82B5d23c5806F93B56
+            </div>
           </div>
         )
 

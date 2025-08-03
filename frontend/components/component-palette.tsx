@@ -166,7 +166,7 @@ const COMPONENTS: ComponentItem[] = [
   }
 ]
 
-const CATEGORIES = ["All", "DeFi", "UI", "Infrastructure", "Analytics"]
+const CATEGORIES = ["All", "DeFi", "Cross-Chain", "UI", "Infrastructure", "Analytics"]
 
 export function ComponentPalette() {
   const [searchTerm, setSearchTerm] = useState("")

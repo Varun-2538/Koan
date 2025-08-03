@@ -52,6 +52,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Multi-Chain Wallet Connection",
           config: {
+            template_creation_mode: true,
             supportedWallets: ["MetaMask", "WalletConnect", "Coinbase Wallet"],
             autoConnect: true,
             supportedChains: ["1", "137", "56", "42161", "10", "43114"],
@@ -66,6 +67,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Multi-Chain Token Selector",
           config: {
+            template_creation_mode: true,
             fromToken: "ETH",
             toToken: "USDC",
             amount: "1.0",
@@ -82,6 +84,9 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "1inch Quote Engine",
           config: {
+            // Template mode flag
+            template_creation_mode: true,
+            
             // Backend required fields
             api_key: "template-mode-demo-key",
             
@@ -102,6 +107,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Price Impact Analysis",
           config: {
+            template_creation_mode: true,
             slippage: 1.0,
             autoSlippage: true,
             showPriceImpact: true,
@@ -117,6 +123,9 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "1inch Swap Executor",
           config: {
+            // Template mode flag
+            template_creation_mode: true,
+            
             // Backend required fields
             api_key: "template-mode-demo-key",
             
@@ -136,6 +145,9 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Fusion+ Cross-Chain",
           config: {
+            // Template mode flag
+            template_creation_mode: true,
+            
             // Required fields for backend validation
             api_key: "template-mode-demo-key",
             source_chain: "1", // Ethereum
@@ -161,6 +173,9 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Limit Order Protocol",
           config: {
+            // Template mode flag
+            template_creation_mode: true,
+            
             // Backend required fields  
             api_key: "template-mode-demo-key",
             
@@ -179,6 +194,9 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Portfolio & Balance API",
           config: {
+            // Template mode flag
+            template_creation_mode: true,
+            
             // Backend required fields
             api_key: "template-mode-demo-key",
             
@@ -197,6 +215,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Transaction Monitor",
           config: {
+            template_creation_mode: true,
             maxTransactions: "50",
             showPendingTx: true,
             enableFiltering: true,
@@ -211,6 +230,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "DeFi Analytics Dashboard",
           config: {
+            template_creation_mode: true,
             title: "1inch-Powered DeFi Suite",
             enableMultiSwap: true,
             showPortfolio: true,
@@ -283,6 +303,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Wallet Connection",
           config: {
+            template_creation_mode: true,
             supportedWallets: ["MetaMask", "WalletConnect"],
             autoConnect: true,
             networkChainId: "1"
@@ -296,6 +317,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Token Selector",
           config: {
+            template_creation_mode: true,
             fromToken: "ETH",
             toToken: "USDC",
             amount: "1.0",
@@ -310,6 +332,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "1inch Quote",
           config: {
+            template_creation_mode: true,
             apiKey: "",
             supportedChains: ["1"],
             quoteRefreshInterval: 10,
@@ -325,6 +348,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Slippage Control",
           config: {
+            template_creation_mode: true,
             slippage: 1.0,
             autoSlippage: false,
             minSlippage: 0.1,
@@ -339,6 +363,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Execute Swap",
           config: {
+            template_creation_mode: true,
             apiKey: "",
             supportedChains: ["1"],
             enableFusion: false,
@@ -354,6 +379,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Swap Interface",
           config: {
+            template_creation_mode: true,
             title: "DEX Aggregator Swap",
             showAdvancedSettings: true,
             theme: "modern",
@@ -405,6 +431,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "DAO Member Connection",
           config: {
+            template_creation_mode: true,
             supportedWallets: ["MetaMask", "WalletConnect", "Gnosis Safe"],
             autoConnect: true,
             supportedChains: ["1", "137"]
@@ -418,6 +445,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Governance Token",
           config: {
+            template_creation_mode: true,
             fromToken: "1INCH",
             toToken: "USDC", 
             amount: "1000",
@@ -433,6 +461,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Multi-Chain DAO",
           config: {
+            template_creation_mode: true,
             supportedChains: ["1", "137", "42161"],
             defaultChain: "1",
             enableTestnet: false
@@ -446,6 +475,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Treasury Swap Manager",
           config: {
+            template_creation_mode: true,
             apiKey: "",
             supportedChains: ["1", "137", "42161"],
             enableFusion: true,
@@ -461,6 +491,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Treasury Analytics",
           config: {
+            template_creation_mode: true,
             apiKey: "",
             trackHistory: true,
             enableAnalytics: true,
@@ -475,6 +506,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "DAO Governance Dashboard",
           config: {
+            template_creation_mode: true,
             title: "DAO Governance & Treasury",
             components: ["proposals", "voting", "treasury", "analytics"],
             theme: "professional"
@@ -537,6 +569,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "NFT Wallet Connection",
           config: {
+            template_creation_mode: true,
             supportedWallets: ["MetaMask", "WalletConnect", "Coinbase Wallet"],
             autoConnect: true,
             supportedChains: ["1", "137", "42161"]
@@ -550,6 +583,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Multi-Chain NFTs",
           config: {
+            template_creation_mode: true,
             supportedChains: ["1", "137", "42161"],
             defaultChain: "1",
             enableTestnet: false
@@ -563,6 +597,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Payment Processor",
           config: {
+            template_creation_mode: true,
             apiKey: "",
             supportedChains: ["1", "137", "42161"],
             enableFusion: true,
@@ -577,6 +612,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "NFT Portfolio Tracker",
           config: {
+            template_creation_mode: true,
             apiKey: "",
             trackHistory: true,
             enableAnalytics: true,

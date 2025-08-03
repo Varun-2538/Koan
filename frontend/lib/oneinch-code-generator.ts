@@ -2220,13 +2220,13 @@ export function getTokenAddress(chainId: string, symbol: string) {
 
   private static generateWagmiConfig(chains: string[]): string {
     const chainImports = chains.map(chainId => {
-      const config = this.getChainConfig(chainId);
-      return `import { ${config.name.toLowerCase()} } from 'wagmi/chains';`;
+      const wagmiChainName = this.getWagmiChainName(chainId);
+      return `import { ${wagmiChainName} } from 'wagmi/chains';`;
     }).join('\n');
 
     const chainList = chains.map(chainId => {
-      const config = this.getChainConfig(chainId);
-      return `  ${config.name.toLowerCase()}`;
+      const wagmiChainName = this.getWagmiChainName(chainId);
+      return `  ${wagmiChainName}`;
     }).join(',\n');
 
     return `import { configureChains, createConfig } from 'wagmi';
@@ -2642,6 +2642,18 @@ This application showcases complete multi-chain DeFi capabilities:
       '43114': { name: 'Avalanche', symbol: 'AVAX', rpc: 'https://api.avax.network/ext/bc/C/rpc' }
     };
     return configs[chainId] || configs['1'];
+  }
+
+  private static getWagmiChainName(chainId: string): string {
+    const wagmiChainNames: Record<string, string> = {
+      '1': 'mainnet',        // Ethereum mainnet
+      '137': 'polygon',      // Polygon
+      '56': 'bsc',          // Binance Smart Chain
+      '42161': 'arbitrum',   // Arbitrum One
+      '10': 'optimism',     // Optimism
+      '43114': 'avalanche'   // Avalanche
+    };
+    return wagmiChainNames[chainId] || 'mainnet';
   }
 
   private static getChainTokens(chainId: string): any {

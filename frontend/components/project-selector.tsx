@@ -93,10 +93,10 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
     const template = getTemplateById(templateId)
     if (!template) return
 
-    // Create project with template
+    // Create project with template - IMPORTANT: Include templateId in the project ID
     const projectName = inputs.appName || template.name
     const newProject = {
-      id: `template-${Date.now()}`,
+      id: `template-${templateId}`, // Use templateId directly in project ID
       name: projectName,
       description: `Created from ${template.name} template`,
       created_at: new Date().toISOString(),

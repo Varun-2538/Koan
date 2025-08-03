@@ -73,284 +73,52 @@ export const SlippageControlNode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-// Transaction Status Node
-export const TransactionStatusNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-green-500 text-white rounded">
-        <Clock className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Transaction Status</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Track: {data.config?.trackGasUsed ? "Gas + Status" : "Status Only"}</div>
-      <div>Notify: {data.config?.enableNotifications ? "Yes" : "No"}</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-// Bridge-specific Nodes
-export const SourceChainNode = ({ data, selected }: NodeProps) => (
+// Wallet Connector Node
+export const WalletConnectorNode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
       <div className="p-1 bg-purple-500 text-white rounded">
-        <Link className="w-4 h-4" />
+        <Wallet className="w-4 h-4" />
       </div>
-      <span className="font-medium">Source Chain</span>
+      <span className="font-medium">Wallet Connector</span>
     </div>
     <div className="text-xs text-gray-600 space-y-1">
-      <div>Chain: {data.config?.chain || "ethereum"}</div>
-      <div className="flex flex-wrap gap-1">
-        <Badge variant="secondary" className="text-xs">
-          {data.config?.chain || "ETH"}
-        </Badge>
-      </div>
+      <div>Wallets: {data.config?.supportedWallets?.join(", ") || "MetaMask, WalletConnect"}</div>
+      <div>Auto Connect: {data.config?.autoConnect ? "Yes" : "No"}</div>
     </div>
     <Handle type="source" position={Position.Bottom} />
   </NodeWrapper>
 )
 
-export const DestinationChainNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-indigo-500 text-white rounded">
-        <Link className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Destination Chain</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Chain: {data.config?.chain || "polygon"}</div>
-      <div className="flex flex-wrap gap-1">
-        <Badge variant="secondary" className="text-xs">
-          {data.config?.chain || "MATIC"}
-        </Badge>
-      </div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-// Limit Order Nodes
-export const OrderTypeNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-yellow-500 text-white rounded">
-        <Vote className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Order Type</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Type: {data.config?.orderType || "limit"}</div>
-      <div>Multiple: {data.config?.allowMultipleOrders ? "Yes" : "No"}</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-export const PriceTriggerNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-red-500 text-white rounded">
-        <Clock className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Price Trigger</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Price: ${data.config?.triggerPrice || "3000"}</div>
-      <div>Type: {data.config?.triggerType || "above"}</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-// New Swap Application Nodes
-export const TokenSelectorNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-blue-500 text-white rounded">
-        <Search className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Token Selector</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>From: {data.config?.defaultFromToken || "ETH"}</div>
-      <div>To: {data.config?.defaultToToken || "USDC"}</div>
-      <div>Tokens: {data.config?.enabledTokens?.length || 6}</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-export const PriceImpactCalculatorNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-orange-500 text-white rounded">
-        <TrendingUp className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Price Impact</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Warning: {data.config?.warningThreshold || 3}%</div>
-      <div>Max: {data.config?.maxImpactThreshold || 15}%</div>
-      <div>Analysis: {data.config?.detailedAnalysis ? "Yes" : "No"}</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-export const TransactionMonitorNode = ({ data, selected }: NodeProps) => (
+export const SwapInterfaceNode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
       <div className="p-1 bg-green-500 text-white rounded">
-        <Activity className="w-4 h-4" />
+        <Repeat className="w-4 h-4" />
       </div>
-      <span className="font-medium">Transaction Monitor</span>
+      <span className="font-medium">Swap Interface</span>
     </div>
     <div className="text-xs text-gray-600 space-y-1">
-      <div>Confirmations: {data.config?.confirmationsRequired || 1}</div>
-      <div>Timeout: {data.config?.timeoutMinutes || 30}m</div>
-      <div>MEV Detection: {data.config?.enableMEVDetection ? "On" : "Off"}</div>
+      <div>Title: {data.config?.title || "DEX Aggregator Swap"}</div>
+      <div>Theme: {data.config?.theme || "modern"}</div>
     </div>
     <Handle type="source" position={Position.Bottom} />
   </NodeWrapper>
 )
 
-// 1inch Protocol Nodes
-export const FusionSwapNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-purple-500 text-white rounded">
-        <Zap className="w-4 h-4" />
-      </div>
-      <span className="font-medium">1inch Fusion</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Mode: {data.config?.enableGaslessSwaps ? "Gasless" : "Standard"}</div>
-      <div>Auction: {data.config?.auctionDuration || "auto"}</div>
-      <div>MEV Protection: {data.config?.enableMEVProtection ? "On" : "Off"}</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-export const LimitOrderNode = ({ data, selected }: NodeProps) => (
+export const DashboardNode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
       <div className="p-1 bg-indigo-500 text-white rounded">
-        <TrendingUp className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Limit Orders</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Type: {data.config?.orderType || "limit"}</div>
-      <div>Strategies: {data.config?.enableAdvancedStrategies ? "Advanced" : "Basic"}</div>
-      <div>Protocol: 1inch v3</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-export const PortfolioAPINode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-emerald-500 text-white rounded">
-        <TrendingUp className="w-4 h-4" />
-      </div>
-      <span className="font-medium">1inch Portfolio</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>History: {data.config?.trackHistory ? "Enabled" : "Disabled"}</div>
-      <div>Analytics: {data.config?.enableAnalytics ? "On" : "Off"}</div>
-      <div>APIs: Balance + Portfolio</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-export const DeFiDashboardNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded">
         <Layout className="w-4 h-4" />
       </div>
-      <span className="font-medium">1inch DeFi Suite</span>
+      <span className="font-medium">Dashboard</span>
     </div>
     <div className="text-xs text-gray-600 space-y-1">
-      <div className="flex flex-wrap gap-1">
-        {["Swap", "Fusion", "Limits", "Portfolio"].map((feature) => (
-          <Badge key={feature} variant="secondary" className="text-xs">
-            {feature}
-          </Badge>
-        ))}
-      </div>
-      <div>Theme: {data.config?.theme || "1inch-branded"}</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-// Yield Farming Nodes
-export const YieldOptimizerNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-emerald-500 text-white rounded">
-        <Database className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Yield Optimizer</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Strategy: {data.config?.optimizationStrategy || "highest-apy"}</div>
-      <div>Risk: {data.config?.riskTolerance || "medium"}</div>
-      <div>Auto Compound: {data.config?.autoCompound ? "Yes" : "No"}</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-export const PortfolioTrackerNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-teal-500 text-white rounded">
-        <Layout className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Portfolio Tracker</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Staked Assets: {data.config?.trackStakedAssets ? "Yes" : "No"}</div>
-      <div>P&L Tracking: {data.config?.enablePnLTracking ? "Yes" : "No"}</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-// DAO Governance Nodes
-export const GovernanceResultsNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-purple-600 text-white rounded">
-        <Vote className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Governance Results</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Auto Execute: {data.config?.enableAutoExecution ? "Yes" : "No"}</div>
-      <div>Track Status: {data.config?.trackProposalStatus ? "Yes" : "No"}</div>
+      <div>Components: {data.config?.components?.join(", ") || "header, charts, tables"}</div>
     </div>
     <Handle type="source" position={Position.Bottom} />
   </NodeWrapper>
@@ -360,10 +128,10 @@ export const ERC20TokenNode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-blue-500 text-white rounded">
+      <div className="p-1 bg-yellow-500 text-white rounded">
         <Coins className="w-4 h-4" />
       </div>
-      <span className="font-medium">ERC-20 Token</span>
+      <span className="font-medium">ERC20 Token</span>
     </div>
     <div className="text-xs text-gray-600 space-y-1">
       <div>Name: {data.config?.name || "MyToken"}</div>
@@ -374,170 +142,70 @@ export const ERC20TokenNode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-export const GovernanceNode = ({ data, selected }: NodeProps) => (
+// Additional nodes for completeness
+export const FusionSwapNode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-purple-500 text-white rounded">
-        <Vote className="w-4 h-4" />
+      <div className="p-1 bg-red-500 text-white rounded">
+        <Zap className="w-4 h-4" />
       </div>
-      <span className="font-medium">Governance</span>
+      <span className="font-medium">Fusion Swap</span>
     </div>
     <div className="text-xs text-gray-600 space-y-1">
-      <div>Voting Period: {data.config?.votingPeriod || "7"} days</div>
-      <div>Threshold: {data.config?.proposalThreshold || "1000"}</div>
+      <div>Gasless: {data.config?.enableGaslessSwaps ? "Yes" : "No"}</div>
+      <div>MEV Protection: {data.config?.enableMEVProtection ? "Yes" : "No"}</div>
     </div>
     <Handle type="source" position={Position.Bottom} />
   </NodeWrapper>
 )
 
-export const DashboardNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-green-500 text-white rounded">
-        <Layout className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Dashboard</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Title: {data.config?.title || "Dashboard"}</div>
-      <div className="flex flex-wrap gap-1">
-        {(data.config?.components || ["header", "sidebar"]).map((comp: string) => (
-          <Badge key={comp} variant="secondary" className="text-xs">
-            {comp}
-          </Badge>
-        ))}
-      </div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-export const APIEndpointNode = ({ data, selected }: NodeProps) => (
+export const LimitOrderNode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
       <div className="p-1 bg-orange-500 text-white rounded">
-        <Server className="w-4 h-4" />
+        <Clock className="w-4 h-4" />
       </div>
-      <span className="font-medium">API Endpoint</span>
+      <span className="font-medium">Limit Order</span>
     </div>
     <div className="text-xs text-gray-600 space-y-1">
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className="text-xs">
-          {data.config?.method || "GET"}
-        </Badge>
-        <span>{data.config?.path || "/api/data"}</span>
-      </div>
-      <div>Auth: {data.config?.authentication ? "Yes" : "No"}</div>
+      <div>Type: {data.config?.orderType || "limit"}</div>
+      <div>Advanced: {data.config?.enableAdvancedStrategies ? "Yes" : "No"}</div>
     </div>
     <Handle type="source" position={Position.Bottom} />
   </NodeWrapper>
 )
 
-export const AIAgentNode = ({ data, selected }: NodeProps) => (
+export const PortfolioAPINode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-pink-500 text-white rounded">
-        <Bot className="w-4 h-4" />
+      <div className="p-1 bg-blue-500 text-white rounded">
+        <TrendingUp className="w-4 h-4" />
       </div>
-      <span className="font-medium">AI Agent</span>
+      <span className="font-medium">Portfolio API</span>
     </div>
     <div className="text-xs text-gray-600 space-y-1">
-      <div>Type: {data.config?.type || "decision-making"}</div>
-      <div>Model: {data.config?.model || "gpt-3.5-turbo"}</div>
+      <div>History: {data.config?.trackHistory ? "Yes" : "No"}</div>
+      <div>Analytics: {data.config?.enableAnalytics ? "Yes" : "No"}</div>
     </div>
     <Handle type="source" position={Position.Bottom} />
   </NodeWrapper>
 )
 
-// Legacy nodes for backward compatibility
-export const UniswapV3RouterNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-pink-500 text-white rounded">
-        <Repeat className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Uniswap V3 Router</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Network: {data.config?.network || "ethereum"}</div>
-      <div>Slippage: {data.config?.slippageTolerance || "0.5"}%</div>
-      <div>Deadline: {data.config?.deadline || "20"}m</div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-export const ChainlinkOracleNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-blue-600 text-white rounded">
-        <Link className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Chainlink Oracle</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Update: {data.config?.updateInterval || "30"}s</div>
-      <div className="flex flex-wrap gap-1">
-        {Object.keys(data.config?.priceFeedAddresses || {}).slice(0, 2).map((pair: string) => (
-          <Badge key={pair} variant="secondary" className="text-xs">
-            {pair}
-          </Badge>
-        ))}
-      </div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-export const SwapInterfaceNode = ({ data, selected }: NodeProps) => (
+export const DefiDashboardNode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
       <div className="p-1 bg-purple-500 text-white rounded">
         <Layout className="w-4 h-4" />
       </div>
-      <span className="font-medium">Swap Interface</span>
+      <span className="font-medium">DeFi Dashboard</span>
     </div>
     <div className="text-xs text-gray-600 space-y-1">
-      <div>Title: {data.config?.title || "Token Swap"}</div>
-      <div>Theme: {data.config?.theme || "modern"}</div>
-      <div className="flex flex-wrap gap-1">
-        {(data.config?.defaultTokens || ["ETH", "USDC"]).slice(0, 3).map((token: string) => (
-          <Badge key={token} variant="secondary" className="text-xs">
-            {token}
-          </Badge>
-        ))}
-      </div>
-    </div>
-    <Handle type="source" position={Position.Bottom} />
-  </NodeWrapper>
-)
-
-export const WalletConnectorNode = ({ data, selected }: NodeProps) => (
-  <NodeWrapper selected={selected}>
-    <Handle type="target" position={Position.Top} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-yellow-500 text-white rounded">
-        <Wallet className="w-4 h-4" />
-      </div>
-      <span className="font-medium">Wallet Connector</span>
-    </div>
-    <div className="text-xs text-gray-600 space-y-1">
-      <div>Chain: {data.config?.networkChainId || "1"}</div>
-      <div>Auto: {data.config?.autoConnect ? "Yes" : "No"}</div>
-      <div className="flex flex-wrap gap-1">
-        {(data.config?.supportedWallets || ["MetaMask"]).slice(0, 2).map((wallet: string) => (
-          <Badge key={wallet} variant="secondary" className="text-xs">
-            {wallet}
-          </Badge>
-        ))}
-      </div>
+      <div>Title: {data.config?.title || "1inch-Powered DeFi Suite"}</div>
+      <div>Portfolio: {data.config?.showPortfolio ? "Yes" : "No"}</div>
     </div>
     <Handle type="source" position={Position.Bottom} />
   </NodeWrapper>
@@ -547,15 +215,14 @@ export const TransactionHistoryNode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-indigo-500 text-white rounded">
-        <Clock className="w-4 h-4" />
+      <div className="p-1 bg-gray-500 text-white rounded">
+        <Activity className="w-4 h-4" />
       </div>
       <span className="font-medium">Transaction History</span>
     </div>
     <div className="text-xs text-gray-600 space-y-1">
-      <div>Max: {data.config?.maxTransactions || "50"} txs</div>
+      <div>Max: {data.config?.maxTransactions || "50"}</div>
       <div>Pending: {data.config?.showPendingTx ? "Yes" : "No"}</div>
-      <div>Filter: {data.config?.enableFiltering ? "Yes" : "No"}</div>
     </div>
     <Handle type="source" position={Position.Bottom} />
   </NodeWrapper>
@@ -565,15 +232,14 @@ export const SwapAPINode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-emerald-500 text-white rounded">
+      <div className="p-1 bg-green-500 text-white rounded">
         <Server className="w-4 h-4" />
       </div>
       <span className="font-medium">Swap API</span>
     </div>
     <div className="text-xs text-gray-600 space-y-1">
-      <div>Endpoints: {(data.config?.endpoints || []).length}</div>
+      <div>Endpoints: {data.config?.endpoints?.length || "4"}</div>
       <div>Rate Limit: {data.config?.rateLimit || "100"}/min</div>
-      <div>Auth: {data.config?.authentication ? "Yes" : "No"}</div>
     </div>
     <Handle type="source" position={Position.Bottom} />
   </NodeWrapper>
@@ -583,75 +249,42 @@ export const TokenDataServiceNode = ({ data, selected }: NodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
-      <div className="p-1 bg-teal-500 text-white rounded">
+      <div className="p-1 bg-yellow-500 text-white rounded">
         <Database className="w-4 h-4" />
       </div>
       <span className="font-medium">Token Data Service</span>
     </div>
     <div className="text-xs text-gray-600 space-y-1">
+      <div>Providers: {data.config?.dataProviders?.join(", ") || "CoinGecko"}</div>
       <div>Cache: {data.config?.cacheDuration || "300"}s</div>
-      <div className="flex flex-wrap gap-1">
-        {(data.config?.dataProviders || ["CoinGecko"]).slice(0, 2).map((provider: string) => (
-          <Badge key={provider} variant="secondary" className="text-xs">
-            {provider}
-          </Badge>
-        ))}
-      </div>
     </div>
     <Handle type="source" position={Position.Bottom} />
   </NodeWrapper>
 )
 
+// Export all node types in a single object - THIS IS CRITICAL
 export const CustomNodes = {
-  // New 1inch and DeFi executable nodes
+  // Executable DeFi nodes (using ExecutableNode wrapper)
   oneInchSwap: OneInchSwapNode,
   oneInchQuote: OneInchQuoteNode,
   fusionPlus: FusionPlusNode,
   chainSelector: ChainSelectorNode,
   
-  // New 1inch Protocol nodes for hackathon
+  // UI/Interface nodes (static display nodes)
+  tokenInput: TokenInputNode,
+  slippageControl: SlippageControlNode,
+  walletConnector: WalletConnectorNode,
+  swapInterface: SwapInterfaceNode,
+  
+  // Infrastructure nodes
+  dashboard: DashboardNode,
+  erc20Token: ERC20TokenNode,
+  
+  // Additional nodes referenced in getDefaultConfig
   fusionSwap: FusionSwapNode,
   limitOrder: LimitOrderNode,
   portfolioAPI: PortfolioAPINode,
-  defiDashboard: DeFiDashboardNode,
-  
-  // New Swap Application nodes
-  tokenSelector: TokenSelectorNode,
-  priceImpactCalculator: PriceImpactCalculatorNode,
-  transactionMonitor: TransactionMonitorNode,
-  
-  // DeFi UI nodes
-  tokenInput: TokenInputNode,
-  slippageControl: SlippageControlNode,
-  transactionStatus: TransactionStatusNode,
-  
-  // Bridge nodes
-  sourceChain: SourceChainNode,
-  destinationChain: DestinationChainNode,
-  
-  // Trading nodes
-  orderType: OrderTypeNode,
-  priceTrigger: PriceTriggerNode,
-  
-  // Yield farming nodes
-  yieldOptimizer: YieldOptimizerNode,
-  portfolioTracker: PortfolioTrackerNode,
-  
-  // Governance nodes
-  governanceResults: GovernanceResultsNode,
-  
-  // Existing nodes
-  erc20Token: ERC20TokenNode,
-  governance: GovernanceNode,
-  dashboard: DashboardNode,
-  apiEndpoint: APIEndpointNode,
-  aiAgent: AIAgentNode,
-  
-  // Legacy DeFi nodes
-  uniswapV3Router: UniswapV3RouterNode,
-  chainlinkOracle: ChainlinkOracleNode,
-  swapInterface: SwapInterfaceNode,
-  walletConnector: WalletConnectorNode,
+  defiDashboard: DefiDashboardNode,
   transactionHistory: TransactionHistoryNode,
   swapAPI: SwapAPINode,
   tokenDataService: TokenDataServiceNode,

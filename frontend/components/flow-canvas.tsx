@@ -93,21 +93,43 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   // Load template data if project is created from template
   useEffect(() => {
     const loadTemplateFlow = () => {
-              // Check if this is a template-based project
-        if (projectId.startsWith('template-') && !templateLoaded) {
-          // In a real app, you'd fetch this from your database
-          // For demo, we'll check if it's the swap template
-          const template = getTemplateById('dex-aggregator-swap')
-          if (template) {
-            setNodes(template.nodes)
-            setEdges(template.edges)
-            setTemplateLoaded(true)
+      // Check if this is a template-based project
+      if (projectId.startsWith('template-') && !templateLoaded) {
+        // Extract template ID from project ID
+        let templateId = projectId.replace('template-', '')
+        
+        console.log('🎯 Loading template:', templateId, 'from projectId:', projectId)
+        
+        const template = getTemplateById(templateId)
+        if (template) {
+          console.log('✅ Template found:', template.name)
+          console.log('📊 Loading nodes:', template.nodes.length)
+          console.log('🔗 Loading edges:', template.edges.length)
+          
+          // Load the complete template flow
+          setNodes(template.nodes)
+          setEdges(template.edges) 
+          setTemplateLoaded(true)
+          
+          // Optional: Focus on the flow after loading
+          setTimeout(() => {
+            if (reactFlowInstance) {
+              reactFlowInstance.fitView({ padding: 0.1 })
+            }
+          }, 100)
+        } else {
+          console.warn('❌ Template not found:', templateId)
         }
       }
     }
 
     loadTemplateFlow()
-  }, [projectId, setNodes, setEdges, templateLoaded])
+  }, [projectId, setNodes, setEdges, templateLoaded, reactFlowInstance])
+
+  // Reset template loaded state when projectId changes
+  useEffect(() => {
+    setTemplateLoaded(false)
+  }, [projectId])
 
   const onConnect = useCallback((params: Connection) => setEdges((eds) => addEdge(params, eds)), [setEdges])
 

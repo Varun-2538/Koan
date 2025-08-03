@@ -31,7 +31,10 @@ import { OneInchCodeGenerator, type CodeGenerationResult } from "@/lib/oneinch-c
 import { CodePreviewModal } from "./code-preview-modal"
 import { GitHubPublishModal } from "./github-publish-modal"
 import { LiveDashboardPreview } from "./live-dashboard-preview"
+import { AIChatbotPanel } from "./ai-chatbot-panel"
 import { executionClient, type WorkflowDefinition } from "@/lib/execution-client"
+import { workflowExecutionClient, type ExecutionStatus } from "@/lib/workflow-execution-client"
+import { workflowCodeGenerator, type CodeGenerationResult } from "@/lib/workflow-code-generator"
 
 const nodeTypes: NodeTypes = CustomNodes
 
@@ -103,6 +106,151 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const [executionStatus, setExecutionStatus] = useState<string>("")
   const [executionResult, setExecutionResult] = useState<any>(null)
   const [executionError, setExecutionError] = useState<string | null>(null)
+  
+  // AI Chatbot state
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false)
+  
+  // Workflow execution state
+  const [workflowExecutionStatus, setWorkflowExecutionStatus] = useState<ExecutionStatus | null>(null)
+  const [nodeExecutionStatuses, setNodeExecutionStatuses] = useState<Record<string, any>>({})
+
+  // Handle workflow generation from AI chatbot
+  const handleWorkflowGenerated = useCallback((workflow: any) => {
+    console.log('Workflow generated:', workflow)
+    // Store the workflow for potential approval
+  }, [])
+
+  // Handle workflow approval and canvas generation
+  const handleWorkflowApproved = useCallback((workflow: any) => {
+    console.log('Workflow approved:', workflow)
+    
+    // Convert workflow to canvas nodes and edges
+    const newNodes: Node[] = []
+    const newEdges: Edge[] = []
+    
+    if (workflow.nodes && Array.isArray(workflow.nodes)) {
+      workflow.nodes.forEach((node: any, index: number) => {
+        const nodeId = `${node.type}-${index + 1}`
+        newNodes.push({
+          id: nodeId,
+          type: node.type,
+          position: { 
+            x: 150 + (index % 3) * 250, 
+            y: 100 + Math.floor(index / 3) * 150 
+          },
+          data: {
+            label: node.label || node.type,
+            config: node.config || {}
+          }
+        })
+        
+        // Create edges between consecutive nodes
+        if (index > 0) {
+          const prevNodeId = `${workflow.nodes[index - 1].type}-${index}`
+          newEdges.push({
+            id: `${prevNodeId}-${nodeId}`,
+            source: prevNodeId,
+            target: nodeId
+          })
+        }
+      })
+    }
+    
+    // Clear existing nodes and set new ones
+    setNodes(newNodes)
+    setEdges(newEdges)
+    
+    // Close chatbot after successful generation
+    setIsChatbotOpen(false)
+  }, [setNodes, setEdges])
+
+  // Execute workflow on backend
+  const executeWorkflow = useCallback(async () => {
+    if (nodes.length === 0) {
+      console.warn('No nodes to execute')
+      return
+    }
+
+    setExecuting(true)
+    setExecutionError(null)
+    setExecutionStatus("Preparing workflow execution...")
+
+    try {
+      // Convert React Flow nodes to workflow definition
+      const workflowDefinition = {
+        id: `workflow-${Date.now()}`,
+        name: `Canvas Workflow`,
+        description: 'Workflow generated from canvas',
+        nodes: nodes.map(node => ({
+          id: node.id,
+          type: node.type || 'unknown',
+          position: node.position,
+          data: node.data
+        })),
+        edges: edges.map(edge => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target
+        })),
+        metadata: {
+          created: new Date().toISOString(),
+          source: 'canvas'
+        }
+      }
+
+      // Validate workflow
+      const validation = workflowExecutionClient.validateWorkflow(workflowDefinition)
+      if (!validation.valid) {
+        throw new Error(`Workflow validation failed: ${validation.errors.join(', ')}`)
+      }
+
+      setExecutionStatus("Starting workflow execution...")
+      
+      // Execute workflow
+      const { executionId } = await workflowExecutionClient.executeWorkflow(workflowDefinition)
+      setExecutionStatus(`Execution started: ${executionId}`)
+
+      // Monitor execution progress
+      for await (const status of workflowExecutionClient.monitorExecution(executionId)) {
+        setWorkflowExecutionStatus(status)
+        setNodeExecutionStatuses(status.steps || {})
+        
+        if (status.status === 'completed') {
+          setExecutionStatus("Workflow completed successfully!")
+          setExecutionResult(status)
+          
+          // Automatically generate code after successful execution
+          try {
+            setExecutionStatus("Generating application code...")
+            const codeResult = await workflowCodeGenerator.generateApplicationFromWorkflow(
+              status,
+              `${workflowDefinition.name} Application`
+            )
+            setCodeResult(codeResult)
+            setExecutionStatus("Code generation completed!")
+          } catch (codeError) {
+            console.error('Code generation failed:', codeError)
+            setExecutionStatus("Workflow completed (code generation failed)")
+          }
+          
+          break
+        } else if (status.status === 'failed') {
+          setExecutionError(status.error || 'Workflow execution failed')
+          setExecutionStatus("Workflow execution failed")
+          break
+        } else {
+          setExecutionStatus(`Workflow ${status.status}...`)
+        }
+      }
+
+    } catch (error) {
+      console.error('Workflow execution error:', error)
+      setExecutionError(error instanceof Error ? error.message : 'Unknown error')
+      setExecutionStatus("Execution failed")
+    } finally {
+      setExecuting(false)
+    }
+  }, [nodes, edges])
 
   // Load template data if project is created from template
   useEffect(() => {
@@ -667,17 +815,35 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                 <FlowToolbar projectId={projectId} />
               </Panel>
 
-              {/* Instructions Panel */}
+              {/* Execution Status Panel */}
               <Panel position="bottom-left">
-                <div className="bg-white border border-gray-200 rounded-lg p-3 max-w-sm shadow-sm">
-                  <div className="text-xs text-gray-600 space-y-1">
-                    <div className="font-medium text-gray-800 mb-2">💡 Quick Tips:</div>
-                    <div>• Click a node to select it</div>
-                    <div>• Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Delete</kbd> or <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Backspace</kbd> to delete</div>
-                    <div>• Use the <span className="text-red-600">Delete Node</span> button</div>
-                    <div>• Click empty space to deselect</div>
+                {executing || executionStatus ? (
+                  <div className="bg-white border border-gray-200 rounded-lg p-3 max-w-sm shadow-sm">
+                    <div className="font-medium text-gray-800 mb-2">🚀 Execution Status</div>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div>{executionStatus}</div>
+                      {executionError && (
+                        <div className="text-red-600 text-xs">Error: {executionError}</div>
+                      )}
+                      {executing && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                          Processing...
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="bg-white border border-gray-200 rounded-lg p-3 max-w-sm shadow-sm">
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <div className="font-medium text-gray-800 mb-2">💡 Quick Tips:</div>
+                      <div>• Use AI chatbot to generate workflows</div>
+                      <div>• Click a node to select it</div>
+                      <div>• Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Delete</kbd> to delete nodes</div>
+                      <div>• Execute workflows to generate code</div>
+                    </div>
+                  </div>
+                )}
               </Panel>
 
               <Panel position="top-right">
@@ -704,7 +870,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                     {saving ? "Saving..." : "Save"}
                   </Button>
                   <Button 
-                    onClick={executeFlow}
+                    onClick={executeWorkflow}
                     disabled={executing || nodes.length === 0} 
                     size="sm"
                     className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
@@ -818,6 +984,14 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         onClose={() => setShowLivePreviewModal(false)}
         codeResult={codeResult}
         projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+      />
+
+      {/* AI Chatbot Panel */}
+      <AIChatbotPanel
+        isOpen={isChatbotOpen}
+        onToggle={() => setIsChatbotOpen(!isChatbotOpen)}
+        onWorkflowGenerated={handleWorkflowGenerated}
+        onWorkflowApproved={handleWorkflowApproved}
       />
     </div>
   )

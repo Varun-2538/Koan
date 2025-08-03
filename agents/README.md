@@ -4,7 +4,7 @@
 
 This folder contains the agentic workflow components for Unite DeFi - an intelligent system designed to automate and optimize DeFi interactions. 
 
-**🎯 Current Implementation**: A Python AI agent system that takes natural language input, generates DeFi workflows using **agno-agi**, and executes them by calling the existing TypeScript backend APIs.
+**🎯 Current Implementation**: A FastAPI-based Python service that takes natural language input, generates DeFi workflows using **agno-agi**, and executes them by calling the existing TypeScript backend APIs.
 
 ### Features
 - ✅ **Natural Language Processing**: "Create a swap application for ETH, USDC, WBTC with slippage protection"
@@ -127,9 +127,11 @@ pip freeze > requirements.txt
 agents/
 ├── .venv/              # Virtual environment (not committed to git)
 ├── src/                # Source code for agents
-│   ├── __init__.py
-│   └── ...
-├── main.py             # Main entry point
+│   ├── main.py         # FastAPI application entry point
+│   ├── agents/         # AI agent modules
+│   ├── api/            # Backend API client
+│   ├── workflow/       # Workflow generation
+│   └── __init__.py
 ├── pyproject.toml      # Project configuration and dependencies (uv/pip)
 ├── requirements.txt    # Traditional pip dependencies file
 ├── uv.lock            # Lock file for uv (ensures reproducible installs)
@@ -138,37 +140,35 @@ agents/
 
 ## Running the Agents
 
-> ⚠️ **Note**: The agent system is currently under development. The following commands are placeholders for the intended functionality.
+The agent system now provides a FastAPI-based REST API for the frontend to interact with.
 
 ```bash
 # Ensure virtual environment is activated first!
 
-# Run the main agent orchestrator
+# Run the FastAPI server
+cd src
 python main.py
 
-# Run specific agent modules (examples)
-python -m src.defi_monitor
-python -m src.portfolio_manager
-python -m src.risk_analyzer
-
-# Run with specific configurations
-python main.py --config production.yml
+# Or use uvicorn directly
+uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-## 🚀 Quick Start (New Implementation)
+The API will be available at `http://localhost:8000` with interactive docs at `http://localhost:8000/docs`.
 
-### 1. Test Components
+## 🚀 Quick Start
 
-Test the AI agent system without requiring the TypeScript backend:
+### 1. Start the FastAPI Service
+
+Start the agent API service:
 
 ```bash
-python test_system.py
+cd src
+python main.py
 ```
 
-This will verify:
-- ✅ ArchitectureMapperAgent (agno-agi integration)
-- ✅ WorkflowGenerator (requirement to workflow conversion)
-- ✅ DeFiBackendClient (API client structure)
+This will start the FastAPI server on `http://localhost:8000` with endpoints:
+- `POST /process` - Process natural language DeFi requests
+- `GET /executions/{execution_id}` - Get workflow execution status
 
 ### 2. Start TypeScript Backend
 
@@ -181,43 +181,33 @@ npm run dev
 
 The backend should be running on `http://localhost:3001`
 
-### 3. Run the Agent System
+### 3. Test the API
+
+You can test the API using curl or the interactive docs at `http://localhost:8000/docs`:
 
 ```bash
-# Using the main entry point
-python main.py
+# Test with curl
+curl -X POST "http://localhost:8000/process" \
+     -H "Content-Type: application/json" \
+     -d '{"request": "I want to create a swap application for my DeFi protocol that supports ETH, USDC, and WBTC with slippage protection"}'
+
+# Example response:
+{
+  "message": "Workflow execution started",
+  "executionId": "exec_12345",
+  "requirements": {
+    "pattern": "DEX Aggregator",
+    "tokens": ["ETH", "USDC", "WBTC"],
+    "features": ["slippage protection"]
+  },
+  "workflow": { ... }
+}
+
+# Check execution status
+curl "http://localhost:8000/executions/exec_12345"
 ```
 
-### 4. Example Usage
-
-```bash
-$ python main.py
-
-> Enter your DeFi request: I want to create a swap application for my DeFi protocol that supports ETH, USDC, and WBTC with slippage protection
-
-🤖 Processing with AI agents...
-[AGENT CALL] ArchitectureMapper analyzing request...
-[AGENT CALL] Detected pattern: DEX Aggregator
-[AGENT CALL] Tokens identified: ETH, USDC, WBTC
-[AGENT CALL] Feature required: slippage protection
-[AGENT CALL] Generating workflow definition...
-
-📡 Calling TypeScript backend APIs...
-[API CALL] POST /api/workflows/execute
-[API RESPONSE] Execution started: exec_12345
-
-🚀 Workflow executing on backend...
-[BACKEND] ✅ walletConnector completed (0.2s)
-[BACKEND] ✅ tokenSelector completed (0.1s)  
-[BACKEND] ✅ oneInchQuote completed (0.8s)
-[BACKEND] ✅ priceImpactCalculator completed (0.1s)
-[BACKEND] ✅ oneInchSwap completed (2.1s)
-[BACKEND] ✅ transactionMonitor completed (3.2s)
-
-🎉 Workflow completed successfully!
-```
-
-### 5. Supported Patterns
+### 4. Supported Patterns
 
 The AI agent recognizes these DeFi patterns:
 
@@ -227,7 +217,7 @@ The AI agent recognizes these DeFi patterns:
 - **"yield farming"** → Automated yield strategies
 - **"governance"** → DAO voting and proposals
 
-### 6. Expected Backend APIs
+### 5. Expected Backend APIs
 
 The system expects these endpoints on your TypeScript backend:
 

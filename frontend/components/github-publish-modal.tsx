@@ -92,34 +92,54 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
 
   const handleGitHubConnect = () => {
     setIsConnecting(true)
+    setPublishError(null)
     
-    // Generate and store state for security
+    // Generate state for security
     const state = Math.random().toString(36).substring(7)
-    githubOAuth.storeState(state)
     
-    // Open GitHub OAuth in popup
+    console.log('Generated OAuth state:', state)
+    
+    // Store state directly in localStorage (not through githubOAuth instance)
+    localStorage.setItem('github_oauth_state', state)
+    
+    console.log('State stored in localStorage:', localStorage.getItem('github_oauth_state'))
+    
+    // Create auth URL with the same state
     const authUrl = githubOAuth.getAuthorizationUrl(state)
+    
+    console.log('Opening OAuth URL:', authUrl)
+    
     const popup = window.open(
       authUrl,
       'github-oauth',
       'width=600,height=700,scrollbars=yes,resizable=yes'
     )
 
+    if (!popup) {
+      setIsConnecting(false)
+      setPublishError('Popup blocked. Please allow popups for this site and try again.')
+      return
+    }
+
     // Listen for OAuth completion
     const messageHandler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return
 
       if (event.data.type === 'GITHUB_AUTH_SUCCESS') {
+        console.log('Received auth success message')
         setAccessToken(event.data.accessToken)
         setGithubUser(event.data.user)
         setIsConnecting(false)
         popup?.close()
         window.removeEventListener('message', messageHandler)
+        clearInterval(checkClosed)
       } else if (event.data.type === 'GITHUB_AUTH_ERROR') {
+        console.log('Received auth error message:', event.data.error)
         setPublishError(event.data.error)
         setIsConnecting(false)
         popup?.close()
         window.removeEventListener('message', messageHandler)
+        clearInterval(checkClosed)
       }
     }
 
@@ -128,6 +148,7 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
     // Handle popup closed manually
     const checkClosed = setInterval(() => {
       if (popup?.closed) {
+        console.log('Popup closed manually')
         setIsConnecting(false)
         clearInterval(checkClosed)
         window.removeEventListener('message', messageHandler)

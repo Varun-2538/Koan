@@ -242,7 +242,12 @@ export class GitHubOAuth {
    * Store OAuth state in localStorage for verification
    */
   storeState(state: string): void {
+    console.log('Storing OAuth state:', state);
     localStorage.setItem('github_oauth_state', state);
+    
+    // Verify it was stored
+    const stored = localStorage.getItem('github_oauth_state');
+    console.log('Verification - stored state:', stored);
   }
 
   /**
@@ -250,7 +255,17 @@ export class GitHubOAuth {
    */
   verifyState(state: string): boolean {
     const storedState = localStorage.getItem('github_oauth_state');
+    
+    // Add debugging
+    console.log('Verifying OAuth state:', {
+      received: state,
+      stored: storedState,
+      match: storedState === state
+    });
+    
+    // Clean up stored state
     localStorage.removeItem('github_oauth_state');
+    
     return storedState === state;
   }
 
@@ -284,13 +299,24 @@ export class GitHubOAuth {
   }
 }
 
-// Default configuration
+// Replace the createGitHubOAuth function at the bottom of frontend/lib/github-oauth.ts
+
+// Add this to the very end of your frontend/lib/github-oauth.ts file
+// Make sure it's after the GitHubOAuth class definition
+
+// Default configuration with hardcoded values
 export const createGitHubOAuth = () => {
   const config: GitHubOAuthConfig = {
-    clientId: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || '',
+    clientId: 'Ov23lij7oQUxuK5VpghA', // Hardcoded client ID
     redirectUri: `${window.location.origin}/github/callback`,
-    scope: ['repo', 'user:email'] // repo permission for creating repositories
+    scope: ['repo', 'user:email']
   };
+
+  console.log('Creating GitHub OAuth with hardcoded config:', {
+    clientId: config.clientId,
+    redirectUri: config.redirectUri,
+    scope: config.scope
+  });
 
   return new GitHubOAuth(config);
 };

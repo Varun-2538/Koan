@@ -279,45 +279,45 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
       case "multiselect":
         const multiselectOptions = getSelectOptions(key, node.type)
         const selectedValues = Array.isArray(value) ? value : []
-        return (
-          <div className="space-y-2">
+  return (
+      <div className="space-y-2">
             <Label className="text-sm font-medium">
               {label}
               {isRequired && <span className="text-red-500 ml-1">*</span>}
             </Label>
-            <div className="space-y-2">
+        <div className="space-y-2">
               {multiselectOptions.map(option => (
                 <div key={option.value} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
+              <input
+                type="checkbox"
                     id={`${key}-${option.value}`}
                     checked={selectedValues.includes(option.value)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
+                onChange={(e) => {
+                  if (e.target.checked) {
                         handleConfigChange(key, [...selectedValues, option.value])
-                      } else {
+                  } else {
                         handleConfigChange(key, selectedValues.filter((v: string) => v !== option.value))
-                      }
-                    }}
-                  />
+                  }
+                }}
+              />
                   <label htmlFor={`${key}-${option.value}`} className="text-sm">
                     {option.label}
-                  </label>
-                </div>
-              ))}
+              </label>
             </div>
+          ))}
+        </div>
             {hasError && (
               <p className="text-xs text-red-500 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
                 {hasError}
               </p>
             )}
-          </div>
+      </div>
         )
 
       case "textarea":
         return (
-          <div className="space-y-2">
+      <div className="space-y-2">
             <Label htmlFor={key} className="text-sm font-medium">
               {label}
               {isRequired && <span className="text-red-500 ml-1">*</span>}
@@ -336,19 +336,19 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
                 {hasError}
               </p>
             )}
-          </div>
-        )
+    </div>
+  )
 
       case "password":
-        return (
-          <div className="space-y-2">
+  return (
+        <div className="space-y-2">
             <Label htmlFor={key} className="text-sm font-medium">
               {label}
               {isRequired && <span className="text-red-500 ml-1">*</span>}
             </Label>
-            <Input
+          <Input
               id={key}
-              type="password"
+            type="password"
               value={value || ""}
               onChange={(e) => handleConfigChange(key, e.target.value)}
               placeholder={`Enter ${label.toLowerCase()}`}
@@ -360,19 +360,19 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
                 {hasError}
               </p>
             )}
-          </div>
+        </div>
         )
-
+      
       case "number":
         return (
-          <div className="space-y-2">
+      <div className="space-y-2">
             <Label htmlFor={key} className="text-sm font-medium">
               {label}
               {isRequired && <span className="text-red-500 ml-1">*</span>}
             </Label>
-            <Input
+        <Input
               id={key}
-              type="number"
+          type="number"
               value={value || ""}
               onChange={(e) => handleConfigChange(key, e.target.value)}
               placeholder={`Enter ${label.toLowerCase()}`}
@@ -384,12 +384,12 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
                 {hasError}
               </p>
             )}
-          </div>
+      </div>
         )
-
+      
       default:
         return (
-          <div className="space-y-2">
+      <div className="space-y-2">
             <Label htmlFor={key} className="text-sm font-medium">
               {label}
               {isRequired && <span className="text-red-500 ml-1">*</span>}
@@ -462,11 +462,11 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
               <p className="text-xs text-blue-700">
                 💡 Get your API key from <a href="https://portal.1inch.dev" target="_blank" className="underline">portal.1inch.dev</a>
               </p>
-            </div>
+        </div>
             {renderConfigField("supportedChains", config.supportedChains, "Supported Chains", "multiselect")}
             {renderConfigField("defaultSlippage", config.defaultSlippage, "Default Slippage (%)", "number")}
             {renderConfigField("enableMEVProtection", config.enableMEVProtection, "MEV Protection", "boolean")}
-          </div>
+      </div>
         )
 
       case "oneInchQuote":
@@ -493,11 +493,11 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
               <p className="text-xs text-blue-700">
                 💡 Portfolio API requires the same 1inch API key
               </p>
-            </div>
+        </div>
             {renderConfigField("supportedChains", config.supportedChains, "Supported Chains", "multiselect")}
             {renderConfigField("trackHistory", config.trackHistory, "Track History", "boolean")}
             {renderConfigField("enableAnalytics", config.enableAnalytics, "Enable Analytics", "boolean")}
-          </div>
+      </div>
         )
 
       case "walletConnector":
@@ -506,12 +506,12 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
             {renderConfigField("supportedWallets", config.supportedWallets, "Supported Wallets", "multiselect")}
             {renderConfigField("autoConnect", config.autoConnect, "Auto Connect", "boolean")}
             {renderConfigField("networkChainId", config.networkChainId, "Default Network", "select")}
-          </div>
-        )
+    </div>
+  )
 
-      case "tokenSelector":
-        return (
-          <div className="space-y-4">
+case "tokenSelector":
+  return (
+    <div className="space-y-4">
             {renderConfigField("fromToken", config.fromToken, "From Token", "text")}
             {renderConfigField("toToken", config.toToken, "To Token", "text")}
             {renderConfigField("amount", config.amount, "Default Amount", "text")}
@@ -559,8 +559,8 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
-        </div>
-        
+      </div>
+
         <div className="flex items-center gap-2 mb-3">
           <Badge variant="outline">{nodeInfo.category}</Badge>
           {hasUnsavedChanges && (
@@ -619,8 +619,8 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
                       {field}
                     </Badge>
                   ))}
-                </div>
-              </div>
+        </div>
+      </div>
 
               {nodeInfo.documentation && (
                 <div>

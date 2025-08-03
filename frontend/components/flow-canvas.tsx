@@ -80,6 +80,20 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const [codeResult, setCodeResult] = useState<CodeGenerationResult | null>(null)
   const [showCodeModal, setShowCodeModal] = useState(false)
   const [showGitHubModal, setShowGitHubModal] = useState(false)
+
+  // Add validation and direct deploy function
+  const deployToGitHub = async () => {
+    if (!codeResult) {
+      // Generate code first if not available
+      await generateCode()
+    }
+    if (codeResult) {
+      setShowGitHubModal(true)
+    } else {
+      console.error('Failed to generate code for GitHub deployment')
+      // You can add a toast notification here
+    }
+  }
   const [showLivePreviewModal, setShowLivePreviewModal] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
@@ -699,10 +713,10 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                     {executing ? "Executing..." : "Execute Flow"}
                   </Button>
                   <Button 
-                    onClick={generateCode} 
+                    onClick={isTemplateProject ? deployToGitHub : generateCode}
                     disabled={generating} 
                     size="sm"
-                    className={isTemplateProject ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700" : ""}
+                    className={isTemplateProject ? "bg-gradient-to-r from-blue-500 to-purple-600" : ""}
                   >
                     <Play className="w-4 h-4 mr-2" />
                     {generating ? "Generating..." : isTemplateProject ? "Deploy to GitHub" : "Generate Code"}
@@ -795,7 +809,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
       <GitHubPublishModal
         isOpen={showGitHubModal}
         onClose={() => setShowGitHubModal(false)}
-        codeResult={codeResult}
+        codeResult={codeResult}                    // ✅ Correct prop
         projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
       />
 

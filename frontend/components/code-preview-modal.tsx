@@ -40,16 +40,16 @@ export function CodePreviewModal({ isOpen, onClose, codeResult }: CodePreviewMod
   }
 
   const handleDownloadAll = () => {
-    const files = codeResult.files || {}
-    const zip = Object.entries(files).map(([filename, content]) => 
-      `// ${filename}\n${content}`
+    const files = codeResult.files || []
+    const zip = files.map(file => 
+      `// ${file.path}\n${file.content}`
     ).join('\n\n//=================\n\n')
     
     const blob = new Blob([zip], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${codeResult.projectName || 'generated-code'}.txt`
+    a.download = `${projectName || 'generated-code'}.txt`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -81,7 +81,7 @@ export function CodePreviewModal({ isOpen, onClose, codeResult }: CodePreviewMod
           <div>
             <h2 className="text-xl font-semibold">Generated Code Preview</h2>
             <p className="text-sm text-gray-600 mt-1">
-              {codeResult.projectName || 'DeFi Application'} • {Object.keys(codeResult.files || {}).length} files
+              {projectName || 'DeFi Application'} • {(codeResult.files || []).length} files
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -108,26 +108,26 @@ export function CodePreviewModal({ isOpen, onClose, codeResult }: CodePreviewMod
             
             <ScrollArea className="h-full">
               <div className="p-2">
-                {Object.entries(codeResult.files || {}).map(([filename, content]) => (
+                {(codeResult.files || []).map((file) => (
                   <div
-                    key={filename}
+                    key={file.path}
                     className="p-3 rounded-lg hover:bg-white cursor-pointer transition-colors border mb-2"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      {getFileIcon(filename)}
-                      <span className="text-sm font-medium truncate">{filename}</span>
+                      {getFileIcon(file.path)}
+                      <span className="text-sm font-medium truncate">{file.path}</span>
                     </div>
                     <div className="text-xs text-gray-500 mb-2">
-                      {content.length} characters
+                      {file.content.length} characters
                     </div>
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleCopyFile(filename, content)}
+                        onClick={() => handleCopyFile(file.path, file.content)}
                         className="h-6 px-2 text-xs"
                       >
-                        {copiedFile === filename ? (
+                        {copiedFile === file.path ? (
                           <>
                             <CheckCircle className="w-3 h-3 mr-1" />
                             Copied
@@ -195,10 +195,10 @@ export function CodePreviewModal({ isOpen, onClose, codeResult }: CodePreviewMod
                     </CardHeader>
                     <CardContent>
                       <div className="font-mono text-sm space-y-1">
-                        {Object.keys(codeResult.files || {}).map(filename => (
-                          <div key={filename} className="flex items-center gap-2">
-                            {getFileIcon(filename)}
-                            <span className="text-gray-700">{filename}</span>
+                        {(codeResult.files || []).map(file => (
+                          <div key={file.path} className="flex items-center gap-2">
+                            {getFileIcon(file.path)}
+                            <span className="text-gray-700">{file.path}</span>
                           </div>
                         ))}
                       </div>
@@ -374,7 +374,7 @@ export function CodePreviewModal({ isOpen, onClose, codeResult }: CodePreviewMod
         <div className="p-6 border-t bg-gray-50">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              Generated {Object.keys(codeResult.files || {}).length} files • Ready for deployment
+              Generated {(codeResult.files || []).length} files • Ready for deployment
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={onClose}>

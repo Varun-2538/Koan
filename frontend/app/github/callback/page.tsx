@@ -29,11 +29,20 @@ function GitHubCallbackContent() {
 
         const githubOAuth = createGitHubOAuth();
 
-        // Verify state for security
+        // Verify state for security (only if state is present)
         if (state) {
-          if (!githubOAuth.verifyState(state)) {
+          const isValidState = githubOAuth.verifyState(state);
+          if (!isValidState) {
+            // Log the error details for debugging
+            console.error('OAuth state verification failed:', {
+              receivedState: state,
+              currentUrl: window.location.href,
+              hasOpener: !!window.opener
+            });
             throw new Error('Invalid OAuth state parameter');
           }
+        } else {
+          console.warn('No state parameter received in OAuth callback');
         }
 
         setMessage('Exchanging authorization code...');

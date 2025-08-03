@@ -48,8 +48,8 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
   const [copiedFile, setCopiedFile] = useState<string | null>(null)
   
   const [repoConfig, setRepoConfig] = useState({
-    name: projectName || codeResult?.projectName || "my-defi-app",
-    description: codeResult?.description || "DeFi application built with Unite DeFi Platform",
+    name: projectName || "my-defi-app",
+    description: "DeFi application built with Unite DeFi Platform",
     isPrivate: false,
     includeReadme: true,
     autoDeployVercel: true,
@@ -92,13 +92,32 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
 
   const handleGitHubConnect = () => {
     setIsConnecting(true)
+    setPublishError(null)
+    
+    // Check if GitHub client ID is configured
+    const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID
+    if (!clientId) {
+      setIsConnecting(false)
+      setPublishError('GitHub OAuth is not configured. Please set NEXT_PUBLIC_GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables.')
+      return
+    }
     
     // Generate and store state for security
     const state = Math.random().toString(36).substring(7)
     githubOAuth.storeState(state)
     
+    // Also store state in session storage as fallback
+    sessionStorage.setItem('github_oauth_state_fallback', state)
+    
     // Open GitHub OAuth in popup
     const authUrl = githubOAuth.getAuthorizationUrl(state)
+    console.log('GitHub OAuth Debug Info:', {
+      state,
+      authUrl,
+      clientId: clientId ? `${clientId.substring(0, 8)}...` : 'NOT SET',
+      redirectUri: `${window.location.origin}/github/callback`
+    })
+    
     const popup = window.open(
       authUrl,
       'github-oauth',
@@ -124,6 +143,13 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
     }
 
     window.addEventListener('message', messageHandler)
+
+    // Handle popup blocked or failed to open
+    if (!popup || popup.closed) {
+      setIsConnecting(false)
+      setPublishError('Popup blocked or failed to open. Please allow popups for this site and try again.')
+      return
+    }
 
     // Handle popup closed manually
     const checkClosed = setInterval(() => {
@@ -416,7 +442,7 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
                     <Globe className="w-4 h-4 text-gray-400" />
                     <Switch
                       checked={repoConfig.isPrivate}
-                      onCheckedChange={(checked) => handleConfigChange('isPrivate', checked)}
+                      onCheckedChange={(checked: boolean) => handleConfigChange('isPrivate', checked)}
                     />
                     <Lock className="w-4 h-4 text-gray-400" />
                   </div>
@@ -427,7 +453,7 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
                     <Label>Include README.md</Label>
                     <Switch
                       checked={repoConfig.includeReadme}
-                      onCheckedChange={(checked) => handleConfigChange('includeReadme', checked)}
+                      onCheckedChange={(checked: boolean) => handleConfigChange('includeReadme', checked)}
                     />
                   </div>
                   
@@ -435,7 +461,7 @@ export function GitHubPublishModal({ isOpen, onClose, codeResult, projectName }:
                     <Label>Auto-deploy to Vercel</Label>
                     <Switch
                       checked={repoConfig.autoDeployVercel}
-                      onCheckedChange={(checked) => handleConfigChange('autoDeployVercel', checked)}
+                      onCheckedChange={(checked: boolean) => handleConfigChange('autoDeployVercel', checked)}
                     />
                   </div>
                 </div>

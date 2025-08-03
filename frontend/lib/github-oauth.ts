@@ -249,9 +249,61 @@ export class GitHubOAuth {
    * Verify OAuth state from localStorage
    */
   verifyState(state: string): boolean {
-    const storedState = localStorage.getItem('github_oauth_state');
-    localStorage.removeItem('github_oauth_state');
-    return storedState === state;
+    try {
+      console.log('Verifying OAuth state:', state);
+      
+      // Try to get state from localStorage
+      const storedState = localStorage.getItem('github_oauth_state');
+      console.log('Stored state in localStorage:', storedState);
+      
+      // If no state in localStorage, try sessionStorage fallback
+      if (!storedState) {
+        const sessionStoredState = sessionStorage.getItem('github_oauth_state_fallback');
+        console.log('Fallback state in sessionStorage:', sessionStoredState);
+        
+        if (sessionStoredState === state) {
+          sessionStorage.removeItem('github_oauth_state_fallback');
+          return true;
+        }
+      }
+      
+      // If no state in localStorage, try to get from parent window (for popup scenario)
+      if (!storedState && typeof window !== 'undefined' && window.opener) {
+        try {
+          const parentState = window.opener.localStorage.getItem('github_oauth_state');
+          const parentSessionState = window.opener.sessionStorage.getItem('github_oauth_state_fallback');
+          
+          console.log('Parent window localStorage state:', parentState);
+          console.log('Parent window sessionStorage state:', parentSessionState);
+          
+          if (parentState === state) {
+            // Clean up state from parent window
+            window.opener.localStorage.removeItem('github_oauth_state');
+            return true;
+          }
+          
+          if (parentSessionState === state) {
+            // Clean up state from parent window
+            window.opener.sessionStorage.removeItem('github_oauth_state_fallback');
+            return true;
+          }
+        } catch (error) {
+          console.warn('Could not access parent window storage:', error);
+        }
+      }
+      
+      // Clean up local state
+      if (storedState) {
+        localStorage.removeItem('github_oauth_state');
+      }
+      
+      const isValid = storedState === state;
+      console.log('State verification result:', isValid);
+      return isValid;
+    } catch (error) {
+      console.error('State verification error:', error);
+      return false;
+    }
   }
 
   /**
@@ -286,11 +338,23 @@ export class GitHubOAuth {
 
 // Default configuration
 export const createGitHubOAuth = () => {
+  const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || '';
+  
+  if (!clientId) {
+    console.error('GitHub OAuth client ID is not configured. Please set NEXT_PUBLIC_GITHUB_CLIENT_ID environment variable.');
+  }
+  
   const config: GitHubOAuthConfig = {
-    clientId: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || '',
+    clientId,
     redirectUri: `${window.location.origin}/github/callback`,
     scope: ['repo', 'user:email'] // repo permission for creating repositories
   };
+
+  console.log('Creating GitHub OAuth with config:', {
+    clientId: clientId ? `${clientId.substring(0, 8)}...` : 'NOT SET',
+    redirectUri: config.redirectUri,
+    scope: config.scope
+  });
 
   return new GitHubOAuth(config);
 };

@@ -119,7 +119,16 @@ export class WorkflowExecutionClient {
       const response = await fetch(`${this.backendBaseUrl}/api/executions/${executionId}`)
       
       if (response.ok) {
-        return await response.json()
+        const data = await response.json()
+        // Transform backend response format to expected ExecutionStatus format
+        return {
+          executionId: data.execution.id,
+          status: data.execution.status,
+          steps: data.stats?.stepStatistics || {},
+          startTime: data.execution.startTime,
+          endTime: data.execution.endTime,
+          error: data.execution.error
+        }
       }
     } catch (error) {
       console.warn('Direct backend status check failed, trying via agents:', error)
@@ -130,7 +139,20 @@ export class WorkflowExecutionClient {
       const response = await fetch(`${this.agentsBaseUrl}/executions/${executionId}`)
       
       if (response.ok) {
-        return await response.json()
+        const data = await response.json()
+        // If agents API returns different format, normalize it
+        if (data.execution) {
+          return {
+            executionId: data.execution.id,
+            status: data.execution.status,
+            steps: data.stats?.stepStatistics || {},
+            startTime: data.execution.startTime,
+            endTime: data.execution.endTime,
+            error: data.execution.error
+          }
+        }
+        // If agents API already returns correct format, use as-is
+        return data
       }
     } catch (error) {
       console.warn('Agents API status check failed:', error)

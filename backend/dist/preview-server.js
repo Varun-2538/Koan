@@ -160,6 +160,8 @@ class PreviewServerManager {
             await fs_1.default.promises.mkdir(tempDir, { recursive: true });
             // Write generated files
             await this.writeGeneratedFiles(tempDir, codeResult, instance.config);
+            // Inject multi-chain configuration
+            await this.injectMultiChainConfig(tempDir, instance.config);
             // Check if node_modules already exists and package-lock.json exists
             const nodeModulesPath = path_1.default.join(tempDir, 'node_modules');
             const packageLockPath = path_1.default.join(tempDir, 'package-lock.json');
@@ -183,7 +185,10 @@ class PreviewServerManager {
                     PORT: instance.port.toString(),
                     ONEINCH_API_KEY: instance.config.oneInchApiKey,
                     CHAIN_ID: instance.config.chainId,
-                    RPC_URL: instance.config.rpcUrl
+                    RPC_URL: instance.config.rpcUrl,
+                    WALLET_CONNECT_PROJECT_ID: instance.config.walletConnectProjectId || '',
+                    ENABLED_CHAINS: instance.config.enabledChains?.join(',') || '1,137,56',
+                    DEFAULT_TOKENS: instance.config.defaultTokens?.join(',') || 'ETH,USDC,USDT,DAI'
                 }
             });
             instance.process = childProcess;
@@ -237,9 +242,55 @@ class PreviewServerManager {
                 content = content
                     .replace(/process\.env\.ONEINCH_API_KEY/g, `"${config.oneInchApiKey}"`)
                     .replace(/process\.env\.CHAIN_ID/g, `"${config.chainId}"`)
-                    .replace(/process\.env\.RPC_URL/g, `"${config.rpcUrl}"`);
+                    .replace(/process\.env\.RPC_URL/g, `"${config.rpcUrl}"`)
+                    .replace(/process\.env\.WALLET_CONNECT_PROJECT_ID/g, `"${config.walletConnectProjectId || ''}"`)
+                    .replace(/process\.env\.ENABLED_CHAINS/g, `"${config.enabledChains?.join(',') || '1,137,56'}"`)
+                    .replace(/process\.env\.DEFAULT_TOKENS/g, `"${config.defaultTokens?.join(',') || 'ETH,USDC,USDT,DAI'}"`);
             }
             await fs_1.default.promises.writeFile(filePath, content);
+        }
+    }
+    async injectMultiChainConfig(tempDir, config) {
+        try {
+            console.log(`[Multi-chain config] Injecting configuration for ${tempDir}`);
+            console.log(`[Multi-chain config] Enabled chains: ${config.enabledChains?.join(', ') || '1, 137, 56'}`);
+            console.log(`[Multi-chain config] Default tokens: ${config.defaultTokens?.join(', ') || 'ETH, USDC, USDT, DAI'}`);
+            // Update frontend configuration
+            const frontendConfigPath = path_1.default.join(tempDir, 'frontend/lib/config.ts');
+            const frontendConfig = `
+export const LIVE_PREVIEW_CONFIG = {
+  oneInchApiKey: "${config.oneInchApiKey || ''}",
+  walletConnectProjectId: "${config.walletConnectProjectId || ''}",
+  defaultChain: "${config.chainId}",
+  enabledChains: ${JSON.stringify(config.enabledChains || ['1', '137', '56'])},
+  supportedTokens: ${JSON.stringify(config.defaultTokens || ['ETH', 'USDC', 'USDT', 'DAI'])}
+};
+
+export const BACKEND_URL = "http://localhost:3001";
+      `;
+            await fs_1.default.promises.writeFile(frontendConfigPath, frontendConfig);
+            // Update backend environment
+            const backendEnvPath = path_1.default.join(tempDir, 'backend/.env');
+            const backendEnv = `
+ONEINCH_API_KEY=${config.oneInchApiKey || ''}
+NODE_ENV=development
+PORT=3001
+FRONTEND_URL=http://localhost:3000
+
+# Multi-chain RPC URLs
+ETHEREUM_RPC_URL=https://eth.llamarpc.com
+POLYGON_RPC_URL=https://polygon-rpc.com
+BSC_RPC_URL=https://bsc-dataseed1.binance.org
+ARBITRUM_RPC_URL=https://arb1.arbitrum.io/rpc
+OPTIMISM_RPC_URL=https://mainnet.optimism.io
+AVALANCHE_RPC_URL=https://api.avax.network/ext/bc/C/rpc
+      `;
+            await fs_1.default.promises.writeFile(backendEnvPath, backendEnv);
+            console.log(`[Multi-chain config] Configuration injected for ${tempDir}`);
+        }
+        catch (error) {
+            console.error(`[Multi-chain config] Failed to inject configuration:`, error);
+            throw error;
         }
     }
     async stopPreviewInstance(instanceId) {

@@ -34,6 +34,13 @@ const getDefaultNodeConfig = (nodeType: string) => {
   switch (nodeType) {
     case "oneInchSwap":
       return {
+        template_creation_mode: true,
+        from_token: "ETH",
+        to_token: "USDC",
+        amount: "1.0", 
+        from_address: "",
+        chain_id: "1",
+        slippage: 1,
         apiKey: "",
         supportedChains: ["1"],
         enableFusion: true,
@@ -42,6 +49,12 @@ const getDefaultNodeConfig = (nodeType: string) => {
       }
     case "oneInchQuote":
       return {
+        template_creation_mode: true,
+        from_token: "ETH",
+        to_token: "USDC", 
+        amount: "1.0",
+        chain_id: "1",
+        slippage: 1,
         apiKey: "",
         supportedChains: ["1", "137"],
         quoteRefreshInterval: 10,
@@ -50,6 +63,10 @@ const getDefaultNodeConfig = (nodeType: string) => {
       }
     case "fusionPlus":
       return {
+        template_creation_mode: true,
+        from_token: "ETH",
+        to_token: "USDC",
+        amount: "1.0",
         apiKey: "",
         supportedChains: ["1", "137"],
         enableMEVProtection: true,
@@ -58,12 +75,14 @@ const getDefaultNodeConfig = (nodeType: string) => {
       }
     case "walletConnector":
       return {
+        template_creation_mode: true,
         supportedWallets: ["MetaMask", "WalletConnect", "Coinbase Wallet"],
         autoConnect: true,
         networkChainId: "1"
       }
     case "tokenInput":
       return {
+        template_creation_mode: true,
         fromToken: "ETH",
         toToken: "USDC",
         amount: "1.0",
@@ -71,13 +90,27 @@ const getDefaultNodeConfig = (nodeType: string) => {
       }
     case "slippageControl":
       return {
+        template_creation_mode: true,
         slippage: 1.0,
         autoSlippage: false,
         minSlippage: 0.1,
         maxSlippage: 50
       }
+    case "priceImpactCalculator":
+      return {
+        template_creation_mode: true,
+        from_token: "ETH",
+        to_token: "USDC",
+        amount: "1.0",
+        slippage: 1.0,
+        autoSlippage: true,
+        showPriceImpact: true,
+        warnOnHighImpact: true,
+        maxImpactThreshold: 5.0
+      }
     case "erc20Token":
       return {
+        template_creation_mode: true,
         name: "MyToken",
         symbol: "MTK",
         totalSupply: "1000000",
@@ -85,9 +118,66 @@ const getDefaultNodeConfig = (nodeType: string) => {
       }
     case "dashboard":
       return {
+        template_creation_mode: true,
         title: "Dashboard",
         components: ["header", "charts", "tables"],
         theme: "modern"
+      }
+    case "defiDashboard":
+      return {
+        template_creation_mode: true,
+        title: "DeFi Dashboard",
+        enableMultiSwap: true,
+        showPortfolio: true,
+        enableLimitOrders: true,
+        showAnalytics: true,
+        theme: "modern"
+      }
+    case "transactionMonitor":
+      return {
+        template_creation_mode: true,
+        maxTransactions: "50",
+        showPendingTx: true,
+        enableFiltering: true,
+        realTimeUpdates: true
+      }
+    case "chainSelector":
+      return {
+        template_creation_mode: true,
+        supportedChains: ["1", "137", "42161"],
+        defaultChain: "1",
+        enableTestnet: false
+      }
+    case "tokenSelector":
+      return {
+        template_creation_mode: true,
+        fromToken: "ETH",
+        toToken: "USDC",
+        amount: "1.0",
+        supportedChains: ["1", "137"],
+        showPriceData: true,
+        enable1inchTokenList: true
+      }
+    case "portfolioAPI":
+      return {
+        template_creation_mode: true,
+        from_token: "ETH",
+        to_token: "USDC",
+        amount: "1.0",
+        apiKey: "",
+        trackHistory: true,
+        enableAnalytics: true
+      }
+    case "limitOrder":
+      return {
+        template_creation_mode: true,
+        from_token: "ETH",
+        to_token: "USDC",
+        amount: "1.0",
+        apiKey: "",
+        orderType: "limit",
+        enableAdvancedStrategies: true,
+        supportedChains: ["1", "137"]
       }
     default:
       return {}

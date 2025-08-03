@@ -265,6 +265,7 @@ if (typeof window !== 'undefined') {
 declare global {
   interface Window {
     testExecutionEngine?: () => Promise<void>
+    templateInputs?: Record<string, any>
   }
 }
 

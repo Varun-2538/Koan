@@ -22,9 +22,10 @@ interface CodePreviewModalProps {
   isOpen: boolean
   onClose: () => void
   codeResult: CodeGenerationResult | null
+  projectName?: string
 }
 
-export function CodePreviewModal({ isOpen, onClose, codeResult }: CodePreviewModalProps) {
+export function CodePreviewModal({ isOpen, onClose, codeResult, projectName = 'DeFi Application' }: CodePreviewModalProps) {
   const [copiedFile, setCopiedFile] = useState<string | null>(null)
 
   if (!isOpen || !codeResult) return null

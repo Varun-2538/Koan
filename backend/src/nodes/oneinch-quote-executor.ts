@@ -61,7 +61,10 @@ export class OneInchQuoteExecutor implements NodeExecutor {
       errors.push('amount is required');
     }
 
-    if (!this.apiKey) {
+    // Check for API key in multiple possible locations
+    const apiKey = inputs.api_key || inputs.oneinch_api_key || inputs.apiKey || this.apiKey;
+    
+    if (!apiKey) {
       errors.push('1inch API key is required');
     }
 

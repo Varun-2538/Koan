@@ -12,6 +12,8 @@ const socket_io_1 = require("socket.io");
 const winston_1 = __importDefault(require("winston"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const uuid_1 = require("uuid");
+// Import 1inch routes
+const oneinch_1 = __importDefault(require("./routes/oneinch"));
 const execution_engine_1 = require("@/engine/execution-engine");
 const oneinch_swap_executor_1 = require("@/nodes/oneinch-swap-executor");
 const fusion_plus_executor_1 = require("./nodes/fusion-plus-executor");
@@ -195,9 +197,13 @@ app.get('/api/health', (req, res) => {
         status: 'healthy',
         timestamp: new Date().toISOString(),
         version: '1.0.0',
-        uptime: process.uptime()
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+        oneInchApiKey: process.env.ONEINCH_API_KEY ? 'configured' : 'missing'
     });
 });
+// API Routes
+app.use('/api/1inch', oneinch_1.default);
 // Get engine configuration
 app.get('/api/config', (req, res) => {
     res.json({
@@ -272,6 +278,45 @@ app.get('/api/executions/:executionId/logs', (req, res) => {
         }
     }
     res.json({ logs });
+});
+// Return generated code artifacts (if any) for an execution
+app.get('/api/executions/:executionId/code', async (req, res) => {
+    const { executionId } = req.params;
+    const execution = executionEngine.getExecution(executionId);
+    if (!execution) {
+        return res.status(404).json({ error: 'Execution not found' });
+    }
+    // Aggregate any generated files from node results (supports nested structures)
+    const generated = {};
+    for (const [nodeId, step] of execution.steps) {
+        const outputs = step.result?.outputs || {};
+        if (outputs.generatedFiles) {
+            generated[nodeId] = outputs.generatedFiles;
+        }
+        else if (outputs.code) {
+            generated[nodeId] = outputs.code;
+        }
+        else {
+            // Look one level deeper for typical template wrappers (e.g., mock_dashboard)
+            for (const key of Object.keys(outputs)) {
+                const inner = outputs[key];
+                if (inner && typeof inner === 'object') {
+                    if (inner.generatedFiles) {
+                        generated[nodeId] = inner.generatedFiles;
+                        break;
+                    }
+                    if (inner.code) {
+                        generated[nodeId] = inner.code;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if (Object.keys(generated).length === 0) {
+        return res.status(404).json({ error: 'No generated code available for this execution' });
+    }
+    res.json({ executionId, generated });
 });
 // Cancel execution
 app.post('/api/executions/:executionId/cancel', async (req, res) => {

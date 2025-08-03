@@ -133,6 +133,7 @@ class TemplateDemo {
         'token-selector-1': {
           type: 'tokenSelector',
           inputs: {
+            template_creation_mode: true,
             from_token: 'ETH',
             to_token: 'USDC',
             config: {
@@ -256,6 +257,7 @@ class TemplateDemo {
         'token-selector-1': {
           type: 'tokenSelector',
           inputs: {
+            template_creation_mode: true,
             from_token: 'ETH',
             to_token: 'USDC',
             config: { includeMetadata: true }

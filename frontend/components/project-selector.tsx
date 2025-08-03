@@ -93,6 +93,9 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
     const template = getTemplateById(templateId)
     if (!template) return
 
+    // Store the template inputs globally for access in flow-canvas
+    window.templateInputs = inputs
+
     // Create project with template - IMPORTANT: Include templateId in the project ID
     const projectName = inputs.appName || template.name
     const newProject = {

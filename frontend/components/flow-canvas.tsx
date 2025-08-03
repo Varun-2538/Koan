@@ -212,6 +212,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
 
       // Monitor execution progress
       for await (const status of workflowExecutionClient.monitorExecution(executionId)) {
+        console.log('Execution status update:', status)
         setWorkflowExecutionStatus(status)
         setNodeExecutionStatuses(status.steps || {})
         
@@ -239,7 +240,8 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           setExecutionStatus("Workflow execution failed")
           break
         } else {
-          setExecutionStatus(`Workflow ${status.status}...`)
+          const statusText = status.status || 'running'
+          setExecutionStatus(`Workflow ${statusText}...`)
         }
       }
 
@@ -291,6 +293,12 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   // Reset template loaded state when projectId changes
   useEffect(() => {
     setTemplateLoaded(false)
+    
+    // Clear template inputs if switching to a non-template project
+    if (!projectId.startsWith('template-')) {
+      window.templateInputs = {}
+      console.log('🧹 Cleared template inputs for non-template project')
+    }
   }, [projectId])
 
   const onConnect = useCallback((params: Connection) => setEdges((eds) => addEdge(params, eds)), [setEdges])
@@ -691,25 +699,159 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     setExecutionResult(null)
 
     try {
+      // Get template inputs from the project configuration
+      const templateInputs = window.templateInputs || {} // You need to pass this from template selector
+      
+      // Log template inputs for debugging
+      if (projectId.startsWith('template-')) {
+        console.log('🎯 Template inputs for project:', projectId, templateInputs)
+        
+        // Validate template inputs
+        if (!validateTemplateInputs(templateInputs, projectId)) {
+          setExecutionError('Missing required template inputs. Please check the console for details.')
+          return
+        }
+      }
+      
       // Convert React Flow nodes/edges to workflow definition
       const workflow: WorkflowDefinition = {
         id: `workflow-${projectId}-${Date.now()}`,
         name: `Flow Execution - ${projectId}`,
         description: "Executing DeFi workflow from visual canvas",
         nodes: nodes.map(node => {
-          // Prepare config for backend - ensure API keys are in the right format
+          // Prepare config for backend
           const backendConfig = { ...node.data?.config }
           
-          // Convert frontend apiKey to backend api_key for 1inch nodes
+          // For 1inch nodes, inject the API key from template inputs
           if (node.type === "oneInchSwap" || node.type === "oneInchQuote" || node.type === "portfolioAPI") {
+            if (templateInputs.oneInchApiKey) {
+              backendConfig.api_key = templateInputs.oneInchApiKey
+              backendConfig.oneinch_api_key = templateInputs.oneInchApiKey
+              console.log(`🔑 Injected API key for ${node.type} node:`, templateInputs.oneInchApiKey ? 'Present' : 'Missing')
+            }
+            // Convert frontend apiKey to backend api_key
             if (backendConfig.apiKey) {
               backendConfig.api_key = backendConfig.apiKey
+            }
+          }
+          
+          // For template execution, ensure we pass the required fields
+          if (projectId.startsWith('template-')) {
+            // For oneInchQuote, provide default values if missing
+            if (node.type === "oneInchQuote") {
+              backendConfig.from_token = backendConfig.from_token || "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+              backendConfig.to_token = backendConfig.to_token || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+              backendConfig.amount = backendConfig.amount || "1000000000000000000"
+              backendConfig.chain_id = backendConfig.chain_id || "1"
+            }
+          }
+
+          // Convert camelCase to snake_case for wallet connector nodes
+          if (node.type === 'walletConnector') {
+            if (backendConfig.walletAddress) {
+              backendConfig.wallet_address = backendConfig.walletAddress
+            }
+            if (backendConfig.walletProvider) {
+              backendConfig.wallet_provider = backendConfig.walletProvider
+            }
+            if (backendConfig.supportedWallets) {
+              backendConfig.supported_wallets = backendConfig.supportedWallets
+            }
+            if (backendConfig.supportedNetworks) {
+              backendConfig.supported_networks = backendConfig.supportedNetworks
+            }
+            if (backendConfig.defaultNetwork) {
+              backendConfig.default_network = backendConfig.defaultNetwork
+            }
+            if (backendConfig.autoConnect !== undefined) {
+              backendConfig.auto_connect = backendConfig.autoConnect
+            }
+            if (backendConfig.showBalance !== undefined) {
+              backendConfig.show_balance = backendConfig.showBalance
+            }
+            if (backendConfig.showNetworkSwitcher !== undefined) {
+              backendConfig.show_network_switcher = backendConfig.showNetworkSwitcher
+            }
+          }
+
+          // Convert camelCase to snake_case for transaction monitor nodes
+          if (node.type === 'transactionMonitor') {
+            if (backendConfig.transactionHash) {
+              backendConfig.transaction_hash = backendConfig.transactionHash
+            }
+            if (backendConfig.transactionData) {
+              backendConfig.transaction_data = backendConfig.transactionData
+            }
+            if (backendConfig.confirmationsRequired !== undefined) {
+              backendConfig.confirmations_required = backendConfig.confirmationsRequired
+            }
+            if (backendConfig.timeoutMinutes !== undefined) {
+              backendConfig.timeout_minutes = backendConfig.timeoutMinutes
+            }
+          }
+
+          // Convert camelCase to snake_case for transaction status nodes
+          if (node.type === 'transactionStatus') {
+            if (backendConfig.transactionHash) {
+              backendConfig.transaction_hash = backendConfig.transactionHash
+            }
+            if (backendConfig.includeReceipt !== undefined) {
+              backendConfig.include_receipt = backendConfig.includeReceipt
+            }
+            if (backendConfig.waitForConfirmations !== undefined) {
+              backendConfig.wait_for_confirmations = backendConfig.waitForConfirmations
             }
           }
           
           // Add template mode flag for execution
           if (projectId.startsWith('template-')) {
             backendConfig.template_creation_mode = true
+          }
+
+          // FOR ALL TOKEN SELECTOR NODES, ALSO ADD:
+          if (node.type === 'tokenSelector') {
+            backendConfig.template_creation_mode = true
+            
+            // Convert camelCase token fields to snake_case for backend
+            if (backendConfig.fromToken) {
+              backendConfig.from_token = backendConfig.fromToken
+            }
+            if (backendConfig.toToken) {
+              backendConfig.to_token = backendConfig.toToken
+            }
+            if (backendConfig.chainId) {
+              backendConfig.chain_id = backendConfig.chainId
+            }
+            if (backendConfig.networkChainId) {
+              backendConfig.chain_id = backendConfig.networkChainId
+            }
+            if (backendConfig.defaultTokens) {
+              backendConfig.default_tokens = backendConfig.defaultTokens
+            }
+            if (backendConfig.enabledTokens) {
+              backendConfig.enabled_tokens = backendConfig.enabledTokens
+            }
+            if (backendConfig.defaultFromToken) {
+              backendConfig.default_from_token = backendConfig.defaultFromToken
+            }
+            if (backendConfig.defaultToToken) {
+              backendConfig.default_to_token = backendConfig.defaultToToken
+            }
+            if (backendConfig.allowCustomTokens !== undefined) {
+              backendConfig.allow_custom_tokens = backendConfig.allowCustomTokens
+            }
+            if (backendConfig.showPopularTokens !== undefined) {
+              backendConfig.show_popular_tokens = backendConfig.showPopularTokens
+            }
+            if (backendConfig.showBalances !== undefined) {
+              backendConfig.show_balances = backendConfig.showBalances
+            }
+            if (backendConfig.priceSource) {
+              backendConfig.price_source = backendConfig.priceSource
+            }
+            if (backendConfig.includeMetadata !== undefined) {
+              backendConfig.include_metadata = backendConfig.includeMetadata
+            }
           }
 
           return {
@@ -782,6 +924,25 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   }
 
   const isTemplateProject = projectId.startsWith('template-')
+  
+  // Helper function to validate template inputs
+  const validateTemplateInputs = (inputs: Record<string, any>, projectId: string) => {
+    if (!projectId.startsWith('template-')) return true
+    
+    const template = getTemplateById(projectId.replace('template-', ''))
+    if (!template?.requiredInputs) return true
+    
+    const missingInputs = template.requiredInputs
+      .filter(input => input.required && !inputs[input.key])
+      .map(input => input.label)
+    
+    if (missingInputs.length > 0) {
+      console.warn('⚠️ Missing required template inputs:', missingInputs)
+      return false
+    }
+    
+    return true
+  }
 
   return (
     <div className="h-screen flex">

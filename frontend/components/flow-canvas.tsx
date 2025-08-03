@@ -31,6 +31,9 @@ import { OneInchCodeGenerator, type CodeGenerationResult as OneInchCodeResult } 
 import { CodePreviewModal } from "./code-preview-modal"
 import { GitHubPublishModal } from "./github-publish-modal"
 import { LiveDashboardPreview } from "./live-dashboard-preview"
+import { EmbeddedPreviewPanel } from "./embedded-preview-panel"
+import { FunctionalPreviewPanel } from "./functional-preview-panel"
+import { RealTestnetPreview } from "./real-testnet-preview"
 import { AIChatbotPanel } from "./ai-chatbot-panel"
 import { executionClient } from "@/lib/execution-client"
 import { workflowExecutionClient, type ExecutionStatus, type WorkflowDefinition } from "@/lib/workflow-execution-client"
@@ -104,6 +107,8 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     }
   }
   const [showLivePreviewModal, setShowLivePreviewModal] = useState(false)
+  const [showEmbeddedPreview, setShowEmbeddedPreview] = useState(false)
+  const [previewMode, setPreviewMode] = useState<'static' | 'functional' | 'testnet'>('testnet')
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
   
@@ -1135,30 +1140,11 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Mobile Component Palette Overlay */}
-      {isMobile && showMobilePalette && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50">
-          <div className="h-full w-80 bg-white">
-            <ComponentPalette />
-            <div className="absolute top-4 right-4">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowMobilePalette(false)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      <div className="flex flex-1 min-h-0">
-        {/* Desktop Component Palette */}
-        {!isMobile && <ComponentPalette />}
-        
-        <div className="flex-1 relative">
+    <div className="h-screen flex">
+      <ComponentPalette />
+
+      <div className="flex-1 relative flex">
+        <div className={`${showEmbeddedPreview ? 'flex-1' : 'w-full'} relative`}>
           <ReactFlowProvider>
             <div className="h-full" ref={reactFlowWrapper}>
             <ReactFlow
@@ -1183,23 +1169,12 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
               <Background gap={12} size={1} />
 
               <Panel position="top-left">
-                {/* Mobile Menu Button */}
-                {isMobile && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setShowMobilePalette(true)}
-                    className="mb-2"
-                  >
-                    <Menu className="w-4 h-4 mr-2" />
-                    Components
-                  </Button>
-                )}
-                
                 <FlowToolbar 
                   projectId={projectId} 
-                  autoConnect={autoConnect}
-                  setAutoConnect={setAutoConnect}
+                  showPreview={showEmbeddedPreview}
+                  onTogglePreview={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
+                  previewMode={previewMode}
+                  onPreviewModeChange={setPreviewMode}
                 />
               </Panel>
 
@@ -1339,25 +1314,62 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                 </Panel>
               )}
             </ReactFlow>
-          </div>
-        </ReactFlowProvider>
-      </div>
-        
-        {/* Node Configuration Panel */}
-        {selectedNode && (
-          <NodeConfigPanel
-            node={selectedNode}
-            onUpdateNode={(nodeId: string, config: any) => updateNodeConfig(nodeId, config)}
-            onClose={() => setSelectedNode(null)}
+            </div>
+          </ReactFlowProvider>
+        </div>
+
+        {/* Embedded Preview Panel */}
+        {previewMode === 'static' ? (
+          <EmbeddedPreviewPanel
+            nodes={nodes}
+            edges={edges}
+            projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+            isVisible={showEmbeddedPreview}
+            onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
+            codeResult={codeResult}
+          />
+        ) : previewMode === 'functional' ? (
+          <FunctionalPreviewPanel
+            nodes={nodes}
+            edges={edges}
+            projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+            isVisible={showEmbeddedPreview}
+            onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
+            codeResult={codeResult}
+          />
+        ) : (
+          <RealTestnetPreview
+            nodes={nodes}
+            edges={edges}
+            projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+            isVisible={showEmbeddedPreview}
+            onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
+            codeResult={codeResult}
           />
         )}
       </div>
+
+      {selectedNode && (
+        <NodeConfigPanel
+          node={selectedNode}
+          onConfigChange={(config) => updateNodeConfig(selectedNode.id, config)}
+          onClose={() => setSelectedNode(null)}
+        />
+      )}
 
       <CodePreviewModal
         isOpen={showCodeModal}
         onClose={() => setShowCodeModal(false)}
         codeResult={codeResult as OneInchCodeResult | null}
         projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+        onPublishToGitHub={() => {
+          setShowCodeModal(false)
+          setShowGitHubModal(true)
+        }}
+        onLivePreview={() => {
+          setShowCodeModal(false)
+          setShowEmbeddedPreview(true)
+        }}
       />
 
       <GitHubPublishModal

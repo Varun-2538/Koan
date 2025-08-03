@@ -315,7 +315,7 @@ export class OneInchSwapComponent extends SwapComponent {
   }
 
   protected async getQuote(inputs: Record<string, any>): Promise<any> {
-    const { api_key, chain_id, from_token, to_token, amount, slippage = 1 } = inputs
+    const { api_key, chain_id, from_token, to_token, amount, from_address, slippage = 1 } = inputs
 
     const params = new URLSearchParams({
       fromTokenAddress: from_token,
@@ -326,14 +326,26 @@ export class OneInchSwapComponent extends SwapComponent {
       allowPartialFill: 'true'
     })
 
-    const url = `https://api.1inch.dev/swap/v5.2/${chain_id}/quote?${params}`
+    // Add from address if provided for better liquidity calculation
+    if (from_address) {
+      params.append('from', from_address)
+    }
 
-    return await this.makeApiRequest(url, {
+    const url = `/api/oneinch-proxy?chainId=${chain_id}&endpoint=quote&${params}`
+
+    const response = await fetch(url, {
       headers: {
-        'Authorization': `Bearer ${api_key}`,
+        'x-api-key': api_key,
         'accept': 'application/json'
       }
     })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `API Error: ${response.status}`)
+    }
+
+    return await response.json()
   }
 
   protected async executeSwap(inputs: Record<string, any>): Promise<any> {
@@ -365,14 +377,21 @@ export class OneInchSwapComponent extends SwapComponent {
       params.append('fee', (fee_percent * 100).toString()) // 1inch expects basis points
     }
 
-    const url = `https://api.1inch.dev/swap/v5.2/${chain_id}/swap?${params}`
+    const url = `/api/oneinch-proxy?chainId=${chain_id}&endpoint=swap&${params}`
 
-    return await this.makeApiRequest(url, {
+    const response = await fetch(url, {
       headers: {
-        'Authorization': `Bearer ${api_key}`,
+        'x-api-key': api_key,
         'accept': 'application/json'
       }
     })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `API Error: ${response.status}`)
+    }
+
+    return await response.json()
   }
 
   private calculatePriceImpact(quote: any): string {

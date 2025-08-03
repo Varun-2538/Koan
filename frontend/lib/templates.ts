@@ -61,7 +61,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         id: "token-selector-1", 
-        type: "tokenInput",
+        type: "tokenSelector", // Changed from "tokenInput" to match backend
         position: { x: 100, y: 280 },
         data: {
           label: "Multi-Chain Token Selector",
@@ -82,7 +82,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "1inch Quote Engine",
           config: {
-            apiKey: "",
+            // Backend required fields
+            api_key: "template-mode-demo-key",
+            
+            // Frontend config fields
+            apiKey: "template-mode-demo-key",
             supportedChains: ["1", "137", "56", "42161", "10", "43114"],
             quoteRefreshInterval: 10,
             showPriceChart: true,
@@ -93,7 +97,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         id: "price-impact-1",
-        type: "slippageControl",
+        type: "priceImpactCalculator", // Changed from "slippageControl" to match backend
         position: { x: 400, y: 280 },
         data: {
           label: "Price Impact Analysis",
@@ -113,7 +117,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "1inch Swap Executor",
           config: {
-            apiKey: "",
+            // Backend required fields
+            api_key: "template-mode-demo-key",
+            
+            // Frontend config fields
+            apiKey: "template-mode-demo-key",
             supportedChains: ["1", "137", "56", "42161", "10", "43114"],
             enableFusion: true,
             enableMEVProtection: true,
@@ -128,7 +136,17 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Fusion+ Cross-Chain",
           config: {
-            apiKey: "",
+            // Required fields for backend validation
+            api_key: "template-mode-demo-key",
+            source_chain: "1", // Ethereum
+            destination_chain: "137", // Polygon
+            from_token: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // ETH
+            to_token: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619", // WETH on Polygon
+            amount: "1000000000000000000", // 1 ETH in wei
+            from_address: "0x1234567890123456789012345678901234567890", // Demo address
+            
+            // Original config fields
+            apiKey: "template-mode-demo-key",
             supportedChains: ["1", "137", "56", "42161", "10", "43114"],
             enableMEVProtection: true,
             enableGasless: true,
@@ -137,13 +155,17 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         }
       },
       {
-        id: "limit-order-1",
+        id: "limitOrder-1",
         type: "limitOrder",
         position: { x: 1000, y: 100 },
         data: {
           label: "Limit Order Protocol",
           config: {
-            apiKey: "",
+            // Backend required fields  
+            api_key: "template-mode-demo-key",
+            
+            // Frontend config fields
+            apiKey: "template-mode-demo-key",
             orderType: "limit",
             enableAdvancedStrategies: true,
             supportedChains: ["1", "137", "56", "42161", "10", "43114"]
@@ -157,7 +179,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         data: {
           label: "Portfolio & Balance API",
           config: {
-            apiKey: "",
+            // Backend required fields
+            api_key: "template-mode-demo-key",
+            
+            // Frontend config fields
+            apiKey: "template-mode-demo-key",
             trackHistory: true,
             enableAnalytics: true,
             supportedChains: ["1", "137", "56", "42161", "10", "43114"]
@@ -166,7 +192,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         id: "transaction-monitor-1",
-        type: "transactionHistory",
+        type: "transactionMonitor", // Changed from "transactionHistory" to match backend
         position: { x: 1300, y: 100 },
         data: {
           label: "Transaction Monitor",
@@ -180,7 +206,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         id: "defi-dashboard-1",
-        type: "defiDashboard",
+        type: "defiDashboard", // This should match backend
         position: { x: 1300, y: 280 },
         data: {
           label: "DeFi Analytics Dashboard",
@@ -201,9 +227,9 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       { id: "e3-4", source: "oneinch-quote-1", target: "price-impact-1", type: "default" },
       { id: "e4-5", source: "price-impact-1", target: "oneinch-swap-1", type: "default" },
       { id: "e3-6", source: "oneinch-quote-1", target: "fusion-plus-1", type: "default" },
-      { id: "e5-7", source: "oneinch-swap-1", target: "limit-order-1", type: "default" },
+      { id: "e5-7", source: "oneinch-swap-1", target: "limitOrder-1", type: "default" }, // Fixed ID
       { id: "e5-8", source: "oneinch-swap-1", target: "portfolio-api-1", type: "default" },
-      { id: "e7-9", source: "limit-order-1", target: "transaction-monitor-1", type: "default" },
+      { id: "e7-9", source: "limitOrder-1", target: "transaction-monitor-1", type: "default" }, // Fixed ID
       { id: "e8-10", source: "portfolio-api-1", target: "defi-dashboard-1", type: "default" },
       { id: "e9-10", source: "transaction-monitor-1", target: "defi-dashboard-1", type: "default" }
     ],
@@ -265,7 +291,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         id: "token-input-1",
-        type: "tokenInput", 
+        type: "tokenSelector", // Changed from "tokenInput" to match backend
         position: { x: 400, y: 150 },
         data: {
           label: "Token Selector",
@@ -294,7 +320,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         id: "slippage-control-1",
-        type: "slippageControl",
+        type: "priceImpactCalculator", // Changed from "slippageControl" to match backend
         position: { x: 700, y: 300 },
         data: {
           label: "Slippage Control",
@@ -323,7 +349,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         id: "swap-interface-1", 
-        type: "swapInterface",
+        type: "defiDashboard", // Changed from "swapInterface" to match backend available type
         position: { x: 1300, y: 150 },
         data: {
           label: "Swap Interface",
@@ -387,7 +413,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         id: "token-selector-1",
-        type: "tokenInput",
+        type: "tokenSelector", // Changed from "tokenInput" 
         position: { x: 100, y: 280 },
         data: {
           label: "Governance Token",
@@ -402,7 +428,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         id: "chain-selector-1",
-        type: "chainSelector",
+        type: "chainSelector", // This should match backend
         position: { x: 400, y: 100 },
         data: {
           label: "Multi-Chain DAO",
@@ -444,7 +470,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         id: "dashboard-1",
-        type: "dashboard",
+        type: "defiDashboard", // Changed from "dashboard" to match backend
         position: { x: 1000, y: 100 },
         data: {
           label: "DAO Governance Dashboard",
@@ -560,7 +586,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         id: "dashboard-1",
-        type: "dashboard",
+        type: "defiDashboard", // Changed from "dashboard" to match backend
         position: { x: 1000, y: 150 },
         data: {
           label: "NFT Marketplace",

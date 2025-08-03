@@ -534,27 +534,32 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         id: `workflow-${projectId}-${Date.now()}`,
         name: `Flow Execution - ${projectId}`,
         description: "Executing DeFi workflow from visual canvas",
-        nodes: nodes.map(node => ({
-          id: node.id,
-          type: node.type || 'default',
-          position: node.position,
-          data: {
-            label: node.data?.label || node.type || 'Node',
-            config: {
-              ...(node.data?.config || {}),
-              // Add template creation mode for template projects
-              ...(projectId.startsWith('template-') && {
-                template_creation_mode: true,
-                supported_wallets: ['metamask', 'walletconnect', 'coinbase'],
-                supported_networks: [1, 137, 42161],
-                default_tokens: ['ETH', 'USDC', 'WBTC', 'DAI', 'USDT', '1INCH'],
-                show_popular_tokens: true,
-                track_protocols: true,
-                allow_custom_tokens: true
-              })
+        nodes: nodes.map(node => {
+          // Prepare config for backend - ensure API keys are in the right format
+          const backendConfig = { ...node.data?.config }
+          
+          // Convert frontend apiKey to backend api_key for 1inch nodes
+          if (node.type === "oneInchSwap" || node.type === "oneInchQuote" || node.type === "portfolioAPI") {
+            if (backendConfig.apiKey) {
+              backendConfig.api_key = backendConfig.apiKey
             }
           }
-        })),
+          
+          // Add template mode flag for execution
+          if (projectId.startsWith('template-')) {
+            backendConfig.template_creation_mode = true
+          }
+
+          return {
+            id: node.id,
+            type: node.type || 'default',
+            position: node.position,
+            data: {
+              label: node.data?.label || node.type || 'Node',
+              config: backendConfig
+            }
+          }
+        }),
         edges: edges.map(edge => ({
           id: edge.id,
           source: edge.source,
@@ -563,6 +568,15 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           targetHandle: edge.targetHandle
         }))
       }
+
+      console.log('🚀 Executing workflow with nodes:', workflow.nodes.length)
+      console.log('📊 Node configurations:')
+      workflow.nodes.forEach(node => {
+        console.log(`  - ${node.id} (${node.type}):`, {
+          hasApiKey: !!node.data.config.api_key || !!node.data.config.apiKey,
+          configKeys: Object.keys(node.data.config)
+        })
+      })
 
       // Set up execution event listeners
       executionClient.on('execution.started', (data) => {

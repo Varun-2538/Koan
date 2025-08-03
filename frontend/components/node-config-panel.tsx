@@ -193,32 +193,19 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
   const validateConfig = () => {
     const errors: Record<string, string> = {}
     
-    nodeInfo.requiredFields.forEach(field => {
-      if (!config[field] || (Array.isArray(config[field]) && config[field].length === 0)) {
-        errors[field] = `${field} is required`
-      }
-    })
-
-    // Additional validation rules
+    // Essential validation for 1inch nodes
     if (node.type === "oneInchSwap" || node.type === "oneInchQuote" || node.type === "fusionPlus") {
-      if (config.apiKey && config.apiKey.length < 10) {
-        errors.apiKey = "API key appears to be invalid"
+      if (!config.apiKey || config.apiKey.trim() === "") {
+        errors.apiKey = "1inch API key is required for execution"
       }
     }
 
-    if (node.type === "slippageControl") {
-      if (config.slippage < 0.1 || config.slippage > 50) {
-        errors.slippage = "Slippage must be between 0.1% and 50%"
-      }
-    }
-
-    if (node.type === "erc20Token") {
-      if (config.decimals < 1 || config.decimals > 18) {
-        errors.decimals = "Decimals must be between 1 and 18"
-      }
-      if (config.totalSupply && isNaN(Number(config.totalSupply))) {
-        errors.totalSupply = "Total supply must be a number"
-      }
+    if (node.type === "fusionPlus") {
+      if (!config.sourceChain) errors.sourceChain = "Source chain is required"
+      if (!config.destinationChain) errors.destinationChain = "Destination chain is required"
+      if (!config.fromToken) errors.fromToken = "From token is required"
+      if (!config.toToken) errors.toToken = "To token is required"
+      if (!config.amount || config.amount <= 0) errors.amount = "Valid amount is required"
     }
 
     setValidationErrors(errors)
@@ -229,6 +216,7 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
     if (validateConfig()) {
       onUpdateNode(node.id, config)
       setHasUnsavedChanges(false)
+      console.log('✅ Configuration saved for node:', node.id, config)
     }
   }
 
@@ -470,9 +458,13 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
         return (
           <div className="space-y-4">
             {renderConfigField("apiKey", config.apiKey, "1inch API Key", "password")}
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 Get your API key from <a href="https://portal.1inch.dev" target="_blank" className="underline">portal.1inch.dev</a>
+              </p>
+            </div>
             {renderConfigField("supportedChains", config.supportedChains, "Supported Chains", "multiselect")}
             {renderConfigField("defaultSlippage", config.defaultSlippage, "Default Slippage (%)", "number")}
-            {renderConfigField("enableFusion", config.enableFusion, "Enable Fusion Mode", "boolean")}
             {renderConfigField("enableMEVProtection", config.enableMEVProtection, "MEV Protection", "boolean")}
           </div>
         )
@@ -481,6 +473,11 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
         return (
           <div className="space-y-4">
             {renderConfigField("apiKey", config.apiKey, "1inch API Key", "password")}
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 Get your API key from <a href="https://portal.1inch.dev" target="_blank" className="underline">portal.1inch.dev</a>
+              </p>
+            </div>
             {renderConfigField("supportedChains", config.supportedChains, "Supported Chains", "multiselect")}
             {renderConfigField("quoteRefreshInterval", config.quoteRefreshInterval, "Refresh Interval (seconds)", "number")}
             {renderConfigField("showPriceChart", config.showPriceChart, "Show Price Chart", "boolean")}
@@ -488,14 +485,18 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
           </div>
         )
 
-      case "fusionPlus":
+      case "portfolioAPI":
         return (
           <div className="space-y-4">
             {renderConfigField("apiKey", config.apiKey, "1inch API Key", "password")}
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 Portfolio API requires the same 1inch API key
+              </p>
+            </div>
             {renderConfigField("supportedChains", config.supportedChains, "Supported Chains", "multiselect")}
-            {renderConfigField("enableMEVProtection", config.enableMEVProtection, "MEV Protection", "boolean")}
-            {renderConfigField("enableGasless", config.enableGasless, "Gasless Mode", "boolean")}
-            {renderConfigField("defaultTimeout", config.defaultTimeout, "Default Timeout (seconds)", "number")}
+            {renderConfigField("trackHistory", config.trackHistory, "Track History", "boolean")}
+            {renderConfigField("enableAnalytics", config.enableAnalytics, "Enable Analytics", "boolean")}
           </div>
         )
 
@@ -508,7 +509,7 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
           </div>
         )
 
-      case "tokenInput":
+      case "tokenSelector":
         return (
           <div className="space-y-4">
             {renderConfigField("fromToken", config.fromToken, "From Token", "text")}
@@ -518,31 +519,23 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
           </div>
         )
 
-      case "slippageControl":
+      case "transactionMonitor":
         return (
           <div className="space-y-4">
-            {renderConfigField("slippage", config.slippage, "Slippage Tolerance (%)", "number")}
-            {renderConfigField("autoSlippage", config.autoSlippage, "Auto Slippage", "boolean")}
-            {renderConfigField("minSlippage", config.minSlippage, "Minimum Slippage (%)", "number")}
-            {renderConfigField("maxSlippage", config.maxSlippage, "Maximum Slippage (%)", "number")}
+            {renderConfigField("maxTransactions", config.maxTransactions, "Max Transactions", "number")}
+            {renderConfigField("showPendingTx", config.showPendingTx, "Show Pending Transactions", "boolean")}
+            {renderConfigField("enableFiltering", config.enableFiltering, "Enable Filtering", "boolean")}
+            {renderConfigField("realTimeUpdates", config.realTimeUpdates, "Real-time Updates", "boolean")}
           </div>
         )
 
-      case "erc20Token":
-        return (
-          <div className="space-y-4">
-            {renderConfigField("name", config.name, "Token Name", "text")}
-            {renderConfigField("symbol", config.symbol, "Token Symbol", "text")}
-            {renderConfigField("totalSupply", config.totalSupply, "Total Supply", "text")}
-            {renderConfigField("decimals", config.decimals, "Decimals", "number")}
-          </div>
-        )
-
-      case "dashboard":
+      case "defiDashboard":
         return (
           <div className="space-y-4">
             {renderConfigField("title", config.title, "Dashboard Title", "text")}
             {renderConfigField("theme", config.theme, "Theme", "select")}
+            {renderConfigField("showPortfolio", config.showPortfolio, "Show Portfolio", "boolean")}
+            {renderConfigField("showAnalytics", config.showAnalytics, "Show Analytics", "boolean")}
           </div>
         )
 
@@ -551,6 +544,7 @@ export function NodeConfigPanel({ node, onClose, onUpdateNode }: NodeConfigPanel
           <div className="text-center text-gray-500 py-8">
             <Settings className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No configuration available for this node type</p>
+            <p className="text-xs text-gray-400 mt-1">Node type: {node.type}</p>
           </div>
         )
     }

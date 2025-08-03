@@ -262,6 +262,64 @@ export const TokenDataServiceNode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
+// Add specialized node for Multi-Chain Token Selector
+export const MultiChainTokenSelectorNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-purple-500 text-white rounded">
+        <Coins className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Multi-Chain Token Selector</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>From: {data.config?.fromToken || "ETH"}</div>
+      <div>To: {data.config?.toToken || "USDC"}</div>
+      <div>Chains: {data.config?.supportedChains?.length || 0}</div>
+      <div>Amount: {data.config?.amount || "1.0"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+// Add specialized node for Price Impact Analysis
+export const PriceImpactAnalysisNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-red-500 text-white rounded">
+        <TrendingUp className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Price Impact Analysis</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Slippage: {data.config?.slippage || "1.0"}%</div>
+      <div>Max Impact: {data.config?.maxImpactThreshold || "5.0"}%</div>
+      <div>Auto: {data.config?.autoSlippage ? "Yes" : "No"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
+// Add specialized node for Transaction Monitor  
+export const TransactionMonitorNode = ({ data, selected }: NodeProps) => (
+  <NodeWrapper selected={selected}>
+    <Handle type="target" position={Position.Top} />
+    <div className="flex items-center gap-2 mb-2">
+      <div className="p-1 bg-green-500 text-white rounded">
+        <Activity className="w-4 h-4" />
+      </div>
+      <span className="font-medium">Transaction Monitor</span>
+    </div>
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>Max Tx: {data.config?.maxTransactions || "50"}</div>
+      <div>Pending: {data.config?.showPendingTx ? "Yes" : "No"}</div>
+      <div>Real-time: {data.config?.realTimeUpdates ? "Yes" : "No"}</div>
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </NodeWrapper>
+)
+
 // Export all node types in a single object - THIS IS CRITICAL
 export const CustomNodes = {
   // Executable DeFi nodes (using ExecutableNode wrapper)
@@ -269,6 +327,11 @@ export const CustomNodes = {
   oneInchQuote: OneInchQuoteNode,
   fusionPlus: FusionPlusNode,
   chainSelector: ChainSelectorNode,
+  
+  // Backend node types that need frontend representations
+  tokenSelector: MultiChainTokenSelectorNode, // Use specialized component
+  priceImpactCalculator: PriceImpactAnalysisNode, // Use specialized component
+  transactionMonitor: TransactionMonitorNode, // Use specialized component
   
   // UI/Interface nodes (static display nodes)
   tokenInput: TokenInputNode,
@@ -279,12 +342,12 @@ export const CustomNodes = {
   // Infrastructure nodes
   dashboard: DashboardNode,
   erc20Token: ERC20TokenNode,
+  defiDashboard: DefiDashboardNode,
   
   // Additional nodes referenced in getDefaultConfig
   fusionSwap: FusionSwapNode,
   limitOrder: LimitOrderNode,
   portfolioAPI: PortfolioAPINode,
-  defiDashboard: DefiDashboardNode,
   transactionHistory: TransactionHistoryNode,
   swapAPI: SwapAPINode,
   tokenDataService: TokenDataServiceNode,

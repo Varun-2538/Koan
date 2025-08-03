@@ -8,12 +8,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Play, Stop, ExternalLink, Settings, Globe } from 'lucide-react';
+import { Play, Square, ExternalLink, Settings, Globe } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
+// Import the type we need
+interface CodeGenerationResult {
+  projectName?: string
+  description?: string
+  framework?: string
+  features?: string[]
+  files?: Record<string, string>
+  dependencies?: any
+}
+
 interface LivePreviewProps {
-  workflow: any;
-  onClose: () => void;
+  isOpen: boolean
+  onClose: () => void
+  codeResult: CodeGenerationResult | null
+  projectName: string
 }
 
 interface PreviewConfig {
@@ -43,7 +55,8 @@ const DEFAULT_TOKENS = {
   '43114': ['AVAX', 'USDC', 'USDT']
 };
 
-export default function LiveDashboardPreview({ workflow, onClose }: LivePreviewProps) {
+// Named export instead of default export
+export function LiveDashboardPreview({ isOpen, onClose, codeResult, projectName }: LivePreviewProps) {
   const [isStarting, setIsStarting] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -54,95 +67,59 @@ export default function LiveDashboardPreview({ workflow, onClose }: LivePreviewP
     defaultTokens: DEFAULT_TOKENS
   });
 
-  // Check if workflow needs 1inch API key
-  const needs1inchAPI = workflow.nodes?.some((node: any) => 
-    ['oneInchSwap', 'oneInchQuote', 'fusionSwap', 'portfolioAPI'].includes(node.type)
-  );
-
-  const needsWalletConnect = workflow.nodes?.some((node: any) => 
-    node.type === 'walletConnector'
-  );
+  // Check configuration completeness
+  const isConfigValid = config.oneInchApiKey && config.chainId;
 
   const handleConfigChange = (key: keyof PreviewConfig, value: any) => {
     setConfig(prev => ({ ...prev, [key]: value }));
   };
 
-  const validateConfiguration = () => {
-    const errors: string[] = [];
-    
-    if (needs1inchAPI && !config.oneInchApiKey) {
-      errors.push('1inch API key is required for swap operations');
-    }
-    
-    if (needsWalletConnect && !config.walletConnectProjectId) {
-      errors.push('WalletConnect Project ID is required for wallet connection');
-    }
+  const generateWorkflowConfig = () => {
+    return {
+      projectName: projectName,
+      codeResult: codeResult,
+      config: {
+        oneInchApiKey: config.oneInchApiKey,
+        defaultChain: config.chainId,
+        enabledChains: config.enabledChains,
+        rpcEndpoints: Object.fromEntries(
+          config.enabledChains.map(chainId => [
+            chainId,
+            config.rpcUrl || SUPPORTED_CHAINS[chainId as keyof typeof SUPPORTED_CHAINS]?.rpc
+          ])
+        ),
+        walletConnectProjectId: config.walletConnectProjectId,
+        defaultTokens: config.defaultTokens
+      }
+    };
+  }
 
-    if (config.enabledChains.length === 0) {
-      errors.push('At least one chain must be enabled');
-    }
-
-    return errors;
-  };
+  // Don't render if modal is not open
+  if (!isOpen) return null;
 
   const startPreview = async () => {
-    const errors = validateConfiguration();
-    if (errors.length > 0) {
-      toast.error(errors.join(', '));
+    if (!isConfigValid) {
+      toast.error('Please configure all required settings');
       return;
     }
 
     setIsStarting(true);
-    setLogs([]);
-
     try {
-      // Inject configuration into workflow nodes
-      const configuredWorkflow = {
-        ...workflow,
-        nodes: workflow.nodes.map((node: any) => ({
-          ...node,
-          data: {
-            ...node.data,
-            config: {
-              ...node.data.config,
-              // Inject API keys and configuration for live preview
-              ...(node.type === 'oneInchSwap' && {
-                apiKey: config.oneInchApiKey,
-                chainId: config.chainId,
-                rpcUrl: SUPPORTED_CHAINS[config.chainId]?.rpc
-              }),
-              ...(node.type === 'walletConnector' && {
-                walletConnectProjectId: config.walletConnectProjectId,
-                supportedChains: config.enabledChains
-              }),
-              ...(node.type === 'tokenSelector' && {
-                enabledTokens: config.defaultTokens[config.chainId] || DEFAULT_TOKENS['1'],
-                chainId: config.chainId
-              }),
-              ...(node.type === 'chainSelector' && {
-                supportedChains: config.enabledChains,
-                defaultChain: config.chainId
-              })
-            }
-          }
-        }))
-      };
-
+      const workflowConfig = generateWorkflowConfig();
+      
       const response = await fetch('/api/preview/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workflow: configuredWorkflow,
-          config: config
-        })
+        body: JSON.stringify(workflowConfig)
       });
 
       const result = await response.json();
-
+      
       if (result.success) {
-        setPreviewUrl(result.previewUrl);
         setIsRunning(true);
-        toast.success('Live preview started successfully!');
+        setPreviewUrl(result.url);
+        setLogs(['✅ Preview instance started successfully']);
+        toast.success('Live preview started!');
         
         // Start listening for logs
         connectToLogs(result.instanceId);
@@ -187,6 +164,10 @@ export default function LiveDashboardPreview({ workflow, onClose }: LivePreviewP
         setLogs(prev => [...prev, data.message]);
       }
     };
+
+    ws.onerror = () => {
+      // Silently handle WebSocket errors for now
+    };
   };
 
   return (
@@ -200,52 +181,53 @@ export default function LiveDashboardPreview({ workflow, onClose }: LivePreviewP
               {isRunning ? "Running" : "Stopped"}
             </Badge>
           </div>
-          <Button variant="ghost" onClick={onClose}>×</Button>
+          <Button onClick={onClose} variant="ghost" size="sm">
+            ✕
+          </Button>
         </div>
 
         <div className="flex-1 flex">
           {/* Configuration Panel */}
-          <div className="w-80 border-r p-4 overflow-y-auto">
-            <Tabs defaultValue="config" className="w-full">
+          <div className="w-80 border-r p-4 space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Settings className="w-4 h-4" />
+              <h3 className="font-medium">Configuration</h3>
+            </div>
+
+            <Tabs defaultValue="api" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="config">Config</TabsTrigger>
+                <TabsTrigger value="api">API</TabsTrigger>
                 <TabsTrigger value="chains">Chains</TabsTrigger>
               </TabsList>
-              
-              <TabsContent value="config" className="space-y-4">
-                {needs1inchAPI && (
-                  <div className="space-y-2">
-                    <Label htmlFor="oneinch-key">1inch API Key *</Label>
-                    <Input
-                      id="oneinch-key"
-                      type="password"
-                      placeholder="Your 1inch API key"
-                      value={config.oneInchApiKey || ''}
-                      onChange={(e) => handleConfigChange('oneInchApiKey', e.target.value)}
-                    />
-                    <p className="text-xs text-gray-500">
-                      Get it from <a href="https://portal.1inch.dev" target="_blank" className="text-blue-500">1inch Portal</a>
-                    </p>
-                  </div>
-                )}
 
-                {needsWalletConnect && (
-                  <div className="space-y-2">
-                    <Label htmlFor="wc-project-id">WalletConnect Project ID *</Label>
-                    <Input
-                      id="wc-project-id"
-                      placeholder="Your WalletConnect project ID"
-                      value={config.walletConnectProjectId || ''}
-                      onChange={(e) => handleConfigChange('walletConnectProjectId', e.target.value)}
-                    />
-                    <p className="text-xs text-gray-500">
-                      Get it from <a href="https://cloud.walletconnect.com" target="_blank" className="text-blue-500">WalletConnect Cloud</a>
-                    </p>
-                  </div>
-                )}
+              <TabsContent value="api" className="space-y-4">
+                <div className="space-y-2">
+                  <Label>1inch API Key *</Label>
+                  <Input
+                    type="password"
+                    placeholder="Enter your 1inch API key"
+                    value={config.oneInchApiKey || ''}
+                    onChange={(e) => handleConfigChange('oneInchApiKey', e.target.value)}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Get your API key from{' '}
+                    <a href="https://portal.1inch.dev" target="_blank" className="underline">
+                      portal.1inch.dev
+                    </a>
+                  </p>
+                </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="default-chain">Default Chain</Label>
+                  <Label>WalletConnect Project ID</Label>
+                  <Input
+                    placeholder="Optional WalletConnect Project ID"
+                    value={config.walletConnectProjectId || ''}
+                    onChange={(e) => handleConfigChange('walletConnectProjectId', e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Default Chain</Label>
                   <Select value={config.chainId} onValueChange={(value) => handleConfigChange('chainId', value)}>
                     <SelectTrigger>
                       <SelectValue />
@@ -291,7 +273,7 @@ export default function LiveDashboardPreview({ workflow, onClose }: LivePreviewP
               {!isRunning ? (
                 <Button
                   onClick={startPreview}
-                  disabled={isStarting}
+                  disabled={isStarting || !isConfigValid}
                   className="w-full"
                 >
                   {isStarting ? (
@@ -306,7 +288,7 @@ export default function LiveDashboardPreview({ workflow, onClose }: LivePreviewP
               ) : (
                 <div className="space-y-2">
                   <Button
-                    onClick={() => window.open(previewUrl, '_blank')}
+                    onClick={() => window.open(previewUrl!, '_blank')}
                     className="w-full"
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
@@ -317,7 +299,7 @@ export default function LiveDashboardPreview({ workflow, onClose }: LivePreviewP
                     variant="destructive"
                     className="w-full"
                   >
-                    <Stop className="w-4 h-4 mr-2" />
+                    <Square className="w-4 h-4 mr-2" />
                     Stop Preview
                   </Button>
                 </div>

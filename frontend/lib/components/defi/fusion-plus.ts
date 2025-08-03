@@ -524,8 +524,8 @@ export class FusionPlusComponent extends BridgeComponent {
           routes.push({
             from: chains[i],
             to: chains[j],
-            fromName: this.getChainName(chains[i]),
-            toName: this.getChainName(chains[j]),
+            fromName: this.getChainName(parseInt(chains[i])),
+            toName: this.getChainName(parseInt(chains[j])),
             estimatedTime: '10-30 minutes',
             supported: true
           })
@@ -549,14 +549,14 @@ export class FusionPlusComponent extends BridgeComponent {
     })
   }
 
-  private getChainName(chainId: string): string {
-    const chainNames: Record<string, string> = {
-      '1': 'Ethereum',
-      '137': 'Polygon',
-      '56': 'BNB Chain',
-      '42161': 'Arbitrum',
-      '10': 'Optimism',
-      '101': 'Solana'
+  protected getChainName(chainId: number): string {
+    const chainNames: Record<number, string> = {
+      1: 'Ethereum',
+      137: 'Polygon',
+      56: 'BNB Chain',
+      42161: 'Arbitrum',
+      10: 'Optimism',
+      101: 'Solana'
     }
     return chainNames[chainId] || 'Unknown'
   }

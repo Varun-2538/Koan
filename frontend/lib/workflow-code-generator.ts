@@ -98,6 +98,13 @@ export class WorkflowCodeGenerator {
       features.push('Cross-Chain Transfers')
     }
     
+    if (uniqueNodeTypes.includes('fusionMonadBridge')) {
+      pattern = 'Ethereum-Monad Atomic Bridge'
+      features.push('Atomic Cross-Chain Swaps')
+      features.push('HTLC Implementation')
+      features.push('MEV Protection')
+    }
+    
     if (uniqueNodeTypes.includes('portfolioAPI')) {
       features.push('Portfolio Tracking')
     }
@@ -139,6 +146,22 @@ export class WorkflowCodeGenerator {
       })
     }
     
+    if (analysis.nodeTypes.includes('fusionMonadBridge')) {
+      files.push({
+        path: 'backend/src/routes/atomic-bridge.ts',
+        content: this.generateAtomicBridgeRoutes(),
+        type: 'backend',
+        language: 'typescript'
+      })
+      
+      files.push({
+        path: 'backend/src/services/htlc-service.ts',
+        content: this.generateHTLCService(),
+        type: 'backend',
+        language: 'typescript'
+      })
+    }
+    
     if (analysis.nodeTypes.includes('portfolioAPI')) {
       files.push({
         path: 'backend/src/routes/portfolio.ts',
@@ -175,6 +198,22 @@ export class WorkflowCodeGenerator {
       files.push({
         path: 'frontend/src/components/SwapInterface.tsx',
         content: this.generateSwapInterface(),
+        type: 'frontend',
+        language: 'typescript'
+      })
+    }
+    
+    if (analysis.nodeTypes.includes('fusionMonadBridge')) {
+      files.push({
+        path: 'frontend/src/components/AtomicBridgeInterface.tsx',
+        content: this.generateAtomicBridgeInterface(),
+        type: 'frontend',
+        language: 'typescript'
+      })
+      
+      files.push({
+        path: 'frontend/src/components/HTLCMonitor.tsx',
+        content: this.generateHTLCMonitor(),
         type: 'frontend',
         language: 'typescript'
       })
@@ -235,6 +274,7 @@ export class WorkflowCodeGenerator {
 import cors from 'cors'
 import dotenv from 'dotenv'
 ${analysis.nodeTypes.includes('oneInchSwap') ? "import swapRoutes from './routes/swap'" : ''}
+${analysis.nodeTypes.includes('fusionMonadBridge') ? "import atomicBridgeRoutes from './routes/atomic-bridge'" : ''}
 ${analysis.nodeTypes.includes('portfolioAPI') ? "import portfolioRoutes from './routes/portfolio'" : ''}
 
 dotenv.config()
@@ -253,6 +293,7 @@ app.get('/api/health', (req, res) => {
 
 // Routes
 ${analysis.nodeTypes.includes('oneInchSwap') ? "app.use('/api/swap', swapRoutes)" : ''}
+${analysis.nodeTypes.includes('fusionMonadBridge') ? "app.use('/api/atomic-bridge', atomicBridgeRoutes)" : ''}
 ${analysis.nodeTypes.includes('portfolioAPI') ? "app.use('/api/portfolio', portfolioRoutes)" : ''}
 
 app.listen(PORT, () => {
@@ -643,12 +684,533 @@ ${analysis.features.map((f: string) => `### ${f}\\n\\nImplemented using the ${an
 
 - \`GET /api/health\` - Health check
 ${analysis.nodeTypes.includes('oneInchSwap') ? '- `POST /api/swap/quote` - Get swap quote\\n- `POST /api/swap/execute` - Execute swap' : ''}
+${analysis.nodeTypes.includes('fusionMonadBridge') ? '- `POST /api/atomic-bridge/quote` - Get atomic swap quote\\n- `POST /api/atomic-bridge/create-htlc` - Create HTLC\\n- `POST /api/atomic-bridge/claim/:contractId` - Claim funds\\n- `GET /api/atomic-bridge/status/:contractId` - Check HTLC status' : ''}
 ${analysis.nodeTypes.includes('portfolioAPI') ? '- `GET /api/portfolio/:address` - Get portfolio data' : ''}
 
 ## Generated Files
 
 This application was automatically generated based on successful workflow execution.
 `
+  }
+
+  // New methods for Fusion+ Monad Bridge code generation
+  private generateAtomicBridgeRoutes(): string {
+    return `import express from 'express';
+import { HTLCService } from '../services/htlc-service';
+
+const router = express.Router();
+const htlcService = new HTLCService();
+
+// Get atomic swap quote
+router.post('/quote', async (req, res) => {
+  try {
+    const { bridge_direction, source_token, destination_token, amount } = req.body;
+    
+    // Calculate cross-chain quote with bridge fees
+    const bridgeFeePercent = 0.005; // 0.5%
+    const destinationAmount = amount * (1 - bridgeFeePercent);
+    
+    const quote = {
+      source_token,
+      destination_token,
+      source_amount: amount,
+      destination_amount: destinationAmount,
+      bridge_fee: amount * bridgeFeePercent,
+      estimated_time: '10-15 minutes',
+      gas_estimates: {
+        ethereum: bridge_direction === 'eth_to_monad' ? '150000' : '80000',
+        monad: bridge_direction === 'eth_to_monad' ? '7500' : '4000'
+      },
+      mev_protection: true,
+      atomic_guarantee: true
+    };
+    
+    res.json({ success: true, quote });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Create Hash Time Locked Contract
+router.post('/create-htlc', async (req, res) => {
+  try {
+    const { quote_id, from_address, timelock_duration = 24 } = req.body;
+    
+    // Generate HTLC parameters
+    const contractId = \`htlc_\${Date.now()}_\${Math.random().toString(36)}\`;
+    const secret = \`0x\${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}\`;
+    const hashlock = \`0x\${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}\`;
+    const timelock = Math.floor(Date.now() / 1000) + (timelock_duration * 3600);
+    
+    // Create HTLC on both chains (mock implementation)
+    const result = {
+      contract_id: contractId,
+      hashlock,
+      timelock,
+      status: 'htlc_created',
+      ethereum_tx: \`0x\${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}\`,
+      monad_tx: \`0x\${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}\`,
+      monitoring_url: \`/api/atomic-bridge/status/\${contractId}\`
+    };
+    
+    res.json({ success: true, htlc: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Claim funds with secret
+router.post('/claim/:contractId', async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const { secret, to_address } = req.body;
+    
+    // Mock claiming funds
+    const result = {
+      contract_id: contractId,
+      status: 'funds_claimed',
+      claim_tx: \`0x\${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}\`,
+      to_address,
+      timestamp: new Date().toISOString()
+    };
+    
+    res.json({ success: true, claim: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get HTLC status
+router.get('/status/:contractId', async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    // Mock status check
+    const status = {
+      contract_id: contractId,
+      phase: 'locked',
+      ethereum_status: {
+        locked: true,
+        claimed: false,
+        refunded: false
+      },
+      monad_status: {
+        locked: true,
+        claimed: false,
+        refunded: false
+      },
+      time_remaining: 24 * 60 * 60 * 1000, // 24 hours
+      last_updated: new Date().toISOString()
+    };
+    
+    res.json({ success: true, status });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+export default router;`;
+  }
+
+  private generateHTLCService(): string {
+    return `// HTLC Service for Ethereum-Monad atomic swaps
+import { ethers } from 'ethers';
+
+export class HTLCService {
+  private ethereumProvider: ethers.Provider;
+  private monadProvider: ethers.Provider;
+
+  constructor() {
+    this.ethereumProvider = new ethers.JsonRpcProvider(
+      process.env.ETHEREUM_RPC_URL || 'https://mainnet.infura.io/v3/YOUR-PROJECT-ID'
+    );
+    
+    this.monadProvider = new ethers.JsonRpcProvider(
+      process.env.MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'
+    );
+  }
+
+  async createHTLC(params: any) {
+    // Implementation for creating HTLCs on both chains
+    return {
+      contractId: params.contractId,
+      ethereumTx: 'mock-eth-tx',
+      monadTx: 'mock-monad-tx'
+    };
+  }
+
+  async monitorHTLC(contractId: string) {
+    // Implementation for monitoring HTLC status
+    return {
+      status: 'locked',
+      timeRemaining: 24 * 60 * 60 * 1000
+    };
+  }
+}`;
+  }
+
+  private generateAtomicBridgeInterface(): string {
+    return `'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ArrowLeftRight, Clock, Shield, Zap } from 'lucide-react';
+
+interface AtomicBridgeInterfaceProps {
+  onBridgeInitiated?: (result: any) => void;
+}
+
+export default function AtomicBridgeInterface({ onBridgeInitiated }: AtomicBridgeInterfaceProps) {
+  const [bridgeDirection, setBridgeDirection] = useState<'eth_to_monad' | 'monad_to_eth'>('eth_to_monad');
+  const [sourceToken, setSourceToken] = useState('ETH');
+  const [destinationToken, setDestinationToken] = useState('MONAD');
+  const [amount, setAmount] = useState('1.0');
+  const [isLoading, setIsLoading] = useState(false);
+  const [quote, setQuote] = useState<any>(null);
+
+  const getQuote = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/atomic-bridge/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bridge_direction: bridgeDirection,
+          source_token: sourceToken,
+          destination_token: destinationToken,
+          amount: parseFloat(amount)
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setQuote(data.quote);
+      }
+    } catch (error) {
+      console.error('Failed to get quote:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const initiateBridge = async () => {
+    if (!quote) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/atomic-bridge/create-htlc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quote_id: 'quote_123',
+          from_address: '0x...',
+          timelock_duration: 24
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success && onBridgeInitiated) {
+        onBridgeInitiated(data.htlc);
+      }
+    } catch (error) {
+      console.error('Failed to initiate bridge:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ArrowLeftRight className="h-5 w-5" />
+          Fusion+ Monad Bridge
+          <Badge variant="secondary">Atomic Swaps</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Bridge Direction */}
+        <div className="flex gap-2">
+          <Button 
+            variant={bridgeDirection === 'eth_to_monad' ? 'default' : 'outline'}
+            onClick={() => setBridgeDirection('eth_to_monad')}
+            className="flex-1"
+          >
+            Ethereum → Monad
+          </Button>
+          <Button 
+            variant={bridgeDirection === 'monad_to_eth' ? 'default' : 'outline'}
+            onClick={() => setBridgeDirection('monad_to_eth')}
+            className="flex-1"
+          >
+            Monad → Ethereum
+          </Button>
+        </div>
+
+        {/* Token Inputs */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium">From Token</label>
+            <Input 
+              value={sourceToken}
+              onChange={(e) => setSourceToken(e.target.value)}
+              placeholder="ETH"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">To Token</label>
+            <Input 
+              value={destinationToken}
+              onChange={(e) => setDestinationToken(e.target.value)}
+              placeholder="MONAD"
+            />
+          </div>
+        </div>
+
+        {/* Amount */}
+        <div>
+          <label className="text-sm font-medium">Amount</label>
+          <Input 
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="1.0"
+            step="0.000001"
+          />
+        </div>
+
+        {/* Get Quote */}
+        <Button 
+          onClick={getQuote} 
+          disabled={isLoading || !amount}
+          className="w-full"
+        >
+          {isLoading ? 'Getting Quote...' : 'Get Quote'}
+        </Button>
+
+        {/* Quote Display */}
+        {quote && (
+          <Alert>
+            <AlertDescription>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>You send:</span>
+                  <span className="font-medium">{quote.source_amount} {sourceToken}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>You receive:</span>
+                  <span className="font-medium">{quote.destination_amount} {destinationToken}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Bridge fee:</span>
+                  <span className="text-sm">{quote.bridge_fee} {sourceToken}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Estimated time:</span>
+                  <span className="text-sm">{quote.estimated_time}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <Shield className="h-4 w-4" />
+                  <span>MEV Protected</span>
+                  <Clock className="h-4 w-4 ml-2" />
+                  <span>Atomic Guarantee</span>
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Initiate Bridge */}
+        {quote && (
+          <Button 
+            onClick={initiateBridge}
+            disabled={isLoading}
+            className="w-full"
+            size="lg"
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            {isLoading ? 'Creating HTLC...' : 'Initiate Atomic Bridge'}
+          </Button>
+        )}
+
+        {/* Security Features */}
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+          <div className="text-center">
+            <Shield className="h-8 w-8 mx-auto mb-2 text-green-500" />
+            <div className="text-sm font-medium">Trustless</div>
+            <div className="text-xs text-gray-500">No custodial risk</div>
+          </div>
+          <div className="text-center">
+            <Clock className="h-8 w-8 mx-auto mb-2 text-blue-500" />
+            <div className="text-sm font-medium">Time Locked</div>
+            <div className="text-xs text-gray-500">Automatic refunds</div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}`;
+  }
+
+  private generateHTLCMonitor(): string {
+    return `'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
+
+interface HTLCMonitorProps {
+  contractId: string;
+  autoRefresh?: boolean;
+}
+
+export default function HTLCMonitor({ contractId, autoRefresh = true }: HTLCMonitorProps) {
+  const [status, setStatus] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchStatus = async () => {
+    try {
+      const response = await fetch(\`/api/atomic-bridge/status/\${contractId}\`);
+      const data = await response.json();
+      if (data.success) {
+        setStatus(data.status);
+      }
+    } catch (error) {
+      console.error('Failed to fetch HTLC status:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatus();
+    
+    if (autoRefresh) {
+      const interval = setInterval(fetchStatus, 10000); // Update every 10 seconds
+      return () => clearInterval(interval);
+    }
+  }, [contractId, autoRefresh]);
+
+  const getPhaseColor = (phase: string) => {
+    switch (phase) {
+      case 'created': return 'bg-yellow-500';
+      case 'locked': return 'bg-blue-500';
+      case 'revealed': return 'bg-purple-500';
+      case 'completed': return 'bg-green-500';
+      case 'refunded': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const formatTimeRemaining = (ms: number) => {
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    return \`\${hours}h \${minutes}m\`;
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading HTLC status...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!status) {
+    return (
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>Failed to load HTLC status</AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>HTLC Monitor</span>
+          <Badge className={\`\${getPhaseColor(status.phase)} text-white\`}>
+            {status.phase.toUpperCase()}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Contract ID */}
+        <div>
+          <label className="text-sm font-medium">Contract ID</label>
+          <div className="font-mono text-sm bg-gray-100 p-2 rounded">
+            {status.contract_id}
+          </div>
+        </div>
+
+        {/* Time Remaining */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Time Remaining</span>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            <span className="font-mono">
+              {formatTimeRemaining(status.time_remaining)}
+            </span>
+          </div>
+        </div>
+
+        {/* Chain Status */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="border rounded-lg p-3">
+            <div className="text-sm font-medium mb-2">Ethereum</div>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span>Locked:</span>
+                <CheckCircle className={\`h-4 w-4 \${status.ethereum_status.locked ? 'text-green-500' : 'text-gray-300'}\`} />
+              </div>
+              <div className="flex justify-between">
+                <span>Claimed:</span>
+                <CheckCircle className={\`h-4 w-4 \${status.ethereum_status.claimed ? 'text-green-500' : 'text-gray-300'}\`} />
+              </div>
+              <div className="flex justify-between">
+                <span>Refunded:</span>
+                <CheckCircle className={\`h-4 w-4 \${status.ethereum_status.refunded ? 'text-red-500' : 'text-gray-300'}\`} />
+              </div>
+            </div>
+          </div>
+
+          <div className="border rounded-lg p-3">
+            <div className="text-sm font-medium mb-2">Monad</div>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span>Locked:</span>
+                <CheckCircle className={\`h-4 w-4 \${status.monad_status.locked ? 'text-green-500' : 'text-gray-300'}\`} />
+              </div>
+              <div className="flex justify-between">
+                <span>Claimed:</span>
+                <CheckCircle className={\`h-4 w-4 \${status.monad_status.claimed ? 'text-green-500' : 'text-gray-300'}\`} />
+              </div>
+              <div className="flex justify-between">
+                <span>Refunded:</span>
+                <CheckCircle className={\`h-4 w-4 \${status.monad_status.refunded ? 'text-red-500' : 'text-gray-300'}\`} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Last Updated */}
+        <div className="text-xs text-gray-500 text-center">
+          Last updated: {new Date(status.last_updated).toLocaleTimeString()}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}`;
   }
   
   private generateDeploymentInfo(analysis: any): DeploymentInfo {

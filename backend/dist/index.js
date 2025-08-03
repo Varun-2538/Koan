@@ -17,6 +17,7 @@ const oneinch_1 = __importDefault(require("./routes/oneinch"));
 const execution_engine_1 = require("@/engine/execution-engine");
 const oneinch_swap_executor_1 = require("@/nodes/oneinch-swap-executor");
 const fusion_plus_executor_1 = require("./nodes/fusion-plus-executor");
+const fusion_monad_bridge_executor_1 = require("./nodes/fusion-monad-bridge-executor");
 const chain_selector_executor_1 = require("./nodes/chain-selector-executor");
 const wallet_connector_executor_1 = require("./nodes/wallet-connector-executor");
 const transaction_status_executor_1 = require("./nodes/transaction-status-executor");
@@ -49,7 +50,7 @@ const config = {
     redis: {
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD
+        ...(process.env.REDIS_PASSWORD && { password: process.env.REDIS_PASSWORD })
     },
     chains: {
         '1': {
@@ -70,7 +71,7 @@ const config = {
     apis: {
         oneInch: {
             baseUrl: 'https://api.1inch.dev',
-            apiKey: process.env.ONEINCH_API_KEY
+            ...(process.env.ONEINCH_API_KEY && { apiKey: process.env.ONEINCH_API_KEY })
         }
     },
     execution: {
@@ -112,6 +113,7 @@ exports.executionEngine = executionEngine;
 // Register node executors
 executionEngine.registerNodeExecutor(new oneinch_swap_executor_1.OneInchSwapExecutor(logger, config.apis.oneInch.apiKey));
 executionEngine.registerNodeExecutor(new fusion_plus_executor_1.FusionPlusExecutor());
+executionEngine.registerNodeExecutor(new fusion_monad_bridge_executor_1.FusionMonadBridgeExecutor());
 executionEngine.registerNodeExecutor(new chain_selector_executor_1.ChainSelectorExecutor());
 executionEngine.registerNodeExecutor(new wallet_connector_executor_1.WalletConnectorExecutor());
 executionEngine.registerNodeExecutor(new transaction_status_executor_1.TransactionStatusExecutor());
@@ -174,6 +176,70 @@ io.on('connection', (socket) => {
         }
     });
     // Handle execution status requests
+    socket.on('get-execution-status', async (data) => {
+        try {
+            const execution = executionEngine.getExecution(data.executionId);
+            socket.emit('execution-status', execution);
+        }
+        catch (error) {
+            socket.emit('execution-error', {
+                executionId: data.executionId,
+                error: error.message
+            });
+        }
+    });
+    // Handle atomic swap monitoring requests
+    socket.on('monitor-atomic-swap', async (data) => {
+        try {
+            const { contractId } = data;
+            logger.info(`Starting atomic swap monitoring for contract: ${contractId}`);
+            // Join the monitoring room for this contract
+            socket.join(`atomic-swap-${contractId}`);
+            // Start monitoring (this would integrate with your HTLC monitoring system)
+            const monitoringInterval = setInterval(async () => {
+                try {
+                    // Mock status update - replace with actual HTLC status checking
+                    const status = {
+                        contractId,
+                        phase: ['created', 'locked', 'revealed', 'completed'][Math.floor(Math.random() * 4)],
+                        ethereum_tx: '0x' + 'e'.repeat(64),
+                        monad_tx: '0x' + 'm'.repeat(64),
+                        timeRemaining: 24 * 60 * 60 * 1000 - Math.random() * 1000000,
+                        timestamp: new Date().toISOString()
+                    };
+                    // Emit to all clients monitoring this contract
+                    io.to(`atomic-swap-${contractId}`).emit('atomic-swap-status', status);
+                    // Stop monitoring if completed or failed
+                    if (status.phase === 'completed' || status.phase === 'failed') {
+                        clearInterval(monitoringInterval);
+                        socket.leave(`atomic-swap-${contractId}`);
+                    }
+                }
+                catch (error) {
+                    logger.error(`Error monitoring atomic swap ${contractId}:`, error);
+                    clearInterval(monitoringInterval);
+                }
+            }, 10000); // Update every 10 seconds
+            // Clean up on disconnect
+            socket.on('disconnect', () => {
+                clearInterval(monitoringInterval);
+                socket.leave(`atomic-swap-${contractId}`);
+            });
+            socket.emit('atomic-swap-monitoring-started', { contractId });
+        }
+        catch (error) {
+            logger.error('Failed to start atomic swap monitoring:', error);
+            socket.emit('atomic-swap-error', {
+                contractId: data.contractId,
+                error: error.message
+            });
+        }
+    });
+    // Handle stop monitoring requests
+    socket.on('stop-atomic-swap-monitoring', (data) => {
+        socket.leave(`atomic-swap-${data.contractId}`);
+        socket.emit('atomic-swap-monitoring-stopped', { contractId: data.contractId });
+    });
     socket.on('get-execution-status', (data) => {
         const execution = executionEngine.getExecution(data.executionId);
         const stats = executionEngine.getExecutionStats(data.executionId);
@@ -393,6 +459,13 @@ app.get('/api/nodes', (req, res) => {
             description: 'Cross-chain swaps with MEV protection and gasless options',
             category: 'bridge',
             tags: ['1inch', 'fusion', 'cross-chain', 'mev-protection', 'gasless']
+        },
+        {
+            type: 'fusionMonadBridge',
+            name: 'Fusion+ Monad Bridge',
+            description: 'Atomic swaps between Ethereum and Monad using HTLCs with 1inch Fusion+',
+            category: 'cross-chain',
+            tags: ['1inch', 'fusion+', 'monad', 'ethereum', 'htlc', 'atomic-swap', 'cross-chain']
         },
         {
             type: 'chainSelector',

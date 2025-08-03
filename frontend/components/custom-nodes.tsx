@@ -4,10 +4,68 @@ import type React from "react"
 import { Handle, Position, type NodeProps } from "@xyflow/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Coins, Vote, Layout, Server, Bot, Repeat, Link, Clock, Database, Wallet, TrendingUp, Activity, Search, Zap } from "lucide-react"
+import { Coins, Vote, Layout, Server, Bot, Repeat, Link, Clock, Database, Wallet, TrendingUp, Activity, Search, Zap, ArrowLeftRight } from "lucide-react"
 import { ExecutableNode } from "./nodes/executable-node"
 import { OneInchSwapComponent, OneInchQuoteComponent } from "@/lib/components/defi/oneinch-swap"
 import { FusionPlusComponent, ChainSelectorComponent } from "@/lib/components/defi/fusion-plus"
+import { FusionMonadBridgeComponent } from "@/lib/components/defi/fusion-monad-bridge"
+
+// Type definitions for node configurations
+interface NodeConfig {
+  // Token and swap related
+  fromToken?: string
+  toToken?: string
+  amount?: string
+  slippage?: string
+  autoSlippage?: boolean
+  supportedChains?: string[]
+  
+  // Wallet related
+  supportedWallets?: string[]
+  autoConnect?: boolean
+  
+  // UI related
+  title?: string
+  theme?: string
+  components?: string[]
+  
+  // Token creation
+  name?: string
+  symbol?: string
+  totalSupply?: string
+  
+  // Trading features
+  enableGaslessSwaps?: boolean
+  enableMEVProtection?: boolean
+  orderType?: string
+  enableAdvancedStrategies?: boolean
+  
+  // Analytics and monitoring
+  trackHistory?: boolean
+  enableAnalytics?: boolean
+  showPortfolio?: boolean
+  maxTransactions?: string
+  showPendingTx?: boolean
+  realTimeUpdates?: boolean
+  
+  // API and services
+  endpoints?: any[]
+  rateLimit?: string
+  dataProviders?: string[]
+  cacheDuration?: string
+  
+  // Price impact
+  maxImpactThreshold?: string
+}
+
+interface CustomNodeData {
+  config?: NodeConfig
+  [key: string]: any
+}
+
+interface CustomNodeProps extends Omit<NodeProps, 'data'> {
+  data: CustomNodeData
+}
 
 const NodeWrapper = ({ children, selected }: { children: React.ReactNode; selected?: boolean }) => (
   <Card className={`min-w-[200px] ${selected ? "ring-2 ring-blue-500" : ""}`}>
@@ -31,13 +89,18 @@ export const FusionPlusNode = (props: NodeProps) => {
   return <ExecutableNode {...props} component={component} />
 }
 
+export const FusionMonadBridgeNode = (props: NodeProps) => {
+  const component = new FusionMonadBridgeComponent()
+  return <ExecutableNode {...props} component={component} />
+}
+
 export const ChainSelectorNode = (props: NodeProps) => {
   const component = new ChainSelectorComponent()
   return <ExecutableNode {...props} component={component} />
 }
 
 // Token Input Node - Specialized for DeFi token selection
-export const TokenInputNode = ({ data, selected }: NodeProps) => (
+export const TokenInputNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -56,7 +119,7 @@ export const TokenInputNode = ({ data, selected }: NodeProps) => (
 )
 
 // Slippage Control Node
-export const SlippageControlNode = ({ data, selected }: NodeProps) => (
+export const SlippageControlNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -74,7 +137,7 @@ export const SlippageControlNode = ({ data, selected }: NodeProps) => (
 )
 
 // Wallet Connector Node
-export const WalletConnectorNode = ({ data, selected }: NodeProps) => (
+export const WalletConnectorNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -91,7 +154,7 @@ export const WalletConnectorNode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-export const SwapInterfaceNode = ({ data, selected }: NodeProps) => (
+export const SwapInterfaceNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -108,7 +171,7 @@ export const SwapInterfaceNode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-export const DashboardNode = ({ data, selected }: NodeProps) => (
+export const DashboardNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -124,7 +187,7 @@ export const DashboardNode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-export const ERC20TokenNode = ({ data, selected }: NodeProps) => (
+export const ERC20TokenNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -143,7 +206,7 @@ export const ERC20TokenNode = ({ data, selected }: NodeProps) => (
 )
 
 // Additional nodes for completeness
-export const FusionSwapNode = ({ data, selected }: NodeProps) => (
+export const FusionSwapNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -160,7 +223,7 @@ export const FusionSwapNode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-export const LimitOrderNode = ({ data, selected }: NodeProps) => (
+export const LimitOrderNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -177,7 +240,7 @@ export const LimitOrderNode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-export const PortfolioAPINode = ({ data, selected }: NodeProps) => (
+export const PortfolioAPINode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -194,7 +257,7 @@ export const PortfolioAPINode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-export const DefiDashboardNode = ({ data, selected }: NodeProps) => (
+export const DefiDashboardNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -211,7 +274,7 @@ export const DefiDashboardNode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-export const TransactionHistoryNode = ({ data, selected }: NodeProps) => (
+export const TransactionHistoryNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -228,7 +291,7 @@ export const TransactionHistoryNode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-export const SwapAPINode = ({ data, selected }: NodeProps) => (
+export const SwapAPINode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -245,7 +308,7 @@ export const SwapAPINode = ({ data, selected }: NodeProps) => (
   </NodeWrapper>
 )
 
-export const TokenDataServiceNode = ({ data, selected }: NodeProps) => (
+export const TokenDataServiceNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -263,7 +326,7 @@ export const TokenDataServiceNode = ({ data, selected }: NodeProps) => (
 )
 
 // Add specialized node for Multi-Chain Token Selector
-export const MultiChainTokenSelectorNode = ({ data, selected }: NodeProps) => (
+export const MultiChainTokenSelectorNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -283,7 +346,7 @@ export const MultiChainTokenSelectorNode = ({ data, selected }: NodeProps) => (
 )
 
 // Add specialized node for Price Impact Analysis
-export const PriceImpactAnalysisNode = ({ data, selected }: NodeProps) => (
+export const PriceImpactAnalysisNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -302,7 +365,7 @@ export const PriceImpactAnalysisNode = ({ data, selected }: NodeProps) => (
 )
 
 // Add specialized node for Transaction Monitor  
-export const TransactionMonitorNode = ({ data, selected }: NodeProps) => (
+export const TransactionMonitorNode = ({ data, selected }: CustomNodeProps) => (
   <NodeWrapper selected={selected}>
     <Handle type="target" position={Position.Top} />
     <div className="flex items-center gap-2 mb-2">
@@ -326,6 +389,7 @@ export const CustomNodes = {
   oneInchSwap: OneInchSwapNode,
   oneInchQuote: OneInchQuoteNode,
   fusionPlus: FusionPlusNode,
+  fusionMonadBridge: FusionMonadBridgeNode,
   chainSelector: ChainSelectorNode,
   
   // Backend node types that need frontend representations

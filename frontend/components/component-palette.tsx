@@ -18,7 +18,8 @@ import {
   Zap,
   ChevronDown,
   ChevronRight,
-  Search
+  Search,
+  ArrowLeftRight
 } from "lucide-react"
 
 interface ComponentItem {
@@ -113,6 +114,13 @@ const COMPONENTS: ComponentItem[] = [
     description: "Gasless swaps with MEV protection",
     category: "DeFi",
     icon: <Zap className="w-4 h-4" />
+  },
+  {
+    id: "fusionMonadBridge",
+    name: "Fusion+ Monad Bridge",
+    description: "Atomic swaps between Ethereum and Monad using HTLCs",
+    category: "Cross-Chain",
+    icon: <ArrowLeftRight className="w-4 h-4" />
   },
   {
     id: "limitOrder",

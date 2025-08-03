@@ -97,35 +97,20 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
 
   // Add validation and direct deploy function
   const deployToGitHub = async () => {
-    let currentCodeResult = codeResult
-    
-    if (!currentCodeResult) {
-      // Generate code first if not available
-      try {
-        currentCodeResult = await generateCodeAndReturn()
-        if (currentCodeResult) {
-          setCodeResult(currentCodeResult)
-        }
-      } catch (error) {
-        console.error('Failed to generate code for GitHub deployment:', error)
-        toast({
-          title: "Code Generation Failed",
-          description: "Please try generating code again before deploying to GitHub.",
-          variant: "destructive"
-        })
-        return
+    try {
+      const result = await generateCodeAndReturn()
+      if (result) {
+        setCodeResult(result)
+        setShowGitHubModal(true)
+      } else {
+        throw new Error('No code result generated')
       }
-    }
-    
-    // Open modal if we have the code result
-    if (currentCodeResult) {
-      setShowGitHubModal(true)
-    } else {
-      console.error('Failed to generate code for GitHub deployment - no code result available')
+    } catch (error) {
+      console.error('Failed to generate code for GitHub deployment:', error)
       toast({
-        title: "Code Generation Failed",
-        description: "Please try generating code again before deploying to GitHub.",
-        variant: "destructive"
+        title: 'Code Generation Failed',
+        description: 'Please try generating code again before deploying to GitHub.',
+        variant: 'destructive',
       })
     }
   }
@@ -258,11 +243,10 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           // Automatically generate code after successful execution
           try {
             setExecutionStatus("Generating application code...")
-            const codeResult = await workflowCodeGenerator.generateApplicationFromWorkflow(
-              status,
-              `${workflowDefinition.name} Application`
-            )
-            setCodeResult(codeResult)
+            const codeResult = await generateCodeAndReturn()
+            if (codeResult) {
+              setCodeResult(codeResult)
+            }
             setExecutionStatus("Code generation completed!")
           } catch (codeError) {
             console.error('Code generation failed:', codeError)
@@ -876,31 +860,35 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
       )
       return result
     } else {
-      // For custom workflows with new nodes, check if there's execution data
+      // For custom workflows: always generate from the current node configuration.
+      // If an executed workflow is available, we'll also try generating from execution
+      // and pick whichever result has MORE files (to avoid the 7-file regression).
+
+      console.log('🎯 Generating code from current nodes using workflowCodeGenerator.generateFromNodes')
+      const nodesResult = await workflowCodeGenerator.generateFromNodes(
+        nodes,
+        edges,
+        projectName,
+        {
+          framework: "Next.js 14",
+          generateAPI: true,
+          generateUI: true,
+          generateTests: false
+        }
+      )
+
       if (workflowExecutionStatus && workflowExecutionStatus.status === 'completed') {
-        // Use workflow code generator for executed workflows
-        console.log('🎯 Generating code for executed workflow using workflowCodeGenerator.generateApplicationFromWorkflow')
-        const result = await workflowCodeGenerator.generateApplicationFromWorkflow(
+        console.log('🎯 Also generating code from execution using workflowCodeGenerator.generateApplicationFromWorkflow')
+        const execResult = await workflowCodeGenerator.generateApplicationFromWorkflow(
           workflowExecutionStatus,
           projectName
         )
-        return result
-      } else {
-        // For unexecuted workflows, generate based on node configuration
-        console.log('🎯 Generating code for unexecuted workflow using workflowCodeGenerator.generateFromNodes')
-        const result = await workflowCodeGenerator.generateFromNodes(
-          nodes,
-          edges,
-          projectName,
-          {
-            framework: "Next.js 14",
-            generateAPI: true,
-            generateUI: true,
-            generateTests: false
-          }
-        )
-        return result
+
+        // Choose the result with more files (usually the richer, 26-file version)
+        return execResult.files.length > nodesResult.files.length ? execResult : nodesResult
       }
+
+      return nodesResult
     }
   }
 

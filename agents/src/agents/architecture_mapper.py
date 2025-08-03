@@ -78,6 +78,22 @@ class ArchitectureMapperAgent:
             "You are an expert DeFi architecture mapper. "
             "Given a user's natural-language request, analyze it and provide structured information.\n\n"
             
+            "CRITICAL RULE: You MUST distinguish between DeFi workflow requests and conversational messages.\n\n"
+            
+            "CONVERSATIONAL MESSAGES (respond with pattern='conversational' and suggested_nodes=[]):\n"
+            "- Greetings: hello, hi, hey, good morning, how are you\n"
+            "- Personal questions: how was your day, what's up, how's it going\n"
+            "- General questions: what can you do, help, who are you\n"
+            "- Social responses: thanks, okay, yes, no, bye, see you later\n"
+            "- Random statements: anything not related to DeFi/crypto/blockchain\n\n"
+            
+            "DEFI WORKFLOW REQUESTS (create actual workflows):\n"
+            "- Must contain DeFi-specific terms: swap, trade, limit order, bridge, portfolio, token, wallet\n"
+            "- Must express intent to BUILD or CREATE something DeFi-related\n"
+            "- Examples: 'create a swap app', 'build limit order system', 'make portfolio tracker'\n\n"
+            
+            "IF IN DOUBT: Default to 'conversational' - it's better to be safe!\n\n"
+            
             "Available backend node types:\n"
             "- walletConnector: Connect cryptocurrency wallets (MetaMask, WalletConnect)\n" 
             "- tokenSelector: Select and configure tokens for operations (ETH, USDC, WBTC, etc.)\n"
@@ -102,13 +118,18 @@ class ArchitectureMapperAgent:
             
             "Respond with a JSON object containing:\n"
             "{\n"
-            "  \"pattern\": \"type of DeFi application (e.g., 'DEX Aggregator', 'Cross-Chain Bridge')\",\n"
+            "  \"pattern\": \"type of DeFi application (e.g., 'DEX Aggregator', 'Cross-Chain Bridge') OR 'conversational' for greetings/non-DeFi\",\n"
             "  \"tokens\": [\"list\", \"of\", \"tokens\", \"mentioned\"],\n"
             "  \"features\": [\"list\", \"of\", \"features\", \"like\", \"slippage protection\"],\n"
             "  \"chains\": [\"ethereum\", \"polygon\"],\n"
             "  \"user_intent\": \"summary of what user wants\",\n"
-            "  \"suggested_nodes\": [\"list\", \"of\", \"recommended\", \"node\", \"types\"]\n"
+            "  \"suggested_nodes\": [\"list\", \"of\", \"recommended\", \"node\", \"types\", \"OR empty array for conversational\"]\n"
             "}\n\n"
+            
+            "Examples:\n"
+            "- User: 'Hello' → pattern: 'conversational', suggested_nodes: []\n"
+            "- User: 'Create a swap app' → pattern: 'DEX Aggregator', suggested_nodes: ['walletConnector', 'tokenSelector', ...]\n\n"
+            
             "Respond ONLY with valid JSON (no markdown)."
         )
 
@@ -209,16 +230,87 @@ class ArchitectureMapperAgent:
         
     def _fallback_analysis(self, user_input: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Fallback analysis when agno is not available"""
-        input_lower = user_input.lower()
+        input_lower = user_input.lower().strip()
         
-        # Simple pattern detection
+        # Comprehensive conversational patterns
+        conversational_patterns = [
+            # Greetings
+            'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening',
+            'greetings', 'salutations',
+            
+            # Personal questions
+            'how are you', 'how was your day', 'how\'s your day', 'what\'s up', 'whats up',
+            'how\'s it going', 'hows it going', 'how have you been', 'how you doing',
+            'how are things', 'what\'s new', 'whats new',
+            
+            # General questions
+            'what can you do', 'help', 'what is this', 'who are you', 'what are you',
+            'tell me about yourself', 'what do you do', 'how do you work',
+            
+            # Social responses
+            'thanks', 'thank you', 'bye', 'goodbye', 'see you', 'see ya',
+            'ok', 'okay', 'yes', 'no', 'sure', 'alright', 'cool', 'nice',
+            'that\'s great', 'awesome', 'perfect', 'sounds good',
+            
+            # Random conversational
+            'tell me a joke', 'how\'s the weather', 'what time is it',
+            'i\'m bored', 'i am bored', 'random', 'whatever', 'nothing much'
+        ]
+        
+        # DeFi keywords that indicate actual workflow intent
+        defi_keywords = [
+            'swap', 'trade', 'trading', 'exchange', 'defi', 'token', 'tokens',
+            'limit', 'order', 'orders', 'bridge', 'bridges', 'bridging',
+            'chain', 'chains', 'cross-chain', 'portfolio', 'dashboard',
+            'wallet', 'wallets', 'connect', 'yield', 'farming', 'staking',
+            'liquidity', 'pool', 'lend', 'lending', 'borrow', 'borrowing',
+            'eth', 'ethereum', 'usdc', 'usdt', 'bitcoin', 'btc', 'wbtc',
+            'polygon', 'arbitrum', 'optimism', 'avalanche'
+        ]
+        
+        # Build/create action words
+        action_keywords = [
+            'create', 'build', 'make', 'develop', 'design', 'implement',
+            'generate', 'construct', 'setup', 'configure'
+        ]
+        
+        # Check if input has clear DeFi intent first
+        has_defi_keyword = any(defi_word in input_lower for defi_word in defi_keywords)
+        has_action_keyword = any(action_word in input_lower for action_word in action_keywords)
+        
+        # If it has both DeFi keywords AND action keywords, it's definitely a DeFi request
+        if has_defi_keyword and has_action_keyword:
+            is_conversational = False
+        else:
+            # Check if input is clearly conversational
+            is_conversational = (
+                # Direct match with conversational patterns
+                input_lower in conversational_patterns or
+                any(input_lower.startswith(pattern) for pattern in conversational_patterns) or
+                any(pattern in input_lower for pattern in conversational_patterns) or
+                
+                # Short inputs without DeFi context
+                (len(input_lower.split()) <= 3 and not has_defi_keyword and not has_action_keyword)
+            )
+        
+        if is_conversational:
+            return {
+                'pattern': 'conversational',
+                'tokens': [],
+                'features': [],
+                'chains': [],
+                'user_intent': user_input,
+                'suggested_nodes': []
+            }
+        
+        # DeFi-specific pattern detection
         if any(word in input_lower for word in ['limit order', 'limit-order', 'limitorder', 'order']):
             pattern = "Limit Order Application"
             suggested_nodes = ['walletConnector', 'tokenSelector', 'limitOrder', 'transactionMonitor']
         elif any(word in input_lower for word in ['swap', 'exchange', 'trade']):
             pattern = "DEX Aggregator"
             suggested_nodes = ['walletConnector', 'tokenSelector', 'oneInchQuote', 'priceImpactCalculator', 'oneInchSwap', 'transactionMonitor']
-        elif any(word in input_lower for word in ['bridge', 'cross-chain']):
+        elif any(word in input_lower for word in ['bridge', 'cross-chain', 'cross chain']):
             pattern = "Cross-Chain Bridge"
             suggested_nodes = ['walletConnector', 'chainSelector', 'tokenSelector', 'fusionPlus', 'transactionMonitor']
         elif any(word in input_lower for word in ['portfolio', 'dashboard']):

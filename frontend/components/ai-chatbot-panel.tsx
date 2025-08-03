@@ -120,25 +120,37 @@ export function AIChatbotPanel({
 
       const result = await response.json()
       
-      // Add AI analysis message
-      addMessage({
-        type: 'assistant',
-        content: `🤖 I've analyzed your request and created a workflow proposal:\n\n**Pattern Detected:** ${result.requirements?.pattern || 'Custom DeFi Application'}\n**Tokens:** ${result.requirements?.tokens?.join(', ') || 'None specified'}\n**Features:** ${result.requirements?.features?.join(', ') || 'Basic functionality'}\n\nPlease review the proposed workflow below and approve it to proceed with canvas generation.`
-      })
+      // Check if this is a conversational response
+      if (result.requirements?.pattern === 'conversational') {
+        // Just add the assistant's conversational response
+        addMessage({
+          type: 'assistant',
+          content: result.message || "I'm here to help! What would you like to build?"
+        })
+        
+        // No workflow proposal for conversational responses
+        setCurrentProposal(null)
+      } else {
+        // Add AI analysis message for DeFi workflow requests
+        addMessage({
+          type: 'assistant',
+          content: `🤖 I've analyzed your request and created a workflow proposal:\n\n**Pattern Detected:** ${result.requirements?.pattern || 'Custom DeFi Application'}\n**Tokens:** ${result.requirements?.tokens?.join(', ') || 'None specified'}\n**Features:** ${result.requirements?.features?.join(', ') || 'Basic functionality'}\n\nPlease review the proposed workflow below and approve it to proceed with canvas generation.`
+        })
 
-      // Create workflow proposal
-      const proposal: WorkflowProposal = {
-        id: result.executionId || Date.now().toString(),
-        name: result.workflow?.name || `${result.requirements?.pattern || 'Custom'} Workflow`,
-        description: result.requirements?.user_intent || userMessage,
-        nodes: result.workflow?.nodes || [],
-        pattern: result.requirements?.pattern || 'Custom',
-        tokens: result.requirements?.tokens || [],
-        features: result.requirements?.features || []
+        // Create workflow proposal only for DeFi requests
+        const proposal: WorkflowProposal = {
+          id: result.executionId || Date.now().toString(),
+          name: result.workflow?.name || `${result.requirements?.pattern || 'Custom'} Workflow`,
+          description: result.requirements?.user_intent || userMessage,
+          nodes: result.workflow?.nodes || [],
+          pattern: result.requirements?.pattern || 'Custom',
+          tokens: result.requirements?.tokens || [],
+          features: result.requirements?.features || []
+        }
+
+        setCurrentProposal(proposal)
+        onWorkflowGenerated?.(proposal)
       }
-
-      setCurrentProposal(proposal)
-      onWorkflowGenerated?.(proposal)
 
     } catch (error) {
       console.error('Error calling agents API:', error)

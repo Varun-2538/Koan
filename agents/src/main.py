@@ -59,6 +59,75 @@ class AppState:
         except Exception as e:
             print(f"Warning: Backend health check failed: {e}")
             print("Continuing without backend connection...")
+    
+    def _generate_conversational_response(self, user_input: str, context: Dict[str, Any]) -> str:
+        """Generate appropriate conversational responses for non-DeFi inputs"""
+        input_lower = user_input.lower().strip()
+        
+        # Greeting responses
+        if any(greeting in input_lower for greeting in ['hello', 'hi', 'hey']):
+            return "Hello! 👋 I'm your DeFi workflow assistant. I can help you build DeFi applications like swap interfaces, limit order systems, or portfolio dashboards. What would you like to create?"
+        
+        # Help requests
+        elif any(help_word in input_lower for help_word in ['help', 'what can you do', 'what is this']):
+            return ("I can help you create DeFi applications! Here's what I can do:\n\n"
+                   "🔄 **Swap Applications** - Token swapping with 1inch integration\n"
+                   "📋 **Limit Order Systems** - Advanced trading with limit orders\n"
+                   "💼 **Portfolio Dashboards** - Track and analyze your DeFi positions\n"
+                   "🌉 **Cross-Chain Bridges** - Move assets between blockchains\n\n"
+                   "Just describe what you want to build in natural language!")
+        
+        # Thank you responses
+        elif any(thanks in input_lower for thanks in ['thank', 'thanks']):
+            return "You're welcome! 😊 Feel free to ask me to create any DeFi application you have in mind."
+        
+        # Goodbye responses
+        elif any(bye in input_lower for bye in ['bye', 'goodbye', 'see you']):
+            return "Goodbye! 👋 Come back anytime when you want to build something awesome in DeFi!"
+        
+        # General conversational
+        else:
+            return ("I'm here to help you build DeFi applications! 🚀\n\n"
+                   "Try asking me something like:\n"
+                   "• 'Create a swap application for ETH and USDC'\n"
+                   "• 'Build a limit order system'\n"
+                   "• 'Make a portfolio tracker'\n\n"
+                   "What would you like to build?")
+    
+    def _is_defi_request(self, user_input: str, requirements: Dict[str, Any]) -> bool:
+        """Secondary validation to ensure we don't create workflows for conversational inputs"""
+        input_lower = user_input.lower().strip()
+        
+        # Strong indicators this is NOT a DeFi request
+        non_defi_indicators = [
+            'how was your day', 'how\'s your day', 'how are you', 'what\'s up',
+            'how\'s it going', 'tell me about', 'what time is it', 'how\'s the weather',
+            'tell me a joke', 'i\'m bored', 'nothing much', 'random', 'whatever'
+        ]
+        
+        if any(indicator in input_lower for indicator in non_defi_indicators):
+            return False
+        
+        # Must have DeFi keywords AND action intent to be a valid DeFi request
+        defi_keywords = ['swap', 'trade', 'token', 'limit', 'order', 'bridge', 'portfolio', 'wallet', 'defi', 'chain']
+        action_keywords = ['create', 'build', 'make', 'develop', 'generate', 'implement']
+        
+        has_defi_keyword = any(keyword in input_lower for keyword in defi_keywords)
+        has_action_keyword = any(keyword in input_lower for keyword in action_keywords)
+        
+        # If it doesn't have both DeFi context AND action intent, it's probably conversational
+        if not (has_defi_keyword and has_action_keyword):
+            # Special case: if requirements somehow detected a pattern other than conversational
+            # but input lacks clear DeFi intent, force it to conversational
+            pattern = requirements.get('pattern', '').lower()
+            if pattern != 'conversational' and not has_defi_keyword:
+                return False
+                
+        # "develop a token bridge" should work - it has both 'token' and 'bridge' (DeFi) + 'develop' (action)
+        if has_defi_keyword and has_action_keyword:
+            return True
+        
+        return True
 
 state = AppState()
 
@@ -94,10 +163,42 @@ async def process_request(user_request: UserRequest) -> ConversationResponse:
             context=context
         )
         
+        # Secondary validation: Double-check for conversational inputs that might have slipped through
+        if not state._is_defi_request(user_request.request, requirements):
+            requirements['pattern'] = 'conversational'
+            requirements['suggested_nodes'] = []
+        
         # Update context with new requirements
         context["current_requirements"] = requirements
         
-        # Step 2: Generate workflow based on requirements
+        # Check if this is a conversational response (not a DeFi workflow request)
+        if requirements.get('pattern') == 'conversational':
+            # Handle conversational interactions
+            conversational_response = state._generate_conversational_response(user_request.request, context)
+            context["history"].append({
+                "role": "assistant",
+                "content": conversational_response,
+                "timestamp": asyncio.get_event_loop().time()
+            })
+            
+            # Save updated context
+            state.conversations[conversation_id] = context
+            
+            return ConversationResponse(
+                conversation_id=conversation_id,
+                message=conversational_response,
+                requirements=requirements,
+                workflow=None,
+                executionId=None,
+                needs_approval=False,
+                suggestions=[
+                    "Try: 'Create a swap application'",
+                    "Try: 'Build a limit order system'", 
+                    "Try: 'Make a portfolio dashboard'"
+                ]
+            )
+        
+        # Step 2: Generate workflow based on requirements (only for DeFi requests)
         workflow_def = await state.workflow_generator.generate_workflow(requirements)
         context["current_workflow"] = workflow_def
         

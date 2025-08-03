@@ -125,6 +125,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const [executionStatus, setExecutionStatus] = useState<string>("")
   const [executionResult, setExecutionResult] = useState<any>(null)
   const [executionError, setExecutionError] = useState<string | null>(null)
+  const [showExecutionPanel, setShowExecutionPanel] = useState(true)
   
   // AI Chatbot state
   const [isChatbotOpen, setIsChatbotOpen] = useState(false)
@@ -319,6 +320,33 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
       console.log('🧹 Cleared template inputs for non-template project')
     }
   }, [projectId])
+
+  // Auto-close execution panel after 3 seconds when execution completes
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+    
+    // Show panel when execution starts or has status
+    if (executing || executionStatus || executionError) {
+      setShowExecutionPanel(true)
+    }
+    
+    // Auto-close after 3 seconds when execution completes (not executing but has status/result/error)
+    if (!executing && (executionStatus || executionResult || executionError)) {
+      timeoutId = setTimeout(() => {
+        setShowExecutionPanel(false)
+        // Clear the status after hiding the panel
+        setExecutionStatus("")
+        setExecutionResult(null)
+        setExecutionError(null)
+      }, 3000)
+    }
+    
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
+  }, [executing, executionStatus, executionResult, executionError])
 
   const onConnect = useCallback((params: Connection) => setEdges((eds) => addEdge(params, eds)), [setEdges])
 
@@ -1182,6 +1210,31 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
 
   const isTemplateProject = projectId.startsWith('template-')
   
+  // Helper function to convert codeResult to preview panel format
+  const convertCodeResultForPreviews = (result: CodeGenerationResult | OneInchCodeResult | null) => {
+    if (!result) return null
+    
+    // Check if it's OneInchCodeResult (has array files with path, type, content)
+    if ('files' in result && Array.isArray(result.files)) {
+      const filesRecord: Record<string, string> = {}
+      result.files.forEach(file => {
+        filesRecord[file.path] = file.content
+      })
+      
+      return {
+        projectName: result.projectName,
+        description: result.description,
+        files: filesRecord,
+        dependencies: (result as any).dependencies,
+        framework: (result as any).framework,
+        features: (result as any).features
+      }
+    }
+    
+    // If it's already in the right format or unknown, return as is
+    return result as any
+  }
+  
   // Helper function to validate template inputs
   const validateTemplateInputs = (inputs: Record<string, any>, projectId: string) => {
     if (!projectId.startsWith('template-')) return true
@@ -1242,9 +1295,18 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
 
               {/* Execution Status Panel */}
               <Panel position="bottom-left">
-                {executing || executionStatus ? (
+                {showExecutionPanel && (executing || executionStatus) ? (
                   <div className="bg-white border border-gray-200 rounded-lg p-3 max-w-sm shadow-sm">
-                    <div className="font-medium text-gray-800 mb-2">🚀 Execution Status</div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-medium text-gray-800">🚀 Execution Status</div>
+                      <button
+                        onClick={() => setShowExecutionPanel(false)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Close panel"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                     <div className="text-sm text-gray-600 space-y-1">
                       <div>{executionStatus}</div>
                       {executionError && (
@@ -1256,12 +1318,26 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                           Processing...
                         </div>
                       )}
+                      {!executing && (executionStatus || executionResult || executionError) && (
+                        <div className="text-xs text-gray-500 mt-2">
+                          Panel will auto-close in 3 seconds
+                        </div>
+                      )}
                     </div>
                   </div>
-                ) : (
+                ) : showExecutionPanel ? (
                   <div className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3 max-w-xs sm:max-w-sm shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-medium text-gray-800">💡 Quick Tips:</div>
+                      <button
+                        onClick={() => setShowExecutionPanel(false)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Close panel"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
                     <div className="text-xs text-gray-600 space-y-1">
-                      <div className="font-medium text-gray-800 mb-2">💡 Quick Tips:</div>
                       <div className="hidden sm:block">• Use AI chatbot to generate workflows</div>
                       <div>• Click a node to select it</div>
                       <div className="hidden sm:block">• Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Delete</kbd> to delete nodes</div>
@@ -1269,7 +1345,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                       <div className="sm:hidden">• Tap nodes to configure</div>
                     </div>
                   </div>
-                )}
+                ) : null}
               </Panel>
 
               <Panel position="top-right">
@@ -1388,7 +1464,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
             projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
             isVisible={showEmbeddedPreview}
             onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
-            codeResult={codeResult}
+            codeResult={convertCodeResultForPreviews(codeResult)}
           />
         ) : previewMode === 'functional' ? (
           <FunctionalPreviewPanel
@@ -1397,7 +1473,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
             projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
             isVisible={showEmbeddedPreview}
             onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
-            codeResult={codeResult}
+            codeResult={convertCodeResultForPreviews(codeResult)}
           />
         ) : (
           <RealTestnetPreview
@@ -1406,7 +1482,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
             projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
             isVisible={showEmbeddedPreview}
             onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
-            codeResult={codeResult}
+            codeResult={convertCodeResultForPreviews(codeResult)}
           />
         )}
       </div>
@@ -1414,7 +1490,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
       {selectedNode && (
         <NodeConfigPanel
           node={selectedNode}
-          onConfigChange={(config) => updateNodeConfig(selectedNode.id, config)}
+          onUpdateNode={(nodeId: string, config: any) => updateNodeConfig(nodeId, config)}
           onClose={() => setSelectedNode(null)}
         />
       )}
@@ -1424,14 +1500,6 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         onClose={() => setShowCodeModal(false)}
         codeResult={codeResult as OneInchCodeResult | null}
         projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
-        onPublishToGitHub={() => {
-          setShowCodeModal(false)
-          setShowGitHubModal(true)
-        }}
-        onLivePreview={() => {
-          setShowCodeModal(false)
-          setShowEmbeddedPreview(true)
-        }}
       />
 
       <GitHubPublishModal

@@ -1034,7 +1034,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                     onClick={executeWorkflow}
                     disabled={executing || nodes.length === 0} 
                     size="sm"
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
                     <Zap className="w-4 h-4 mr-2" />
                     {executing ? "Executing..." : "Execute Flow"}
@@ -1043,7 +1043,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                     onClick={isTemplateProject ? deployToGitHub : generateCode}
                     disabled={generating} 
                     size="sm"
-                    className={isTemplateProject ? "bg-gradient-to-r from-blue-500 to-purple-600" : ""}
+                    className={isTemplateProject ? "bg-blue-600 hover:bg-blue-700 text-white" : ""}
                   >
                     <Play className="w-4 h-4 mr-2" />
                     {generating ? "Generating..." : isTemplateProject ? "Deploy to GitHub" : "Generate Code"}

@@ -201,18 +201,18 @@ export function ComponentPalette() {
   }, {} as Record<string, ComponentItem[]>)
 
   return (
-    <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col h-full max-h-screen">
-      <div className="p-2 sm:p-4 border-b">
-        <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Components</h2>
+    <div className="w-full sm:w-72 md:w-80 lg:w-80 xl:w-96 bg-white border-r border-gray-200 flex flex-col h-full max-h-screen">
+      <div className="p-2 sm:p-3 md:p-4 border-b">
+        <h2 className="text-sm sm:text-base md:text-lg font-semibold mb-2 sm:mb-3">Components</h2>
         
         {/* Search */}
         <div className="relative mb-2 sm:mb-3">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 sm:w-4 h-3 sm:h-4" />
           <Input
             placeholder="Search components..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 text-sm"
+            className="pl-8 sm:pl-10 text-xs sm:text-sm h-8 sm:h-10"
           />
         </div>
 
@@ -222,7 +222,7 @@ export function ComponentPalette() {
             <Badge
               key={category}
               variant={selectedCategory === category ? "default" : "outline"}
-              className="cursor-pointer text-xs"
+              className="cursor-pointer text-xs hover:bg-gray-100 transition-colors px-2 py-1"
               onClick={() => setSelectedCategory(category)}
             >
               {category}
@@ -231,25 +231,25 @@ export function ComponentPalette() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 space-y-2 sm:space-y-3 md:space-y-4">
         {selectedCategory === "All" ? (
           // Show grouped by category
           Object.entries(groupedComponents).map(([category, components]) => (
             <div key={category} className="space-y-1 sm:space-y-2">
               <button
                 onClick={() => toggleCategory(category)}
-                className="flex items-center gap-2 w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900"
+                className="flex items-center gap-2 w-full text-left text-xs sm:text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors p-1 rounded hover:bg-gray-50"
               >
                 {expandedCategories.has(category) ? (
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-3 sm:w-4 h-3 sm:h-4" />
                 ) : (
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3 sm:w-4 h-3 sm:h-4" />
                 )}
                 {category} ({components.length})
               </button>
               
               {expandedCategories.has(category) && (
-                <div className="pl-6 space-y-1 sm:space-y-2">
+                <div className="pl-4 sm:pl-6 space-y-1 sm:space-y-2">
                   {components.map(component => (
                     <ComponentCard
                       key={component.id}
@@ -275,23 +275,23 @@ export function ComponentPalette() {
         )}
 
         {filteredComponents.length === 0 && (
-          <div className="text-center text-gray-500 py-4 sm:py-8">
-            <Search className="w-6 sm:w-8 h-6 sm:h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No components found</p>
-            <p className="text-xs">Try adjusting your search or filters</p>
+          <div className="text-center text-gray-500 py-4 sm:py-6 md:py-8">
+            <Search className="w-6 sm:w-8 md:w-10 h-6 sm:h-8 md:h-10 mx-auto mb-2 opacity-50" />
+            <p className="text-xs sm:text-sm">No components found</p>
+            <p className="text-xs opacity-75">Try adjusting your search or filters</p>
           </div>
         )}
       </div>
 
       {/* Instructions */}
-      <div className="p-2 sm:p-4 border-t bg-gray-50">
+      <div className="p-2 sm:p-3 md:p-4 border-t bg-gray-50">
         <div className="text-xs text-gray-600 space-y-1">
           <div className="font-medium">💡 How to use:</div>
           <div className="hidden sm:block">• Drag components to the canvas</div>
           <div className="hidden sm:block">• Connect nodes to create workflows</div>
           <div className="hidden sm:block">• Click nodes to configure them</div>
-          <div className="sm:hidden">• Tap components to add</div>
-          <div className="sm:hidden">• Long press to configure</div>
+          <div className="sm:hidden">• Tap components to add to canvas</div>
+          <div className="sm:hidden">• Long press for configuration</div>
         </div>
       </div>
     </div>
@@ -307,23 +307,25 @@ function ComponentCard({
 }) {
   return (
     <Card
-      className="cursor-grab hover:shadow-md transition-shadow border border-gray-200"
+      className="cursor-grab hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-gray-300 active:cursor-grabbing"
       draggable
       onDragStart={(event) => onDragStart(event, component.id)}
     >
       <CardContent className="p-2 sm:p-3">
         <div className="flex items-start gap-2 sm:gap-3">
-          <div className="flex-shrink-0 p-1.5 sm:p-2 bg-blue-50 rounded-lg">
-            {component.icon}
+          <div className="flex-shrink-0 p-1 sm:p-1.5 md:p-2 bg-blue-50 rounded-lg">
+            <div className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5">
+              {component.icon}
+            </div>
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-medium text-xs sm:text-sm text-gray-900 mb-1 truncate">
               {component.name}
             </h3>
-            <p className="text-xs text-gray-600 leading-relaxed line-clamp-2 sm:line-clamp-none">
+            <p className="text-xs text-gray-600 leading-relaxed line-clamp-2 sm:line-clamp-3">
               {component.description}
             </p>
-            <Badge variant="outline" className="mt-1 sm:mt-2 text-xs">
+            <Badge variant="outline" className="mt-1 sm:mt-2 text-xs px-1.5 py-0.5">
               {component.category}
             </Badge>
           </div>

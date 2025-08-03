@@ -698,55 +698,56 @@ case "tokenSelector":
   }
 
   return (
-    <div className="w-full sm:w-80 bg-white border-l border-gray-200 flex flex-col h-full shadow-lg">
+    <div className="w-full sm:w-72 md:w-80 lg:w-96 bg-white border-l border-gray-200 flex flex-col h-full shadow-lg">
       {/* Header */}
       <div className="p-3 sm:p-4 border-b">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base sm:text-lg font-semibold">Node Configuration</h3>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="w-4 h-4" />
+          <h3 className="text-sm sm:text-base md:text-lg font-semibold truncate">Node Configuration</h3>
+          <Button variant="ghost" size="sm" onClick={onClose} className="flex-shrink-0">
+            <X className="w-3 sm:w-4 h-3 sm:h-4" />
           </Button>
-      </div>
+        </div>
 
-        <div className="flex items-center gap-2 mb-2 sm:mb-3">
-          <Badge variant="outline" className="text-xs">{nodeInfo.category}</Badge>
+        <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-2 sm:mb-3">
+          <Badge variant="outline" className="text-xs px-1.5 py-0.5">{nodeInfo.category}</Badge>
           {hasUnsavedChanges && (
-            <Badge variant="destructive" className="text-xs">
-              Unsaved changes
+            <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+              Unsaved
             </Badge>
           )}
         </div>
 
         <div className="text-sm text-gray-600">
-          <div className="font-medium">{nodeInfo.name}</div>
-          <div className="text-xs mt-1">{nodeInfo.description}</div>
+          <div className="font-medium text-xs sm:text-sm truncate">{nodeInfo.name}</div>
+          <div className="text-xs mt-1 line-clamp-2">{nodeInfo.description}</div>
         </div>
       </div>
 
       {/* Configuration Form */}
-      <ScrollArea className="flex-1 p-3 sm:p-4">
+      <ScrollArea className="flex-1 p-2 sm:p-3 md:p-4">
         <Tabs defaultValue="config" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="config" className="text-xs sm:text-sm">Config</TabsTrigger>
-            <TabsTrigger value="info" className="text-xs sm:text-sm">Info</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 h-8 sm:h-10">
+            <TabsTrigger value="config" className="text-xs sm:text-sm px-2">Config</TabsTrigger>
+            <TabsTrigger value="info" className="text-xs sm:text-sm px-2">Info</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="config" className="space-y-3 sm:space-y-4 mt-4">
+          <TabsContent value="config" className="space-y-2 sm:space-y-3 md:space-y-4 mt-3 sm:mt-4">
             {renderNodeConfiguration()}
           </TabsContent>
 
-          <TabsContent value="info" className="space-y-4 mt-4">
-            <div className="space-y-4">
+          <TabsContent value="info" className="space-y-3 sm:space-y-4 mt-3 sm:mt-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <Label className="text-sm font-medium">Node ID</Label>
+                <Label className="text-xs sm:text-sm font-medium">Node ID</Label>
                 <div className="flex items-center gap-2 mt-1">
-                  <code className="text-xs bg-gray-100 px-2 py-1 rounded flex-1 truncate">
+                  <code className="text-xs bg-gray-100 px-2 py-1 rounded flex-1 truncate min-w-0">
                     {node.id}
                   </code>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => navigator.clipboard.writeText(node.id)}
+                    className="flex-shrink-0 p-1"
                   >
                     <Copy className="w-3 h-3" />
                   </Button>
@@ -788,15 +789,15 @@ case "tokenSelector":
       </ScrollArea>
 
       {/* Actions */}
-      <div className="p-4 border-t space-y-2">
-        <div className="flex gap-2">
+      <div className="p-2 sm:p-3 md:p-4 border-t space-y-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button
             onClick={handleSave}
             disabled={!hasUnsavedChanges}
-            className="flex-1"
+            className="flex-1 text-xs sm:text-sm h-8 sm:h-9"
             size="sm"
           >
-            <Save className="w-4 h-4 mr-2" />
+            <Save className="w-3 sm:w-4 h-3 sm:h-4 mr-1 sm:mr-2" />
             Save
           </Button>
           <Button
@@ -804,21 +805,23 @@ case "tokenSelector":
             onClick={handleReset}
             disabled={!hasUnsavedChanges}
             size="sm"
+            className="sm:w-auto h-8 sm:h-9"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-3 sm:w-4 h-3 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Reset</span>
           </Button>
         </div>
 
         {Object.keys(validationErrors).length > 0 && (
           <div className="text-xs text-red-500 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            Please fix validation errors before saving
+            <AlertCircle className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">Please fix validation errors</span>
           </div>
         )}
 
         {!hasUnsavedChanges && Object.keys(validationErrors).length === 0 && (
           <div className="text-xs text-green-600 flex items-center gap-1">
-            <CheckCircle className="w-3 h-3" />
+            <CheckCircle className="w-3 h-3 flex-shrink-0" />
             Configuration is valid
           </div>
         )}

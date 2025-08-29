@@ -7,7 +7,7 @@ import { ReactFlowProvider } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
 export const metadata: Metadata = {
-  title: 'DeFiDAO - Build and Deploy DeFi Protocols',
+  title: 'Kōan - Build and Deploy DeFi Protocols',
   description: 'A powerful platform to build and deploy DeFi protocols and DAO governance systems with advanced tooling',
   generator: 'v0.dev',
 }

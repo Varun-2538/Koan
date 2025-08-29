@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState, useCallback, useRef, useEffect } from "react"
+import React, { useState, useCallback, useRef, useEffect } from "react"
 import {
   ReactFlow,
   type Node,
@@ -105,6 +104,19 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const [showCodeModal, setShowCodeModal] = useState(false)
   const [showGitHubModal, setShowGitHubModal] = useState(false)
   const [autoConnect, setAutoConnect] = useState(true)
+  const [showExecutionPanel, setShowExecutionPanel] = useState(false)
+  
+  // Execution state
+  const [executing, setExecuting] = useState(false)
+  const [executionStatus, setExecutionStatus] = useState<string>("")
+  const [executionError, setExecutionError] = useState<string | null>(null)
+  const [executionResult, setExecutionResult] = useState<any>(null)
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
+  const [nodeOutputs, setNodeOutputs] = useState<Record<string, any>>({})
+  
+  // Preview modes
+  const [showEmbeddedPreview, setShowEmbeddedPreview] = useState(false)
+  const [previewMode, setPreviewMode] = useState<'static' | 'functional' | 'testnet'>('static')
   
   // Mobile responsiveness
   const isMobile = useIsMobile()
@@ -131,20 +143,8 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     }
   }
   const [showLivePreviewModal, setShowLivePreviewModal] = useState(false)
-  const [showEmbeddedPreview, setShowEmbeddedPreview] = useState(false)
-  const [previewMode, setPreviewMode] = useState<'static' | 'functional' | 'testnet'>('testnet')
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
-  
-  // Enhanced execution engine state
-  const [executing, setExecuting] = useState(false)
-  const [executionStatus, setExecutionStatus] = useState<string>("")
-  const [executionResult, setExecutionResult] = useState<any>(null)
-  const [executionError, setExecutionError] = useState<string | null>(null)
-
-  // New: Real-time node execution state
-  const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
-  const [nodeOutputs, setNodeOutputs] = useState<Record<string, any>>({})
   const [nodeExecutionMode, setNodeExecutionMode] = useState<'batch' | 'individual'>('batch')
   
   // AI Chatbot state
@@ -771,9 +771,10 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
 
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
-        type,
+        type: 'universalPlugin', // Use universal plugin node type
         position,
         data: {
+          componentId: type, // Store the component ID here
           label: type.charAt(0).toUpperCase() + type.slice(1),
           config: getDefaultConfig(type),
         },

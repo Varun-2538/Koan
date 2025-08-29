@@ -533,3 +533,184 @@ export const BUILT_IN_DATA_TYPES: Record<string, DataType> = {
     isCacheable: true
   }
 }
+
+// Additional interfaces needed by the plugin system
+
+export interface ComponentTemplate {
+  type: string
+  name: string
+  description: string
+  category: string
+  icon?: string
+  color?: string
+  inputs: PortDefinition[]
+  outputs: PortDefinition[]
+  fields: FieldDefinition[]
+}
+
+export interface PortDefinition {
+  id: string
+  name: string
+  dataType: string
+  required?: boolean
+  description?: string
+}
+
+export interface FieldDefinition {
+  key: string
+  type: string
+  label?: string
+  required?: boolean
+  defaultValue?: any
+  options?: { label: string; value: any }[]
+  placeholder?: string
+  description?: string
+  language?: string
+  conditional?: { field: string; value: any }
+  sensitive?: boolean
+}
+
+export interface PluginManifest {
+  id: string
+  name: string
+  version: string
+  author: string
+  description: string
+  components?: ComponentDefinition[]
+  permissions?: string[]
+  compatibility?: { minVersion: string }
+  tags?: string[]
+}
+
+export interface ComponentDefinition {
+  id: string
+  name: string
+  description: string
+  category: string
+  version: string
+  author: string
+  tags: string[]
+  icon?: string
+  color?: string
+  template: {
+    inputs: PortDefinition[]
+    outputs: PortDefinition[]
+    configuration: FieldDefinition[]
+    ui?: {
+      icon?: string
+      color?: string
+      size?: string
+      shape?: string
+      showPorts?: boolean
+      showConfig?: boolean
+    }
+    documentation?: {
+      description: string
+      examples: any[]
+      parameters: any[]
+      usage: string
+      changelog: any[]
+    }
+  }
+  execution: {
+    runtime: string
+    code: string
+    entryPoint?: string
+    timeout?: number
+    memoryLimit?: number
+    environment?: Record<string, any>
+    dependencies?: string[]
+    permissions?: string[]
+  }
+  validation: {
+    preExecution?: string[]
+    postExecution?: string[]
+    runtime?: string[]
+  }
+  metadata: {
+    created?: string
+    modified?: string
+    author?: string
+    license?: string
+    keywords?: string[]
+  }
+  dependencies: string[]
+  permissions: string[]
+  lifecycle?: Record<string, any>
+}
+
+export interface ExecutionContext {
+  nodeId: string
+  workflowId: string
+  inputs: Record<string, any>
+  config: Record<string, any>
+  environment: Record<string, any>
+  dependencies: Record<string, any>
+  permissions: string[]
+}
+
+export interface ExecutionResult {
+  success: boolean
+  outputs: Record<string, any>
+  error: Error | null
+  duration: number
+  logs: string[]
+  metadata: Record<string, any>
+}
+
+export interface WorkflowDefinition {
+  id?: string
+  name?: string
+  description?: string
+  nodes: Array<{
+    id: string
+    type: string
+    data?: Record<string, any>
+  }>
+  connections: Array<{
+    source: string
+    target: string
+    sourceHandle?: string
+    targetHandle?: string
+  }>
+}
+
+export interface ValidationResult {
+  valid: boolean
+  errors: string[]
+  warnings: string[]
+}
+
+// Custom error classes for better error handling
+export class ExecutionError extends Error {
+  constructor(
+    message: string,
+    public code: string = 'EXECUTION_FAILED',
+    public details?: Record<string, any>
+  ) {
+    super(message)
+    this.name = 'ExecutionError'
+  }
+}
+
+export class ValidationError extends Error {
+  constructor(
+    message: string,
+    public code: string = 'VALIDATION_FAILED',
+    public details?: Record<string, any>
+  ) {
+    super(message)
+    this.name = 'ValidationError'
+  }
+}
+
+export class ConnectionError extends Error {
+  constructor(
+    message: string,
+    public code: string = 'CONNECTION_FAILED',
+    public details?: Record<string, any>
+  ) {
+    super(message)
+    this.name = 'ConnectionError'
+  }
+}

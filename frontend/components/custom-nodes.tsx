@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 import { Handle, Position, type NodeProps } from "@xyflow/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -12,7 +12,8 @@ import {
 } from "lucide-react"
 
 // Import the new plugin system
-import { unitePluginSystem, pluginRegistry } from "@/lib/plugin-system"
+import { unitePluginSystem } from "@/lib/unite-plugin-system"
+import { pluginRegistry } from "@/lib/plugin-system/plugin-registry"
 import { connectionValidator } from "@/lib/plugin-system/connection-validator"
 import { codeExecutionEngine } from "@/lib/plugin-system/code-execution"
 import type { 
@@ -75,6 +76,13 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
   React.useEffect(() => {
     const loadComponent = async () => {
       const comp = pluginRegistry.getComponent(data.componentId)
+      console.log('Loading component:', {
+        componentId: data.componentId,
+        component: comp,
+        inputs: comp?.template?.inputs,
+        outputs: comp?.template?.outputs,
+        fields: comp?.template?.fields || comp?.template?.configuration
+      })
       setComponent(comp)
     }
     
@@ -96,7 +104,10 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
       })
       
       if (result.success) {
-        const nodeOutputs = result.nodeResults[0]?.outputs || {}
+        // Handle different result structures
+        const nodeOutputs = result.nodeResults?.[0]?.outputs || 
+                           result.outputs || 
+                           Object.values(result.outputs || {})[0] || {}
         setOutputs(nodeOutputs)
         setExecutionState({ 
           status: 'success', 
@@ -123,10 +134,10 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
           <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
           <div className="text-sm text-gray-500">Component not found</div>
           <div className="text-xs text-gray-400">{data.componentId}</div>
-        </CardContent>
-      </Card>
-    )
-  }
+      </CardContent>
+    </Card>
+  )
+}
 
   const getNodeStateClasses = () => {
     if (executionState.status === 'error') return "ring-2 ring-red-500 bg-red-50"
@@ -152,7 +163,7 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
         <EnhancedHandle
           key={`input-${input.id}`}
           id={input.id}
-          type="target"
+      type="target"
           position={Position.Left}
           dataType={input.dataType}
           label={input.name}
@@ -171,9 +182,9 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
               <div>
                 <div className="font-medium text-sm">{component.name}</div>
                 <div className="text-xs text-gray-500">{component.category}</div>
-              </div>
-            </div>
-            
+      </div>
+    </div>
+
             {/* Node Actions */}
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <Button
@@ -206,8 +217,8 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
               >
                 <Settings className="w-3 h-3" />
               </Button>
-            </div>
-          </div>
+      </div>
+    </div>
 
           {/* Execution Progress */}
           {executionState.status === 'running' && (
@@ -215,11 +226,11 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
               <div className="flex items-center gap-2 text-xs text-blue-600 mb-1">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 <span>Executing...</span>
-              </div>
+      </div>
               <div className="w-full bg-gray-200 rounded-full h-1">
                 <div className="bg-blue-600 h-1 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-              </div>
-            </div>
+    </div>
+    </div>
           )}
 
           {/* Execution Results */}
@@ -236,10 +247,10 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
                       {typeof value === 'object' ? JSON.stringify(value).slice(0, 30) : String(value).slice(0, 30)}
                       {String(value).length > 30 ? '...' : ''}
                     </span>
-                  </div>
+      </div>
                 ))}
-              </div>
-            </div>
+    </div>
+    </div>
           )}
 
           {/* Error Display */}
@@ -252,15 +263,15 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
                 </div>
                 <div className="text-red-600 text-xs">
                   {executionState.error}
-                </div>
-              </div>
-            </div>
+      </div>
+    </div>
+    </div>
           )}
 
           {/* Configuration Summary */}
           <div className="text-xs text-gray-600">
             {Object.keys(data.config || {}).length} parameters configured
-          </div>
+    </div>
 
           {/* Quick Config Panel */}
           {showConfig && (
@@ -273,10 +284,10 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
                     <span className="text-xs font-mono">
                       {data.config?.[field.key] || field.defaultValue || 'Not set'}
                     </span>
-                  </div>
+      </div>
                 ))}
-              </div>
-            </div>
+    </div>
+    </div>
           )}
         </CardContent>
       </Card>
@@ -375,9 +386,9 @@ const EnhancedHandle: React.FC<{
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: handleColor }} />
           <span>{label}</span>
           {required && <span className="text-red-300">*</span>}
-        </div>
-        <div className="text-xs opacity-75">{dataType}</div>
       </div>
+        <div className="text-xs opacity-75">{dataType}</div>
+    </div>
       
       {/* Connection indicators */}
       {hasData && (
@@ -386,7 +397,7 @@ const EnhancedHandle: React.FC<{
       {required && !hasData && type === 'target' && (
         <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
           <span className="text-white text-[8px] font-bold">!</span>
-        </div>
+      </div>
       )}
     </div>
   )
@@ -494,6 +505,9 @@ export const useCustomNodes = () => {
           />
         )
       })
+      
+      // Add universal plugin node type
+      nodeComponents['universalPlugin'] = UniversalPluginNode
       
       // Add legacy nodes for backward compatibility
       nodeComponents['oneInchSwap'] = OneInchSwapNode

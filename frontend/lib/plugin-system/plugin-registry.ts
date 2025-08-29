@@ -341,6 +341,48 @@ export class PluginRegistry {
       return false
     }
   }
+
+  // Additional methods needed by the unite plugin system
+  getAllPlugins(): ComponentDefinition[] {
+    return Array.from(this.components.values())
+  }
+
+  getComponentsByCategory(category: string): ComponentDefinition[] {
+    return this.getComponents(category)
+  }
+
+  searchComponents(query: string): ComponentDefinition[] {
+    const components = Array.from(this.components.values())
+    return components.filter(component => 
+      component.name.toLowerCase().includes(query.toLowerCase()) ||
+      component.description.toLowerCase().includes(query.toLowerCase()) ||
+      component.category.toLowerCase().includes(query.toLowerCase())
+    )
+  }
+
+  getPlugins(): PluginManifest[] {
+    return Array.from(this.plugins.values())
+  }
+
+  async registerComponent(component: ComponentDefinition): Promise<void> {
+    // Create a simple plugin manifest for the component
+    const pluginManifest: PluginManifest = {
+      id: `builtin-${component.id}`,
+      name: component.name,
+      version: component.version || '1.0.0',
+      author: component.author || 'Unite DeFi',
+      description: component.description,
+      tags: component.tags || [],
+      dependencies: component.dependencies || [],
+      components: [component],
+      permissions: component.permissions || [],
+      compatibility: {
+        minVersion: '1.0.0'
+      }
+    }
+
+    await this.registerPlugin(pluginManifest)
+  }
 }
 
 // Global plugin registry instance

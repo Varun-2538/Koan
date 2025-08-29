@@ -22,7 +22,7 @@ import {
   ArrowLeftRight,
   Loader2
 } from "lucide-react"
-import { unitePluginSystem } from "@/lib/plugin-system"
+import { unitePluginSystem } from "@/lib/unite-plugin-system"
 import { PluginDefinition } from "@/lib/plugin-system/types"
 
 interface ComponentItem {
@@ -51,16 +51,16 @@ const getIconForCategory = (category: string) => {
   }
 }
 
-// Convert plugin to component item
-const pluginToComponent = (plugin: PluginDefinition): ComponentItem => ({
-  id: plugin.id,
-  name: plugin.name,
-  description: plugin.description,
-  category: plugin.category,
-  version: plugin.version,
-  tags: plugin.tags,
-  icon: getIconForCategory(plugin.category),
-  plugin
+// Convert component definition to component item
+const pluginToComponent = (component: any): ComponentItem => ({
+  id: component.id,
+  name: component.name,
+  description: component.description,
+  category: component.category,
+  version: component.version,
+  tags: component.tags || [],
+  icon: getIconForCategory(component.category),
+  plugin: component
 })
 
 export function ComponentPalette() {
@@ -77,18 +77,18 @@ export function ComponentPalette() {
       try {
         setLoading(true)
         
-        // Discover and load plugins
-        await unitePluginSystem.registry.discoverPlugins()
+        // Initialize the plugin system first
+        await unitePluginSystem.initialize()
         
-        // Get all registered plugins
-        const plugins = unitePluginSystem.registry.getAllPlugins()
+        // Get all registered components
+        const components = unitePluginSystem.getComponents()
         
-        // Convert plugins to components
-        const pluginComponents = plugins.map(pluginToComponent)
+        // Convert components to component items
+        const pluginComponents = components.map(pluginToComponent)
         
         // Extract unique categories
         const uniqueCategories = Array.from(
-          new Set(plugins.map(p => p.category))
+          new Set(components.map(c => c.category))
         ).sort()
         
         setComponents(pluginComponents)

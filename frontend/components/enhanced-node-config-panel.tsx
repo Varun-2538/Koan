@@ -39,7 +39,7 @@ import {
   Download
 } from "lucide-react"
 import type { Node } from "@xyflow/react"
-import { unitePluginSystem } from "@/lib/plugin-system"
+import { unitePluginSystem } from "@/lib/unite-plugin-system"
 import { 
   FieldDefinition, 
   PluginDefinition,
@@ -86,7 +86,8 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
   // Load plugin definition when node changes
   useEffect(() => {
     const loadPlugin = async () => {
-      if (!node?.type) {
+      const componentId = node?.data?.componentId || node?.type
+      if (!componentId) {
         setPlugin(null)
         setConfig({})
         return
@@ -94,15 +95,15 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
 
       setLoading(true)
       try {
-        // Get plugin from registry
-        const pluginDef = unitePluginSystem.registry.getPlugin(node.type)
+        // Get component from plugin system using componentId
+        const componentDef = unitePluginSystem.getComponent(componentId)
         
-        if (pluginDef) {
-          setPlugin(pluginDef)
+        if (componentDef) {
+          setPlugin(componentDef as any) // Temporary type cast
           
-          // Initialize config with default values
+          // Initialize config with default values from template fields
           const defaultConfig: FieldValue = {}
-          pluginDef.inputs.forEach(field => {
+          (componentDef.template?.configuration || componentDef.template?.fields)?.forEach(field => {
             if (field.defaultValue !== undefined) {
               defaultConfig[field.key] = field.defaultValue
             }
@@ -129,7 +130,7 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
     }
 
     loadPlugin()
-  }, [node?.type, node?.data?.config])
+  }, [node?.type, node?.data?.componentId, node?.data?.config])
 
   if (!node || loading) {
     return (
@@ -604,12 +605,14 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
         <div className="text-center text-gray-500 py-8">
           <Settings className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">Plugin definition not found</p>
-          <p className="text-xs text-gray-400 mt-1">Node type: {node.type}</p>
+          <p className="text-xs text-gray-400 mt-1">Component ID: {node?.data?.componentId || node?.type}</p>
         </div>
       )
     }
 
-    if (plugin.inputs.length === 0) {
+    const fields = plugin.template?.configuration || plugin.template?.fields || plugin.inputs || []
+
+    if (fields.length === 0) {
       return (
         <div className="text-center text-gray-500 py-8">
           <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -621,7 +624,7 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
 
     return (
       <div className="space-y-4">
-        {plugin.inputs.map(field => renderField(field))}
+        {fields.map(field => renderField(field))}
       </div>
     )
   }

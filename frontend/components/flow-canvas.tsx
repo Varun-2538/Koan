@@ -21,9 +21,12 @@ import {
 import "@xyflow/react/dist/style.css"
 
 import { ComponentPalette } from "./component-palette"
-import { NodeConfigPanel } from "./node-config-panel"
+import { EnhancedNodeConfigPanel } from "./enhanced-node-config-panel"
 import { FlowToolbar } from "./flow-toolbar"
-import { CustomNodes } from "./custom-nodes"
+import { CustomNodes, useCustomNodes } from "./custom-nodes"
+import { unitePluginSystem, pluginRegistry, connectionValidator, executionEngine } from "@/lib/plugin-system"
+import type { ExecutionResult, WorkflowExecutionResult } from "@/lib/plugin-system"
+import { EnhancedCanvasInteractions } from "./enhanced-canvas-interactions"
 import { Button } from "@/components/ui/button"
 import { Save, Play, Zap, Trash2, Menu, X } from "lucide-react"
 import { getTemplateById } from "@/lib/templates"
@@ -41,7 +44,14 @@ import { workflowCodeGenerator, type CodeGenerationResult } from "@/lib/workflow
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useToast } from "@/hooks/use-toast"
 
-const nodeTypes: NodeTypes = CustomNodes
+// Dynamic node types from plugin system
+const useNodeTypes = () => {
+  const dynamicNodes = useCustomNodes()
+  return React.useMemo(() => ({
+    ...CustomNodes,
+    ...dynamicNodes
+  }), [dynamicNodes])
+}
 
 interface FlowCanvasProps {
   projectId: string
@@ -79,6 +89,12 @@ const initialNodes: Node[] = [
 const initialEdges: Edge[] = []
 
 export function FlowCanvas({ projectId }: FlowCanvasProps) {
+  // Initialize plugin system
+  React.useEffect(() => {
+    unitePluginSystem.initialize().catch(console.error)
+  }, [])
+  
+  const nodeTypes = useNodeTypes()
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
@@ -120,11 +136,16 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
   
-  // Execution engine state
+  // Enhanced execution engine state
   const [executing, setExecuting] = useState(false)
   const [executionStatus, setExecutionStatus] = useState<string>("")
   const [executionResult, setExecutionResult] = useState<any>(null)
   const [executionError, setExecutionError] = useState<string | null>(null)
+
+  // New: Real-time node execution state
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
+  const [nodeOutputs, setNodeOutputs] = useState<Record<string, any>>({})
+  const [nodeExecutionMode, setNodeExecutionMode] = useState<'batch' | 'individual'>('batch')
   
   // AI Chatbot state
   const [isChatbotOpen, setIsChatbotOpen] = useState(false)
@@ -132,6 +153,12 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   // Workflow execution state
   const [workflowExecutionStatus, setWorkflowExecutionStatus] = useState<ExecutionStatus | null>(null)
   const [nodeExecutionStatuses, setNodeExecutionStatuses] = useState<Record<string, any>>({})
+
+  // Enhanced interactivity state
+  const [showDynamicConfig, setShowDynamicConfig] = useState(false)
+  const [configuringNode, setConfiguringNode] = useState<Node | null>(null)
+  const [nodeDataTypes, setNodeDataTypes] = useState<Record<string, { inputs: Record<string, DataType>, outputs: Record<string, DataType> }>>({})
+  const [connectionValidation, setConnectionValidation] = useState<Record<string, boolean>>({})
 
   // Handle workflow generation from AI chatbot
   const handleWorkflowGenerated = useCallback((workflow: any) => {
@@ -183,7 +210,68 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     setIsChatbotOpen(false)
   }, [setNodes, setEdges])
 
-  // Execute workflow on backend
+  // Execute individual node using plugin system
+  const executeIndividualNode = useCallback(async (nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId)
+    if (!node) return
+
+    setActiveNodeId(nodeId)
+    const componentId = node.data?.componentId || node.type
+    setExecutionStatus(`Executing ${componentId}...`)
+
+    try {
+      // Execute single node workflow
+      const singleNodeWorkflow = {
+        id: `single-node-${Date.now()}`,
+        name: `Execute ${componentId}`,
+        nodes: [{
+          id: node.id,
+          type: componentId!,
+          config: node.data?.config || {},
+          position: node.position
+        }],
+        connections: []
+      }
+
+      const result = await unitePluginSystem.executeWorkflow(
+        singleNodeWorkflow,
+        {}, // No initial inputs for individual execution
+        { environment: 'development' }
+      )
+
+      if (result.success) {
+        const nodeResult = result.nodeResults[0]
+        if (nodeResult) {
+          setNodeOutputs(prev => ({ ...prev, [nodeId]: nodeResult.outputs }))
+          setExecutionStatus(`✅ ${componentId} executed successfully`)
+          
+          // Show toast with execution summary
+          toast({
+            title: "Node Executed",
+            description: `${componentId} completed in ${nodeResult.duration}ms`,
+            variant: "default"
+          })
+        }
+      } else {
+        throw new Error(result.errors[0] || 'Node execution failed')
+      }
+
+    } catch (error) {
+      console.error('Individual node execution error:', error)
+      setExecutionError(`Node execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setExecutionStatus("❌ Node execution failed")
+      
+      toast({
+        title: "Node Execution Failed",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: "destructive"
+      })
+    } finally {
+      setActiveNodeId(null)
+    }
+  }, [nodes])
+
+  // Execute workflow using new plugin system
   const executeWorkflow = useCallback(async () => {
     if (nodes.length === 0) {
       console.warn('No nodes to execute')
@@ -194,74 +282,77 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     setExecutionError(null)
     setExecutionStatus("Preparing workflow execution...")
 
+    // Clear previous node outputs
+    setNodeOutputs({})
+
     try {
-      // Convert React Flow nodes to workflow definition
-      const workflowDefinition: WorkflowDefinition = {
+      // Convert to workflow definition for plugin system
+      const workflowDefinition = {
         id: `workflow-${Date.now()}`,
         name: `Canvas Workflow`,
         description: 'Workflow generated from canvas',
         nodes: nodes.map(node => ({
           id: node.id,
-          type: node.type || 'unknown',
-          position: node.position,
-          data: {
-            label: typeof node.data?.label === 'string' ? node.data.label : (node.type || 'Node'),
-            config: node.data?.config || {}
-          }
+          type: node.data?.componentId || node.type || 'unknown', 
+          config: node.data?.config || {},
+          position: node.position
         })),
-        edges: edges.map(edge => ({
+        connections: edges.map(edge => ({
           id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          ...(edge.sourceHandle && { sourceHandle: edge.sourceHandle }),
-          ...(edge.targetHandle && { targetHandle: edge.targetHandle })
+          sourceNode: edge.source,
+          sourcePort: edge.sourceHandle || 'output',
+          targetNode: edge.target,
+          targetPort: edge.targetHandle || 'input'
         }))
       }
 
-      // Validate workflow
-      const validation = workflowExecutionClient.validateWorkflow(workflowDefinition)
-      if (!validation.valid) {
-        throw new Error(`Workflow validation failed: ${validation.errors.join(', ')}`)
-      }
-
-      setExecutionStatus("Starting workflow execution...")
+      setExecutionStatus("Executing workflow with plugin system...")
       
-      // Execute workflow
-      const { executionId } = await workflowExecutionClient.executeWorkflow(workflowDefinition)
-      setExecutionStatus(`Execution started: ${executionId}`)
+      // Execute using the new plugin system
+      const result: WorkflowExecutionResult = await unitePluginSystem.executeWorkflow(
+        workflowDefinition,
+        {}, // Initial inputs
+        { environment: 'development' }
+      )
 
-      // Monitor execution progress
-      for await (const status of workflowExecutionClient.monitorExecution(executionId)) {
-        console.log('Execution status update:', status)
-        setWorkflowExecutionStatus(status)
-        setNodeExecutionStatuses(status.steps || {})
+      if (result.success) {
+        setExecutionStatus("Workflow completed successfully!")
+        setExecutionResult(result)
+        setNodeOutputs(result.results)
         
-        if (status.status === 'completed') {
-          setExecutionStatus("Workflow completed successfully!")
-          setExecutionResult(status)
-          
-          // Automatically generate code after successful execution
-          try {
-            setExecutionStatus("Generating application code...")
-            const codeResult = await generateCodeAndReturn()
-            if (codeResult) {
-              setCodeResult(codeResult)
-            }
-            setExecutionStatus("Code generation completed!")
-          } catch (codeError) {
-            console.error('Code generation failed:', codeError)
-            setExecutionStatus("Workflow completed (code generation failed)")
+        // Update node states based on execution results
+        result.nodeResults.forEach(nodeResult => {
+          // Visual feedback for executed nodes could be added here
+          console.log(`Node ${nodeResult.nodeId} completed:`, nodeResult.outputs)
+        })
+        
+        // Automatically generate code after successful execution
+        try {
+          setExecutionStatus("Generating application code...")
+          const codeResult = await unitePluginSystem.generateCode(workflowDefinition)
+          if (codeResult) {
+            // Convert to expected format
+            const files = Array.from(codeResult.modules.entries()).map(([path, module]) => ({
+              path,
+              content: module.code
+            }))
+            
+            setCodeResult({
+              files,
+              projectName: 'MyDeFiApp',
+              framework: 'Next.js 14',
+              dependencies: Array.from(codeResult.dependencies)
+            } as any)
           }
-          
-          break
-        } else if (status.status === 'failed') {
-          setExecutionError(status.error || 'Workflow execution failed')
-          setExecutionStatus("Workflow execution failed")
-          break
-        } else {
-          const statusText = status.status || 'running'
-          setExecutionStatus(`Workflow ${statusText}...`)
+          setExecutionStatus("Code generation completed!")
+        } catch (codeError) {
+          console.error('Code generation failed:', codeError)
+          setExecutionStatus("Workflow completed (code generation failed)")
         }
+        
+      } else {
+        setExecutionError(result.errors.join(', '))
+        setExecutionStatus("Workflow execution failed")
       }
 
     } catch (error) {
@@ -320,7 +411,176 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     }
   }, [projectId])
 
-  const onConnect = useCallback((params: Connection) => setEdges((eds) => addEdge(params, eds)), [setEdges])
+  // Enhanced connection handler with dynamic validation from plugin system
+  const onConnect = useCallback(async (params: Connection) => {
+    const sourceNode = nodes.find(n => n.id === params.source)
+    const targetNode = nodes.find(n => n.id === params.target)
+
+    if (sourceNode && targetNode) {
+      try {
+        // Use plugin system's dynamic connection validator
+        const validationResult = await connectionValidator.validateConnection({
+          sourceNodeId: sourceNode.id,
+          sourcePortId: params.sourceHandle || 'output',
+          sourceDataType: 'any', // Will be determined dynamically by plugin system
+          targetNodeId: targetNode.id,
+          targetPortId: params.targetHandle || 'input', 
+          targetDataType: 'any'
+        })
+
+        if (!validationResult.canConnect) {
+          toast({
+            title: "Connection Invalid",
+            description: validationResult.errors[0] || "Cannot connect these node types",
+            variant: "destructive"
+          })
+          return
+        }
+
+        // Show transformation warnings if needed
+        if (validationResult.warnings.length > 0) {
+          toast({
+            title: "Connection Warning",
+            description: validationResult.warnings[0],
+            variant: "default"
+          })
+        }
+
+        // Add visual feedback for valid connections
+        const edgeId = `e-${params.source}-${params.target}`
+        setConnectionValidation(prev => ({ ...prev, [edgeId]: validationResult.canConnect }))
+
+        // Create edge with appropriate styling
+        setEdges((eds) => addEdge({
+          ...params,
+          animated: validationResult.canConnect,
+          style: { 
+            stroke: validationResult.requiresTransformation ? '#f59e0b' : '#10b981', 
+            strokeWidth: validationResult.canConnect ? 2 : 1,
+            strokeDasharray: validationResult.requiresTransformation ? '5,5' : 'none'
+          },
+          type: validationResult.canConnect ? 'smoothstep' : 'default',
+          label: validationResult.requiresTransformation ? '🔄' : undefined
+        }, eds))
+
+        toast({
+          title: "Connection Created",
+          description: validationResult.requiresTransformation 
+            ? "Data will be automatically transformed"
+            : "Connection established successfully",
+          variant: "default"
+        })
+
+      } catch (error) {
+        console.error('Connection validation failed:', error)
+        toast({
+          title: "Connection Error", 
+          description: "Failed to validate connection",
+          variant: "destructive"
+        })
+      }
+    }
+  }, [nodes, setEdges])
+
+  // Enhanced node configuration handler
+  const handleNodeConfigure = useCallback((node: Node) => {
+    setConfiguringNode(node)
+    setShowDynamicConfig(true)
+  }, [])
+
+  // Handle node deletion with enhanced feedback
+  const handleNodeDelete = useCallback((nodeIds: string[]) => {
+    setNodes(nodes => nodes.filter(node => !nodeIds.includes(node.id)))
+    setEdges(edges => edges.filter(edge =>
+      !nodeIds.includes(edge.source) && !nodeIds.includes(edge.target)
+    ))
+    toast.success(`Deleted ${nodeIds.length} node${nodeIds.length > 1 ? 's' : ''}`)
+  }, [setNodes, setEdges])
+
+  // Handle node duplication
+  const handleNodeDuplicate = useCallback((nodeIds: string[]) => {
+    const nodesToDuplicate = nodes.filter(node => nodeIds.includes(node.id))
+    const duplicatedNodes = nodesToDuplicate.map(node => ({
+      ...node,
+      id: `${node.id}-copy-${Date.now()}`,
+      position: { x: node.position.x + 50, y: node.position.y + 50 },
+      selected: false
+    }))
+
+    setNodes(nodes => [...nodes, ...duplicatedNodes])
+    toast.success(`Duplicated ${nodeIds.length} node${nodeIds.length > 1 ? 's' : ''}`)
+  }, [nodes, setNodes])
+
+  // Enhanced auto-layout algorithm
+  const handleAutoLayout = useCallback(() => {
+    const layoutNodes = [...nodes]
+    const nodeWidth = 200
+    const nodeHeight = 100
+    const horizontalSpacing = 250
+    const verticalSpacing = 150
+
+    // Simple hierarchical layout
+    const processed = new Set<string>()
+    const levels: Node[][] = []
+
+    // Find root nodes (nodes with no incoming edges)
+    const hasIncomingEdge = new Set(edges.map(edge => edge.target))
+    const rootNodes = layoutNodes.filter(node => !hasIncomingEdge.has(node.id))
+
+    if (rootNodes.length > 0) {
+      levels.push(rootNodes)
+      processed.add(...rootNodes.map(n => n.id))
+    }
+
+    // Process remaining nodes level by level
+    let currentLevel = 0
+    while (processed.size < layoutNodes.length && currentLevel < 10) {
+      const nextLevel: Node[] = []
+
+      layoutNodes.forEach(node => {
+        if (!processed.has(node.id)) {
+          const incomingEdges = edges.filter(edge => edge.target === node.id)
+          const allSourcesProcessed = incomingEdges.every(edge => processed.has(edge.source))
+
+          if (allSourcesProcessed) {
+            nextLevel.push(node)
+          }
+        }
+      })
+
+      if (nextLevel.length > 0) {
+        levels.push(nextLevel)
+        processed.add(...nextLevel.map(n => n.id))
+      }
+
+      currentLevel++
+    }
+
+    // Add any remaining nodes to the last level
+    const remainingNodes = layoutNodes.filter(node => !processed.has(node.id))
+    if (remainingNodes.length > 0) {
+      levels.push(remainingNodes)
+    }
+
+    // Position nodes
+    levels.forEach((levelNodes, levelIndex) => {
+      levelNodes.forEach((node, nodeIndex) => {
+        const x = nodeIndex * horizontalSpacing + 100
+        const y = levelIndex * verticalSpacing + 100
+
+        node.position = { x, y }
+      })
+    })
+
+    setNodes(layoutNodes)
+    setTimeout(() => reactFlowInstance?.fitView({ padding: 0.1 }), 100)
+    toast.success('Auto-layout applied')
+  }, [nodes, edges, setNodes])
+
+  // Enhanced fit view handler
+  const handleFitView = useCallback(() => {
+    reactFlowInstance?.fitView({ padding: 0.1 })
+  }, [reactFlowInstance])
 
   // Auto-connection logic for newly dropped nodes
   const createAutoConnections = useCallback((newNode: Node, existingNodes: Node[]) => {
@@ -818,9 +1078,14 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     }
   }
 
-  const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
-    setSelectedNode(node)
-  }, [])
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    // Check if it was a double-click for execution
+    if (event.detail === 2) {
+      executeIndividualNode(node.id)
+    } else {
+      setSelectedNode(node)
+    }
+  }, [executeIndividualNode])
 
   const onPaneClick = useCallback(() => {
     setSelectedNode(null)
@@ -1168,36 +1433,104 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
       <div className="flex-1 relative flex">
         <div className={`${showEmbeddedPreview ? 'flex-1' : 'w-full'} relative`}>
           <ReactFlowProvider>
-            <div className="h-full" ref={reactFlowWrapper}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onInit={setReactFlowInstance}
-              onDrop={onDrop}
-              onDragOver={onDragOver}
-              onNodeClick={onNodeClick}
-              onPaneClick={onPaneClick}
-              onNodesDelete={onNodesDelete}
-              nodeTypes={nodeTypes}
-              connectionMode={ConnectionMode.Loose}
-              fitView
-              className="bg-gray-50"
+            <EnhancedCanvasInteractions
+              onNodeExecute={executeIndividualNode}
+              onNodeStop={(nodeId) => {
+                // Stop individual node execution
+                setActiveNodeId(null)
+                toast.success(`Stopped execution of node ${nodeId}`)
+              }}
+              onWorkflowExecute={executeWorkflow}
+              onWorkflowStop={() => {
+                // Stop workflow execution
+                setExecuting(false)
+                toast.success('Workflow execution stopped')
+              }}
+              onNodeDelete={handleNodeDelete}
+              onNodeDuplicate={handleNodeDuplicate}
+              onAutoLayout={handleAutoLayout}
+              onFitView={handleFitView}
             >
+              <div className="h-full" ref={reactFlowWrapper}>
+                <ReactFlow
+                  nodes={nodes.map(node => ({
+                    ...node,
+                    data: {
+                      ...node.data,
+                      // Enhanced execution state
+                      isExecuting: activeNodeId === node.id,
+                      hasOutput: !!nodeOutputs[node.id],
+                      executionError: false,
+                      onExecute: () => executeIndividualNode(node.id),
+                      onConfigure: () => handleNodeConfigure(node),
+                      // Data type information for connections
+                      dataTypes: nodeDataTypes[node.id] || { inputs: {}, outputs: {} }
+                    }
+                  }))}
+                  edges={edges.map(edge => ({
+                    ...edge,
+                    animated: connectionValidation[edge.id] || false,
+                    style: {
+                      stroke: connectionValidation[edge.id] ? '#10b981' : '#b1b1b7',
+                      strokeWidth: connectionValidation[edge.id] ? 2 : 1
+                    },
+                    type: connectionValidation[edge.id] ? 'interactive' : 'default'
+                  }))}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  onInit={setReactFlowInstance}
+                  onDrop={onDrop}
+                  onDragOver={onDragOver}
+                  onNodeClick={onNodeClick}
+                  onPaneClick={onPaneClick}
+                  onNodesDelete={onNodesDelete}
+                  nodeTypes={nodeTypes}
+                  connectionMode={ConnectionMode.Loose}
+                  fitView
+                  className="bg-gray-50"
+                >
               <Controls />
               <MiniMap />
               <Background gap={12} size={1} />
 
               <Panel position="top-left">
-                <FlowToolbar 
-                  projectId={projectId} 
+                <FlowToolbar
+                  projectId={projectId}
                   showPreview={showEmbeddedPreview}
                   onTogglePreview={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
                   previewMode={previewMode}
                   onPreviewModeChange={setPreviewMode}
                 />
+
+                {/* Interactive Mode Toggle */}
+                <div className="mt-2 bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Mode:</span>
+                    <Button
+                      size="sm"
+                      variant={nodeExecutionMode === 'individual' ? 'default' : 'outline'}
+                      onClick={() => setNodeExecutionMode('individual')}
+                      className="text-xs"
+                    >
+                      Individual
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={nodeExecutionMode === 'batch' ? 'default' : 'outline'}
+                      onClick={() => setNodeExecutionMode('batch')}
+                      className="text-xs"
+                    >
+                      Batch
+                    </Button>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">
+                    {nodeExecutionMode === 'individual'
+                      ? 'Double-click nodes to execute individually'
+                      : 'Execute entire workflow at once'
+                    }
+                  </div>
+                </div>
               </Panel>
 
               {/* Execution Status Panel */}
@@ -1335,8 +1668,9 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
                   </div>
                 </Panel>
               )}
-            </ReactFlow>
-            </div>
+                </ReactFlow>
+              </div>
+            </EnhancedCanvasInteractions>
           </ReactFlowProvider>
         </div>
 
@@ -1372,9 +1706,9 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
       </div>
 
       {selectedNode && (
-        <NodeConfigPanel
+        <EnhancedNodeConfigPanel
           node={selectedNode}
-          onConfigChange={(config) => updateNodeConfig(selectedNode.id, config)}
+          onUpdateNode={(nodeId, config) => updateNodeConfig(nodeId, config)}
           onClose={() => setSelectedNode(null)}
         />
       )}
@@ -1415,6 +1749,48 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         onWorkflowGenerated={handleWorkflowGenerated}
         onWorkflowApproved={handleWorkflowApproved}
       />
+
+      {/* Dynamic Node Configuration Modal */}
+      {showDynamicConfig && configuringNode && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">
+                Configure {configuringNode.data?.label || configuringNode.type}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowDynamicConfig(false)
+                  setConfiguringNode(null)
+                }}
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <EnhancedNodeConfiguration
+                node={configuringNode}
+                onUpdateNode={(nodeId, config) => {
+                  setNodes(nodes => nodes.map(node =>
+                    node.id === nodeId
+                      ? {
+                          ...node,
+                          data: {
+                            ...node.data,
+                            config,
+                            label: config.label || node.data?.label
+                          }
+                        }
+                      : node
+                  ))
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

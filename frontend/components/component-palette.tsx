@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -19,8 +19,11 @@ import {
   ChevronDown,
   ChevronRight,
   Search,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Loader2
 } from "lucide-react"
+import { unitePluginSystem } from "@/lib/plugin-system"
+import { PluginDefinition } from "@/lib/plugin-system/types"
 
 interface ComponentItem {
   id: string
@@ -28,154 +31,88 @@ interface ComponentItem {
   description: string
   category: string
   icon: React.ReactNode
+  version?: string
+  tags?: string[]
+  plugin?: PluginDefinition
 }
 
-const COMPONENTS: ComponentItem[] = [
-  // DeFi Executable Components
-  {
-    id: "oneInchSwap",
-    name: "1inch Swap",
-    description: "Execute token swaps using 1inch aggregation protocol",
-    category: "DeFi",
-    icon: <Repeat className="w-4 h-4" />
-  },
-  {
-    id: "oneInchQuote",
-    name: "1inch Quote",
-    description: "Get real-time swap quotes and price data",
-    category: "DeFi",
-    icon: <TrendingUp className="w-4 h-4" />
-  },
-  {
-    id: "fusionPlus",
-    name: "Fusion+",
-    description: "Cross-chain swaps with MEV protection",
-    category: "DeFi",
-    icon: <Zap className="w-4 h-4" />
-  },
-  {
-    id: "fusionMonadBridge",
-    name: "Fusion Monad Bridge",
-    description: "Atomic swaps between Ethereum and Monad using HTLCs",
-    category: "Bridge",
-    icon: <ArrowLeftRight className="w-4 h-4" />
-  },
-  {
-    id: "chainSelector",
-    name: "Chain Selector",
-    description: "Select blockchain networks for operations",
-    category: "Infrastructure",
-    icon: <Server className="w-4 h-4" />
-  },
-
-  // UI Components
-  {
-    id: "tokenInput",
-    name: "Token Input",
-    description: "Token selection interface",
-    category: "UI",
-    icon: <Coins className="w-4 h-4" />
-  },
-  {
-    id: "slippageControl",
-    name: "Slippage Control",
-    description: "Slippage tolerance settings",
-    category: "UI",
-    icon: <Clock className="w-4 h-4" />
-  },
-  {
-    id: "walletConnector",
-    name: "Wallet Connector",
-    description: "Connect to Web3 wallets",
-    category: "UI",
-    icon: <Wallet className="w-4 h-4" />
-  },
-  {
-    id: "swapInterface",
-    name: "Swap Interface",
-    description: "Complete swap UI component",
-    category: "UI",
-    icon: <Layout className="w-4 h-4" />
-  },
-
-  // Infrastructure
-  {
-    id: "dashboard",
-    name: "Dashboard",
-    description: "Data visualization dashboard",
-    category: "Infrastructure",
-    icon: <Layout className="w-4 h-4" />
-  },
-  {
-    id: "erc20Token",
-    name: "ERC20 Token",
-    description: "Token creation and management",
-    category: "Infrastructure",
-    icon: <Coins className="w-4 h-4" />
-  },
-
-  // Additional DeFi Components
-  {
-    id: "fusionSwap",
-    name: "Fusion Swap",
-    description: "Gasless swaps with MEV protection",
-    category: "DeFi",
-    icon: <Zap className="w-4 h-4" />
-  },
-  {
-    id: "limitOrder",
-    name: "Limit Order",
-    description: "Place limit orders on DEX",
-    category: "DeFi",
-    icon: <Clock className="w-4 h-4" />
-  },
-  {
-    id: "portfolioAPI",
-    name: "Portfolio API",
-    description: "Portfolio tracking and analytics",
-    category: "Analytics",
-    icon: <TrendingUp className="w-4 h-4" />
-  },
-  {
-    id: "defiDashboard",
-    name: "DeFi Dashboard",
-    description: "Complete DeFi dashboard interface",
-    category: "UI",
-    icon: <Layout className="w-4 h-4" />
-  },
-  {
-    id: "transactionHistory",
-    name: "Transaction History",
-    description: "Transaction tracking and history",
-    category: "Analytics",
-    icon: <Activity className="w-4 h-4" />
-  },
-  {
-    id: "swapAPI",
-    name: "Swap API",
-    description: "Backend API for swap operations",
-    category: "Infrastructure",
-    icon: <Server className="w-4 h-4" />
-  },
-  {
-    id: "tokenDataService",
-    name: "Token Data Service",
-    description: "Token price and metadata service",
-    category: "Infrastructure",
-    icon: <Database className="w-4 h-4" />
+// Icon mapping for plugin categories
+const getIconForCategory = (category: string) => {
+  switch (category) {
+    case 'DeFi': return <Repeat className="w-4 h-4" />
+    case 'Bridge': return <ArrowLeftRight className="w-4 h-4" />
+    case 'Logic': return <span className="text-xs">🔀</span>
+    case 'Data': return <span className="text-xs">🔄</span>
+    case 'Wallet': return <Wallet className="w-4 h-4" />
+    case 'UI': return <Layout className="w-4 h-4" />
+    case 'Infrastructure': return <Server className="w-4 h-4" />
+    case 'Analytics': return <TrendingUp className="w-4 h-4" />
+    default: return <Activity className="w-4 h-4" />
   }
-]
+}
 
-const CATEGORIES = ["All", "DeFi", "Bridge", "UI", "Infrastructure", "Analytics"]
+// Convert plugin to component item
+const pluginToComponent = (plugin: PluginDefinition): ComponentItem => ({
+  id: plugin.id,
+  name: plugin.name,
+  description: plugin.description,
+  category: plugin.category,
+  version: plugin.version,
+  tags: plugin.tags,
+  icon: getIconForCategory(plugin.category),
+  plugin
+})
 
 export function ComponentPalette() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["DeFi"]))
+  const [components, setComponents] = useState<ComponentItem[]>([])
+  const [categories, setCategories] = useState<string[]>(["All"])
+  const [loading, setLoading] = useState(true)
 
-  const filteredComponents = COMPONENTS.filter(component => {
+  // Load components from plugin registry
+  useEffect(() => {
+    const loadComponents = async () => {
+      try {
+        setLoading(true)
+        
+        // Discover and load plugins
+        await unitePluginSystem.registry.discoverPlugins()
+        
+        // Get all registered plugins
+        const plugins = unitePluginSystem.registry.getAllPlugins()
+        
+        // Convert plugins to components
+        const pluginComponents = plugins.map(pluginToComponent)
+        
+        // Extract unique categories
+        const uniqueCategories = Array.from(
+          new Set(plugins.map(p => p.category))
+        ).sort()
+        
+        setComponents(pluginComponents)
+        setCategories(["All", ...uniqueCategories])
+        
+      } catch (error) {
+        console.error('Failed to load plugin components:', error)
+        // Fallback to empty state
+        setComponents([])
+        setCategories(["All"])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadComponents()
+  }, [])
+
+  const filteredComponents = components.filter(component => {
     const matchesSearch = component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         component.description.toLowerCase().includes(searchTerm.toLowerCase())
+                         component.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (component.tags && component.tags.some(tag => 
+                           tag.toLowerCase().includes(searchTerm.toLowerCase())
+                         ))
     const matchesCategory = selectedCategory === "All" || component.category === selectedCategory
     return matchesSearch && matchesCategory
   })
@@ -195,15 +132,33 @@ export function ComponentPalette() {
     event.dataTransfer.effectAllowed = "move"
   }
 
-  const groupedComponents = CATEGORIES.slice(1).reduce((acc, category) => {
+  const groupedComponents = categories.slice(1).reduce((acc, category) => {
     acc[category] = filteredComponents.filter(comp => comp.category === category)
     return acc
   }, {} as Record<string, ComponentItem[]>)
 
+  if (loading) {
+    return (
+      <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col h-full max-h-screen">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
+            <p className="text-sm text-gray-600">Loading plugins...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col h-full max-h-screen">
       <div className="p-2 sm:p-4 border-b">
-        <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Components</h2>
+        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+          <h2 className="text-base sm:text-lg font-semibold">Components</h2>
+          <Badge variant="outline" className="text-xs">
+            {components.length}
+          </Badge>
+        </div>
         
         {/* Search */}
         <div className="relative mb-2 sm:mb-3">
@@ -218,7 +173,7 @@ export function ComponentPalette() {
 
         {/* Category Filters */}
         <div className="flex flex-wrap gap-1 sm:gap-2">
-          {CATEGORIES.map(category => (
+          {categories.map(category => (
             <Badge
               key={category}
               variant={selectedCategory === category ? "default" : "outline"}
@@ -226,6 +181,11 @@ export function ComponentPalette() {
               onClick={() => setSelectedCategory(category)}
             >
               {category}
+              {category !== "All" && (
+                <span className="ml-1 opacity-70">
+                  ({components.filter(c => c.category === category).length})
+                </span>
+              )}
             </Badge>
           ))}
         </div>
@@ -292,6 +252,9 @@ export function ComponentPalette() {
           <div className="hidden sm:block">• Click nodes to configure them</div>
           <div className="sm:hidden">• Tap components to add</div>
           <div className="sm:hidden">• Long press to configure</div>
+          <div className="text-xs text-gray-400 mt-2">
+            Powered by Plugin System v{unitePluginSystem.version}
+          </div>
         </div>
       </div>
     </div>
@@ -317,15 +280,36 @@ function ComponentCard({
             {component.icon}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-xs sm:text-sm text-gray-900 mb-1 truncate">
-              {component.name}
-            </h3>
+            <div className="flex items-center gap-1 mb-1">
+              <h3 className="font-medium text-xs sm:text-sm text-gray-900 truncate">
+                {component.name}
+              </h3>
+              {component.version && (
+                <Badge variant="secondary" className="text-xs px-1 py-0">
+                  v{component.version}
+                </Badge>
+              )}
+            </div>
             <p className="text-xs text-gray-600 leading-relaxed line-clamp-2 sm:line-clamp-none">
               {component.description}
             </p>
-            <Badge variant="outline" className="mt-1 sm:mt-2 text-xs">
-              {component.category}
-            </Badge>
+            <div className="flex items-center gap-2 mt-1 sm:mt-2">
+              <Badge variant="outline" className="text-xs">
+                {component.category}
+              </Badge>
+              {component.tags && component.tags.length > 0 && (
+                <div className="flex gap-1">
+                  {component.tags.slice(0, 2).map((tag, index) => (
+                    <Badge key={index} variant="outline" className="text-xs px-1 py-0 opacity-70">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {component.tags.length > 2 && (
+                    <span className="text-xs text-gray-400">+{component.tags.length - 2}</span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>

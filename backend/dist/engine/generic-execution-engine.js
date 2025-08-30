@@ -363,6 +363,15 @@ class GenericExecutionEngine extends events_1.EventEmitter {
                 case 'api':
                     result = await this.executeAPI(plugin, inputs, execution.context);
                     break;
+                case 'avalanche':
+                    if (plugin.executor.instance) {
+                        // Use the direct executor instance for Avalanche plugins
+                        result = await plugin.executor.instance.execute(inputs, execution.context);
+                    }
+                    else {
+                        throw new ExecutionError('Avalanche plugin missing executor instance', nodeId, nodeType, execution.id);
+                    }
+                    break;
                 case 'generic':
                 default:
                     result = await this.executeGeneric(plugin, inputs, execution.context);

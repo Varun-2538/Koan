@@ -159,7 +159,7 @@ export class FusionPlusExecutor implements NodeExecutor {
     try {
       // Mock transaction data for cross-chain swap
       return {
-        to: '0x1111111254fb6c44bAC0beD2854e76F90643097d', // 1inch Router
+        to: process.env.ONEINCH_ROUTER_ADDRESS || '0x1111111254fb6c44bAC0beD2854e76F90643097d', // 1inch Router
         data: '0x' + 'ff'.repeat(200), // Mock encoded function call
         value: inputs.from_token === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' ? inputs.amount : '0',
         gasLimit: await this.estimateGas(inputs)

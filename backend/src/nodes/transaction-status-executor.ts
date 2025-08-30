@@ -132,7 +132,7 @@ export class TransactionStatusExecutor implements NodeExecutor {
         transactionIndex: randomStatus === 'confirmed' ? Math.floor(Math.random() * 100) : null,
         confirmedAt: randomStatus === 'confirmed' ? new Date().toISOString() : null,
         from: '0x742d35Cc6634C0532925a3b8D427b2C0ef46c',
-        to: '0x1111111254fb6c44bAC0beD2854e76F90643097d',
+        to: process.env.ONEINCH_ROUTER_ADDRESS || '0x1111111254fb6c44bAC0beD2854e76F90643097d',
         value: '1000000000000000000', // 1 ETH
         gasLimit: '200000',
         gasUsed: randomStatus === 'confirmed' ? '180000' : null,
@@ -156,7 +156,7 @@ export class TransactionStatusExecutor implements NodeExecutor {
         blockHash: '0x' + 'b'.repeat(64),
         transactionIndex: 42,
         from: '0x742d35Cc6634C0532925a3b8D427b2C0ef46c',
-        to: '0x1111111254fb6c44bAC0beD2854e76F90643097d',
+        to: process.env.ONEINCH_ROUTER_ADDRESS || '0x1111111254fb6c44bAC0beD2854e76F90643097d',
         gasUsed: '180000',
         effectiveGasPrice: '20000000000',
         status: '0x1', // Success
@@ -290,7 +290,8 @@ export class TransactionStatusExecutor implements NodeExecutor {
       return 'transfer';
     }
     
-    if (transaction.to === '0x1111111254fb6c44bAC0beD2854e76F90643097d') {
+    const oneInchRouter = process.env.ONEINCH_ROUTER_ADDRESS || '0x1111111254fb6c44bAC0beD2854e76F90643097d';
+    if (transaction.to === oneInchRouter) {
       return '1inch_swap';
     }
     

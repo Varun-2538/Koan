@@ -56,7 +56,7 @@ interface SwapQuote {
 
 const TOKENS: Record<string, Token> = {
   ETH: { symbol: 'ETH', name: 'Ethereum', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18 },
-  USDC: { symbol: 'USDC', name: 'USD Coin', address: '0xA0b86a33E6441203206448619dd91e2df9dd2abF', decimals: 6 },
+  USDC: { symbol: 'USDC', name: 'USD Coin', address: '0xA0b86a33E6441fb3cD7b2a9da94C2b48A8aE5fF0', decimals: 6 },
   USDT: { symbol: 'USDT', name: 'Tether USD', address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
   DAI: { symbol: 'DAI', name: 'Dai Stablecoin', address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', decimals: 18 },
   WBTC: { symbol: 'WBTC', name: 'Wrapped Bitcoin', address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', decimals: 8 }

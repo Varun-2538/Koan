@@ -39,7 +39,7 @@ async function test1inchAPI() {
   console.log('2️⃣ Testing quote endpoint...');
   try {
     // Use correct USDC address (the one in your script might be outdated)
-    const usdcAddress = '0xA0b86a33E6441203206448619dd91e2df9dd2abf'; // USDC on Ethereum
+    const usdcAddress = '0xA0b86a33E6441fb3cD7b2a9da94C2b48A8aE5fF0'; // USDC on Ethereum
     
     // Verify the token exists in the available tokens
     const usdcToken = Object.values(availableTokens).find(token => 

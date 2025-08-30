@@ -142,7 +142,7 @@ const SUPPORTED_CHAINS = {
     isTestnet: false,
     tokens: {
       'ETH': '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-      'USDC': '0xA0b86a33E6441203206448619dd91e2df9dd2abf',
+      'USDC': '0xA0b86a33E6441fb3cD7b2a9da94C2b48A8aE5fF0',
       'USDT': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
       'DAI': '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     }
@@ -216,7 +216,7 @@ const MONAD_BRIDGE_CONFIG = {
   supported_tokens: {
     'eth_to_monad': {
       'ETH': '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-      'USDC': '0xA0b86a33E6441203206448619dd91e2df9dd2abf'
+      'USDC': '0xA0b86a33E6441fb3cD7b2a9da94C2b48A8aE5fF0'
     },
     'monad_to_eth': {
       'MONAD': '0x0000000000000000000000000000000000000000',

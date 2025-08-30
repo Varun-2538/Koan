@@ -9,9 +9,9 @@ import {
 } from '@/types'
 
 // Avalanche Fuji Teleporter Contract Details
-const TELEPORTER_ADDRESS = '0x253b2784c75e510dD0fF1da844684a1aC0aa5fcf' // Fuji testnet
+const TELEPORTER_ADDRESS = process.env.TELEPORTER_CONTRACT_ADDRESS || '0x253b2784c75e510dD0fF1da844684a1aC0aa5fcf' // Fuji testnet
 const FUJI_CHAIN_ID = 43113
-const FUJI_RPC_URL = 'https://api.avax-test.network/ext/bc/C/rpc'
+const FUJI_RPC_URL = process.env.AVALANCHE_FUJI_RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc'
 
 // Simplified Teleporter ABI for sendCrossChainMessage
 const TELEPORTER_ABI = [

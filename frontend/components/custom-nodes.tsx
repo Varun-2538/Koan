@@ -91,9 +91,37 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
     }
   }, [data.componentId])
 
+  // Check if configuration is complete
+  const isConfigurationComplete = () => {
+    if (!component?.template?.configuration && !component?.template?.fields) return true
+    
+    const fields = component.template?.configuration || component.template?.fields || []
+    const requiredFields = fields.filter(field => field.required)
+    
+    if (requiredFields.length === 0) return true
+    
+    return requiredFields.every(field => {
+      const value = data.config?.[field.key]
+      if (value === undefined || value === null || value === '') return false
+      // Don't consider demo/template values as valid configuration
+      if (typeof value === 'string' && value.includes('template-mode-demo-key')) return false
+      return true
+    })
+  }
+
   // Handle node execution
   const handleExecute = async () => {
     if (!component || executionState.status === 'running') return
+
+    // Validate configuration before execution
+    if (!isConfigurationComplete()) {
+      setExecutionState({
+        status: 'error',
+        error: 'Configuration incomplete. Please configure all required parameters.',
+        duration: 0
+      })
+      return
+    }
 
     setExecutionState({ status: 'running', startTime: Date.now() })
     
@@ -168,13 +196,13 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
           dataType={input.dataType}
           label={input.name}
           required={input.required}
-          style={{ top: 60 + index * 25 }}
+          style={{ top: 70 + index * 30 }}
           nodeId={id!}
         />
       ))}
 
-      <Card className={`min-w-[250px] relative group cursor-pointer transition-all duration-200 ${getNodeStateClasses()}`}>
-        <CardContent className="p-3">
+      <Card className={`min-w-[320px] max-w-[400px] w-full min-h-[120px] relative group cursor-pointer transition-all duration-200 ${getNodeStateClasses()}`}>
+        <CardContent className="p-4">
           {/* Node Header */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -194,7 +222,7 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
                   e.stopPropagation()
                   handleExecute()
                 }}
-                disabled={executionState.status === 'running'}
+                disabled={executionState.status === 'running' || !isConfigurationComplete()}
                 className="w-6 h-6 p-0"
                 title="Execute node"
               >
@@ -269,20 +297,36 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
           )}
 
           {/* Configuration Summary */}
-          <div className="text-xs text-gray-600">
-            {Object.keys(data.config || {}).length} parameters configured
-    </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-600">
+              {Object.keys(data.config || {}).length} parameters configured
+            </span>
+            {/* Configuration Status */}
+            <div className="flex items-center gap-1">
+              {isConfigurationComplete() ? (
+                <CheckCircle className="w-3 h-3 text-green-600" />
+              ) : (
+                <AlertCircle className="w-3 h-3 text-yellow-600" />
+              )}
+            </div>
+          </div>
 
           {/* Quick Config Panel */}
           {showConfig && (
             <div className="mt-2 pt-2 border-t border-gray-200">
               <div className="text-xs text-gray-500 mb-1">Quick Config:</div>
               <div className="space-y-1 max-h-24 overflow-y-auto">
-                {component.template?.configuration?.slice(0, 3).map((field) => (
+                {(component.template?.configuration || component.template?.fields || []).slice(0, 3).map((field) => (
                   <div key={field.key} className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">{field.name}:</span>
+                    <span className="text-xs text-gray-600">{field.label || field.name}:</span>
                     <span className="text-xs font-mono">
-                      {data.config?.[field.key] || field.defaultValue || 'Not set'}
+                      {(() => {
+                        const value = data.config?.[field.key] || field.defaultValue
+                        if (!value) return 'Not set'
+                        if (field.sensitive || field.type === 'password') return '••••••••'
+                        if (typeof value === 'string' && value.includes('template-mode-demo-key')) return 'Not configured'
+                        return String(value).length > 15 ? String(value).substring(0, 15) + '...' : String(value)
+                      })()}
                     </span>
       </div>
                 ))}
@@ -302,7 +346,7 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
           dataType={output.dataType}
           label={output.name}
           hasData={!!outputs[output.id]}
-          style={{ top: 60 + index * 25 }}
+          style={{ top: 70 + index * 30 }}
           nodeId={id!}
         />
       ))}
@@ -366,11 +410,12 @@ const EnhancedHandle: React.FC<{
         style={{
           backgroundColor: handleColor,
           border: `2px solid ${connectionValid ? '#ffffff' : '#ef4444'}`,
-          width: '14px',
-          height: '14px',
+          width: '16px',
+          height: '16px',
           borderRadius: '50%',
-          boxShadow: hasData ? `0 0 0 3px ${handleColor}40` : 'none',
-          transition: 'all 0.2s ease'
+          boxShadow: hasData ? `0 0 0 3px ${handleColor}40` : `0 2px 4px rgba(0,0,0,0.1)`,
+          transition: 'all 0.2s ease',
+          zIndex: 10
         }}
         onConnect={handleValidateConnection}
       />

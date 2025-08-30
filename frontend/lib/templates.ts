@@ -88,10 +88,10 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
             template_creation_mode: true,
             
             // Backend required fields
-            api_key: "template-mode-demo-key",
+            api_key: "",
             
             // Frontend config fields
-            apiKey: "template-mode-demo-key",
+            apiKey: "",
             supportedChains: ["1", "137", "56", "42161", "10", "43114"],
             quoteRefreshInterval: 10,
             showPriceChart: true,
@@ -127,10 +127,10 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
             template_creation_mode: true,
             
             // Backend required fields
-            api_key: "template-mode-demo-key",
+            api_key: "",
             
             // Frontend config fields
-            apiKey: "template-mode-demo-key",
+            apiKey: "",
             supportedChains: ["1", "137", "56", "42161", "10", "43114"],
             enableFusion: true,
             enableMEVProtection: true,
@@ -149,7 +149,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
             template_creation_mode: true,
             
             // Required fields for backend validation
-            api_key: "template-mode-demo-key",
+            api_key: "",
             source_chain: "1", // Ethereum
             destination_chain: "137", // Polygon
             from_token: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // ETH
@@ -158,7 +158,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
             from_address: "0x1234567890123456789012345678901234567890", // Demo address
             
             // Original config fields
-            apiKey: "template-mode-demo-key",
+            apiKey: "",
             supportedChains: ["1", "137", "56", "42161", "10", "43114"],
             enableMEVProtection: true,
             enableGasless: true,
@@ -177,10 +177,10 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
             template_creation_mode: true,
             
             // Backend required fields  
-            api_key: "template-mode-demo-key",
+            api_key: "",
             
             // Frontend config fields
-            apiKey: "template-mode-demo-key",
+            apiKey: "",
             orderType: "limit",
             enableAdvancedStrategies: true,
             supportedChains: ["1", "137", "56", "42161", "10", "43114"]
@@ -198,10 +198,10 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
             template_creation_mode: true,
             
             // Backend required fields
-            api_key: "template-mode-demo-key",
+            api_key: "",
             
             // Frontend config fields
-            apiKey: "template-mode-demo-key",
+            apiKey: "",
             trackHistory: true,
             enableAnalytics: true,
             supportedChains: ["1", "137", "56", "42161", "10", "43114"]

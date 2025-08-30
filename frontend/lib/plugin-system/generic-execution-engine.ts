@@ -10,6 +10,7 @@ import type {
   WorkflowDefinition,
   ValidationResult
 } from './types'
+import { pluginRegistry } from './plugin-registry'
 
 class GenericExecutionEngine {
   private executors = new Map<string, Function>()
@@ -234,19 +235,29 @@ class GenericExecutionEngine {
       }
       if (!node.type) {
         errors.push(`Node ${node.id} missing type`)
+      } else {
+        // Check if component type exists in the registry
+        const component = pluginRegistry.getComponent(node.type)
+        if (!component) {
+          errors.push(`Unknown component type: ${node.type}`)
+        }
       }
     })
 
     // Validate connections
     workflow.connections?.forEach(connection => {
-      const sourceExists = workflow.nodes?.some(n => n.id === connection.source)
-      const targetExists = workflow.nodes?.some(n => n.id === connection.target)
+      // Handle both formats: legacy (source/target) and new (sourceNode/targetNode)
+      const sourceId = connection.source || connection.sourceNode
+      const targetId = connection.target || connection.targetNode
       
-      if (!sourceExists) {
-        errors.push(`Connection references unknown source: ${connection.source}`)
+      const sourceExists = workflow.nodes?.some(n => n.id === sourceId)
+      const targetExists = workflow.nodes?.some(n => n.id === targetId)
+      
+      if (sourceId && !sourceExists) {
+        errors.push(`Connection references unknown source node: ${sourceId}`)
       }
-      if (!targetExists) {
-        errors.push(`Connection references unknown target: ${connection.target}`)
+      if (targetId && !targetExists) {
+        errors.push(`Connection references unknown target node: ${targetId}`)
       }
     })
 

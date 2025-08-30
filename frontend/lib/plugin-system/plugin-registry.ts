@@ -365,6 +365,7 @@ export class PluginRegistry {
   }
 
   async registerComponent(component: ComponentDefinition): Promise<void> {
+    
     // Create a simple plugin manifest for the component
     const pluginManifest: PluginManifest = {
       id: `builtin-${component.id}`,
@@ -381,7 +382,7 @@ export class PluginRegistry {
       }
     }
 
-    await this.registerPlugin(pluginManifest)
+    const result = await this.registerPlugin(pluginManifest)
   }
 }
 

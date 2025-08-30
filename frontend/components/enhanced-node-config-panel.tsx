@@ -95,19 +95,37 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
 
       setLoading(true)
       try {
+        // Ensure plugin system is initialized
+        await unitePluginSystem.initialize()
+        
         // Get component from plugin system using componentId
         const componentDef = unitePluginSystem.getComponent(componentId)
+        
+        console.log('🔍 Loading component configuration:', {
+          componentId,
+          componentDef,
+          hasTemplate: !!componentDef?.template,
+          configFields: componentDef?.template?.configuration,
+          fields: componentDef?.template?.fields,
+          bothLength: {
+            configuration: componentDef?.template?.configuration?.length || 0,
+            fields: componentDef?.template?.fields?.length || 0
+          }
+        })
         
         if (componentDef) {
           setPlugin(componentDef as any) // Temporary type cast
           
           // Initialize config with default values from template fields
+          const fields = componentDef.template?.configuration || componentDef.template?.fields || []
           const defaultConfig: FieldValue = {}
-          (componentDef.template?.configuration || componentDef.template?.fields)?.forEach(field => {
+          fields.forEach(field => {
             if (field.defaultValue !== undefined) {
               defaultConfig[field.key] = field.defaultValue
             }
           })
+          
+          console.log('🔧 Default config:', { fields, defaultConfig })
           
           // Merge with existing node config
           const mergedConfig = {
@@ -117,6 +135,7 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
           
           setConfig(mergedConfig)
         } else {
+          console.error('Component not found in plugin system:', componentId)
           setPlugin(null)
           setConfig({})
         }
@@ -233,8 +252,9 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
     if (!plugin) return false
     
     const errors: Record<string, string> = {}
+    const fields = plugin.template?.configuration || plugin.template?.fields || []
     
-    for (const field of plugin.inputs) {
+    for (const field of fields) {
       const error = validateField(field, config[field.key])
       if (error) {
         errors[field.key] = error
@@ -256,8 +276,9 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
   const handleReset = () => {
     if (!plugin) return
     
+    const fields = plugin.template?.configuration || plugin.template?.fields || []
     const defaultConfig: FieldValue = {}
-    plugin.inputs.forEach(field => {
+    fields.forEach(field => {
       if (field.defaultValue !== undefined) {
         defaultConfig[field.key] = field.defaultValue
       }
@@ -888,11 +909,13 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
                   <div>
                     <Label className="text-sm font-medium">Required Fields</Label>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {plugin.inputs.filter(field => field.required).map(field => (
-                        <Badge key={field.key} variant="outline" className="text-xs">
-                          {field.label}
-                        </Badge>
-                      ))}
+                      {(plugin.template?.configuration || plugin.template?.fields || [])
+                        .filter(field => field.required)
+                        .map(field => (
+                          <Badge key={field.key} variant="outline" className="text-xs">
+                            {field.label || field.name}
+                          </Badge>
+                        ))}
                     </div>
                   </div>
 

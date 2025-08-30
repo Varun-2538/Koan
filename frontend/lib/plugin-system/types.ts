@@ -132,8 +132,8 @@ export interface ComponentTemplate {
   inputs: PortDefinition[]
   outputs: PortDefinition[]
   configuration: ConfigurationField[]
-  metadata: ComponentMetadata
-  behavior: ComponentBehavior
+  metadata?: ComponentMetadata
+  behavior?: ComponentBehavior
   dependencies?: string[]
   resources?: ResourceRequirement[]
 }
@@ -144,8 +144,8 @@ export interface PortDefinition {
   description: string
   dataType: string // References DataType.id
   required: boolean
-  multiple: boolean // Can accept multiple connections
-  streaming: boolean // Supports real-time data
+  multiple?: boolean // Can accept multiple connections
+  streaming?: boolean // Supports real-time data
   defaultValue?: any
   constraints?: PortConstraint[]
   validation?: ValidationRule[]
@@ -219,16 +219,16 @@ export interface UIConfiguration {
 }
 
 export interface ComponentMetadata {
-  author: string
-  version: string
-  license: string
-  tags: string[]
-  category: string
+  author?: string
+  version?: string
+  license?: string
+  tags?: string[]
+  category?: string
   subcategory?: string
   documentation?: string
   examples?: ComponentExample[]
   changelog?: ChangelogEntry[]
-  compatibility: CompatibilityInfo
+  compatibility?: CompatibilityInfo
   resources?: ResourceInfo
 }
 

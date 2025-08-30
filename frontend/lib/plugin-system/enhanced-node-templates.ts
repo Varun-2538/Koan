@@ -632,13 +632,149 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
 
   // API Components
   oneInchQuote: {
+    id: 'oneInchQuote',
     type: 'oneInchQuote',
     name: '1inch Quote',
     description: 'Get token swap quotes',
     category: 'DeFi',
+    version: '1.0.0',
     icon: '💱',
     color: '#0066FF',
     inputs: [
+      {
+        id: 'fromToken',
+        name: 'From Token',
+        description: 'Token to swap from',
+        dataType: 'token',
+        required: true,
+        multiple: false,
+        streaming: false
+      },
+      {
+        id: 'toToken',
+        name: 'To Token',
+        description: 'Token to swap to',
+        dataType: 'token',
+        required: true,
+        multiple: false,
+        streaming: false
+      },
+      {
+        id: 'amount',
+        name: 'Amount',
+        description: 'Amount to swap',
+        dataType: 'number',
+        required: true,
+        multiple: false,
+        streaming: false
+      }
+    ],
+    outputs: [
+      {
+        id: 'quote',
+        name: 'Quote Data',
+        description: 'Swap quote information',
+        dataType: 'object',
+        required: true,
+        multiple: false,
+        streaming: false
+      },
+      {
+        id: 'estimatedGas',
+        name: 'Estimated Gas',
+        description: 'Estimated gas cost',
+        dataType: 'number',
+        required: false,
+        multiple: false,
+        streaming: false
+      }
+    ],
+    configuration: [
+      {
+        key: 'apiKey',
+        label: '1inch API Key',
+        description: 'API key for 1inch aggregator',
+        type: 'text',
+        required: true,
+        sensitive: true,
+        placeholder: 'Enter your 1inch API key'
+      },
+      {
+        key: 'slippage',
+        label: 'Slippage Tolerance %',
+        description: 'Maximum slippage tolerance',
+        type: 'number',
+        required: false,
+        defaultValue: 1.0
+      }
+    ]
+  },
+
+  // Missing components that need to be added
+  priceImpactCalculator: {
+    type: 'priceImpactCalculator',
+    name: 'Price Impact Calculator',
+    description: 'Calculate price impact for trades',
+    category: 'Analytics',
+    icon: '📊',
+    color: '#F59E0B',
+    inputs: [
+      {
+        id: 'tradeAmount',
+        name: 'Trade Amount',
+        dataType: 'number',
+        required: true
+      },
+      {
+        id: 'liquidity',
+        name: 'Pool Liquidity',
+        dataType: 'number',
+        required: true
+      }
+    ],
+    outputs: [
+      {
+        id: 'priceImpact',
+        name: 'Price Impact %',
+        dataType: 'number'
+      },
+      {
+        id: 'minimumReceived',
+        name: 'Minimum Received',
+        dataType: 'number'
+      }
+    ],
+    fields: [
+      {
+        key: 'slippageTolerance',
+        type: 'number',
+        label: 'Slippage Tolerance %',
+        defaultValue: 1,
+        required: false
+      }
+    ]
+  },
+
+  fusionPlus: {
+    type: 'fusionPlus',
+    name: 'Fusion+ Cross-Chain',
+    description: 'Cross-chain swaps with MEV protection',
+    category: 'DeFi',
+    icon: '🌉',
+    color: '#8B5CF6',
+    inputs: [
+      {
+        id: 'sourceChain',
+        name: 'Source Chain',
+        dataType: 'chain',
+        required: true
+      },
+      {
+        id: 'targetChain',
+        name: 'Target Chain',
+        dataType: 'chain',
+        required: true
+      },
       {
         id: 'fromToken',
         name: 'From Token',
@@ -660,22 +796,137 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
     ],
     outputs: [
       {
-        id: 'quote',
-        name: 'Quote Data',
-        dataType: 'object'
+        id: 'bridgeTxHash',
+        name: 'Bridge Transaction',
+        dataType: 'string'
       },
       {
-        id: 'estimatedGas',
-        name: 'Estimated Gas',
+        id: 'estimatedTime',
+        name: 'Estimated Time',
         dataType: 'number'
       }
     ],
     fields: [
       {
-        key: 'slippage',
+        key: 'bridgeProtocol',
+        type: 'select',
+        label: 'Bridge Protocol',
+        options: [
+          { label: 'Layerzero', value: 'layerzero' },
+          { label: 'Axelar', value: 'axelar' },
+          { label: 'Wormhole', value: 'wormhole' }
+        ],
+        defaultValue: 'layerzero'
+      }
+    ]
+  },
+
+  portfolioAPI: {
+    type: 'portfolioAPI',
+    name: 'Portfolio API',
+    description: 'Fetch portfolio data from external API',
+    category: 'Analytics',
+    icon: '📈',
+    color: '#10B981',
+    inputs: [
+      {
+        id: 'walletAddress',
+        name: 'Wallet Address',
+        dataType: 'address',
+        required: true
+      },
+      {
+        id: 'chainIds',
+        name: 'Chain IDs',
+        dataType: 'array',
+        required: false
+      }
+    ],
+    outputs: [
+      {
+        id: 'portfolioData',
+        name: 'Portfolio Data',
+        dataType: 'object'
+      },
+      {
+        id: 'totalValue',
+        name: 'Total Value USD',
+        dataType: 'number'
+      }
+    ],
+    fields: [
+      {
+        key: 'apiProvider',
+        type: 'select',
+        label: 'API Provider',
+        options: [
+          { label: 'DeBank', value: 'debank' },
+          { label: 'Zerion', value: 'zerion' },
+          { label: 'Zapper', value: 'zapper' }
+        ],
+        defaultValue: 'debank'
+      },
+      {
+        key: 'apiKey',
+        type: 'password',
+        label: 'API Key',
+        required: true,
+        sensitive: true
+      }
+    ]
+  },
+
+  defiDashboard: {
+    type: 'defiDashboard',
+    name: 'DeFi Dashboard',
+    description: 'Display comprehensive DeFi metrics',
+    category: 'UI',
+    icon: '📊',
+    color: '#6366F1',
+    inputs: [
+      {
+        id: 'portfolioData',
+        name: 'Portfolio Data',
+        dataType: 'object',
+        required: true
+      },
+      {
+        id: 'priceData',
+        name: 'Price Data',
+        dataType: 'object',
+        required: false
+      }
+    ],
+    outputs: [
+      {
+        id: 'dashboardState',
+        name: 'Dashboard State',
+        dataType: 'object'
+      }
+    ],
+    fields: [
+      {
+        key: 'chartType',
+        type: 'select',
+        label: 'Chart Type',
+        options: [
+          { label: 'Line Chart', value: 'line' },
+          { label: 'Bar Chart', value: 'bar' },
+          { label: 'Pie Chart', value: 'pie' }
+        ],
+        defaultValue: 'line'
+      },
+      {
+        key: 'refreshInterval',
         type: 'number',
-        label: 'Slippage Tolerance %',
-        defaultValue: 1.0
+        label: 'Refresh Interval (seconds)',
+        defaultValue: 30
+      },
+      {
+        key: 'showPnL',
+        type: 'boolean',
+        label: 'Show P&L',
+        defaultValue: true
       }
     ]
   }

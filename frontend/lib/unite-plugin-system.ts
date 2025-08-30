@@ -37,11 +37,11 @@ class UnitePluginSystem {
     // Register enhanced node templates as built-in components
     for (const [type, template] of Object.entries(enhancedNodeTemplates)) {
       const component: ComponentDefinition = {
-        id: type,
+        id: template.id || type,
         name: template.name,
         description: template.description,
         category: template.category,
-        version: '1.0.0',
+        version: template.version || '1.0.0',
         author: 'Unite DeFi',
         tags: [template.category, 'builtin'],
         icon: template.icon,
@@ -49,8 +49,8 @@ class UnitePluginSystem {
         template: {
           inputs: template.inputs,
           outputs: template.outputs,
-          configuration: template.fields,
-          fields: template.fields, // Add for backward compatibility
+          configuration: template.configuration || template.fields || [],
+          fields: template.configuration || template.fields || [], // Add for backward compatibility
           ui: {
             icon: template.icon,
             color: template.color,
@@ -62,7 +62,7 @@ class UnitePluginSystem {
           documentation: {
             description: template.description,
             examples: [],
-            parameters: template.fields.map(f => ({
+            parameters: (template.configuration || template.fields || []).map(f => ({
               name: f.key,
               type: f.type,
               description: f.description || '',
@@ -77,10 +77,10 @@ class UnitePluginSystem {
           runtime: 'javascript',
           code: this.generateExecutionCode(template),
           entryPoint: '',
-          timeout: 30000,
+          timeout: template.behavior?.timeout || 30000,
           memoryLimit: 128 * 1024 * 1024,
           environment: {},
-          dependencies: [],
+          dependencies: template.dependencies || [],
           permissions: []
         },
         validation: {
@@ -91,11 +91,11 @@ class UnitePluginSystem {
         metadata: {
           created: new Date().toISOString(),
           modified: new Date().toISOString(),
-          author: 'Unite DeFi',
-          license: 'MIT',
-          keywords: [template.category]
+          author: template.metadata?.author || 'Unite DeFi',
+          license: template.metadata?.license || 'MIT',
+          keywords: template.metadata?.keywords || [template.category]
         },
-        dependencies: [],
+        dependencies: template.dependencies || [],
         permissions: [],
         lifecycle: {}
       }
@@ -225,6 +225,62 @@ class UnitePluginSystem {
               estimatedGas: Math.floor(Math.random() * 150000) + 50000
             },
             estimatedGas: Math.floor(Math.random() * 150000) + 50000
+          }
+        `
+
+      case 'priceImpactCalculator':
+        return `
+          const tradeAmount = inputs.tradeAmount || 1000
+          const liquidity = inputs.liquidity || 100000
+          const priceImpact = (tradeAmount / liquidity) * 100
+          const slippage = config.slippageTolerance || 1
+          return {
+            priceImpact: Math.min(priceImpact, 15), // Cap at 15%
+            minimumReceived: tradeAmount * (1 - (priceImpact + slippage) / 100)
+          }
+        `
+
+      case 'fusionPlus':
+        return `
+          return {
+            bridgeTxHash: '0x' + Math.random().toString(16).substr(2, 64),
+            estimatedTime: Math.floor(Math.random() * 600) + 180, // 3-13 minutes
+            bridgeProtocol: config.bridgeProtocol || 'layerzero',
+            fees: {
+              bridgeFee: Math.random() * 10 + 5,
+              gasFee: Math.random() * 20 + 10
+            }
+          }
+        `
+
+      case 'portfolioAPI':
+        return `
+          const mockTokens = [
+            { symbol: 'ETH', balance: Math.random() * 10, price: 2400 + Math.random() * 200 },
+            { symbol: 'USDC', balance: Math.random() * 5000, price: 1 },
+            { symbol: 'WBTC', balance: Math.random() * 0.5, price: 45000 + Math.random() * 5000 }
+          ]
+          const totalValue = mockTokens.reduce((sum, token) => sum + (token.balance * token.price), 0)
+          return {
+            portfolioData: {
+              tokens: mockTokens,
+              chains: config.chains || ['ethereum'],
+              lastUpdated: new Date().toISOString()
+            },
+            totalValue: totalValue
+          }
+        `
+
+      case 'defiDashboard':
+        return `
+          return {
+            dashboardState: {
+              chartType: config.chartType || 'line',
+              refreshInterval: config.refreshInterval || 30,
+              showPnL: config.showPnL !== false,
+              data: inputs.portfolioData || {},
+              timestamp: new Date().toISOString()
+            }
           }
         `
 

@@ -240,24 +240,44 @@ class GenericExecutionEngine {
         const component = pluginRegistry.getComponent(node.type)
         if (!component) {
           errors.push(`Unknown component type: ${node.type}`)
+        } else {
+          // Validate node configuration
+          const configFields = component.template?.configuration || component.template?.fields || []
+          const requiredFields = configFields.filter(field => field.required)
+          const nodeConfig = node.config || {}
+          
+          requiredFields.forEach(field => {
+            const value = nodeConfig[field.key]
+            if (value === undefined || value === null || value === '') {
+              errors.push(`Node "${node.id}" (${component.name}) missing required configuration: ${field.label || field.name}`)
+            } else if (typeof value === 'string' && value.includes('template-mode-demo-key')) {
+              errors.push(`Node "${node.id}" (${component.name}) has invalid configuration for: ${field.label || field.name} - please set a proper value`)
+            }
+          })
         }
       }
     })
 
     // Validate connections
-    workflow.connections?.forEach(connection => {
+    workflow.connections?.forEach((connection, index) => {
       // Handle both formats: legacy (source/target) and new (sourceNode/targetNode)
       const sourceId = connection.source || connection.sourceNode
       const targetId = connection.target || connection.targetNode
       
+      // Skip connections with undefined source or target
+      if (!sourceId || !targetId) {
+        warnings.push(`Connection ${index} has undefined source (${sourceId}) or target (${targetId}) - skipping`)
+        return
+      }
+      
       const sourceExists = workflow.nodes?.some(n => n.id === sourceId)
       const targetExists = workflow.nodes?.some(n => n.id === targetId)
       
-      if (sourceId && !sourceExists) {
-        errors.push(`Connection references unknown source node: ${sourceId}`)
+      if (!sourceExists) {
+        errors.push(`Connection ${index} references unknown source node: ${sourceId}`)
       }
-      if (targetId && !targetExists) {
-        errors.push(`Connection references unknown target node: ${targetId}`)
+      if (!targetExists) {
+        errors.push(`Connection ${index} references unknown target node: ${targetId}`)
       }
     })
 

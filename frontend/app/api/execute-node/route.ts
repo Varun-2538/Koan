@@ -30,38 +30,50 @@ export async function POST(request: NextRequest) {
 
     console.log('Executing node via plugin system:', { pluginId, nodeIdentifier, pluginInputs })
 
-    // Get plugin definition
-    const plugin = unitePluginSystem.registry.getPlugin(pluginId)
-    if (!plugin) {
+    // Get component definition (components represent executable nodes)
+    const component = unitePluginSystem.registry.getComponent(pluginId)
+    if (!component) {
       return NextResponse.json(
-        { error: `Plugin not found: ${pluginId}` },
+        { error: `Component not found: ${pluginId}` },
         { status: 404 }
       )
     }
 
-    // Execute the node using the plugin system
+    // Execute the node using the plugin system (componentId, inputs, config, context)
     const executionResult = await unitePluginSystem.executionEngine.executeComponent(
-      plugin,
+      pluginId,
+      {},
       pluginInputs,
-      context || {
+      {
         nodeId: nodeIdentifier,
         workflowId: 'api_execution',
         executionId: `exec_${Date.now()}`,
-        timestamp: Date.now(),
-        environment: 'development'
-      }
+        environment: 'development',
+      } as any
     )
 
     // Handle modular code generation if requested
     if (generateCode && executionResult.success) {
       try {
-        const codeResult = await unitePluginSystem.codeExecutionEngine.generateModularCode({
-          template: pluginId,
-          parameters: pluginInputs,
-          outputType: generateCode.outputType || 'react',
-          includeTests: generateCode.includeTests || false,
-          includeDocs: generateCode.includeDocs || false
-        })
+        const codeResult = await unitePluginSystem.codeExecutionEngine.generateModularCode(
+          [
+            {
+              id: nodeIdentifier,
+              type: pluginId,
+              config: pluginInputs,
+              script: undefined,
+              inputs: [],
+              outputs: []
+            }
+          ],
+          [],
+          {
+            language: 'typescript',
+            includeTests: !!generateCode.includeTests,
+            includeDocumentation: !!generateCode.includeDocs,
+            optimizeForProduction: false
+          } as any
+        )
 
         return NextResponse.json({
           success: true,

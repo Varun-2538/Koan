@@ -153,6 +153,24 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   // Workflow execution state
   const [workflowExecutionStatus, setWorkflowExecutionStatus] = useState<ExecutionStatus | null>(null)
   const [nodeExecutionStatuses, setNodeExecutionStatuses] = useState<Record<string, any>>({})
+  
+  // Langflow-style execution animations
+  const [nodeExecutionStates, setNodeExecutionStates] = useState<Record<string, 'pending' | 'running' | 'completed' | 'error'>>({})
+  const [currentExecutingNode, setCurrentExecutingNode] = useState<string | null>(null)
+  const [executionOrder, setExecutionOrder] = useState<string[]>([])
+  const [executionProgress, setExecutionProgress] = useState(0)
+
+  // Update node visual states when execution state changes
+  React.useEffect(() => {
+    setNodes(prevNodes => prevNodes.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        executionState: nodeExecutionStates[node.id] || 'idle',
+        isCurrentlyExecuting: currentExecutingNode === node.id
+      }
+    })))
+  }, [nodeExecutionStates, currentExecutingNode, setNodes])
 
   // Enhanced interactivity state
   const [showDynamicConfig, setShowDynamicConfig] = useState(false)
@@ -271,6 +289,107 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     }
   }, [nodes])
 
+  // Calculate execution order using topological sort
+  const calculateExecutionOrder = useCallback((nodes: Node[], edges: Edge[]) => {
+    const nodeMap = new Map(nodes.map(node => [node.id, node]))
+    const adjacencyList = new Map<string, string[]>()
+    const inDegree = new Map<string, number>()
+    
+    // Initialize
+    nodes.forEach(node => {
+      adjacencyList.set(node.id, [])
+      inDegree.set(node.id, 0)
+    })
+    
+    // Build adjacency list and calculate in-degrees
+    edges
+      .filter(edge => edge.source && edge.target)
+      .forEach(edge => {
+        adjacencyList.get(edge.source)?.push(edge.target)
+        inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1)
+      })
+    
+    // Topological sort
+    const queue: string[] = []
+    const executionOrder: string[] = []
+    
+    // Start with nodes that have no incoming edges
+    inDegree.forEach((degree, nodeId) => {
+      if (degree === 0) {
+        queue.push(nodeId)
+      }
+    })
+    
+    while (queue.length > 0) {
+      const current = queue.shift()!
+      executionOrder.push(current)
+      
+      adjacencyList.get(current)?.forEach(neighbor => {
+        const newDegree = (inDegree.get(neighbor) || 0) - 1
+        inDegree.set(neighbor, newDegree)
+        
+        if (newDegree === 0) {
+          queue.push(neighbor)
+        }
+      })
+    }
+    
+    return executionOrder
+  }, [])
+
+  // Execute workflow with Langflow-style animations  
+  const executeWithAnimations = useCallback(async (workflowDefinition: any, order: string[]) => {
+    let completedNodes = 0
+    
+    for (let i = 0; i < order.length; i++) {
+      const nodeId = order[i]
+      const node = nodes.find(n => n.id === nodeId)
+      
+      if (!node) continue
+      
+      // Update current executing node
+      setCurrentExecutingNode(nodeId)
+      setNodeExecutionStates(prev => ({ ...prev, [nodeId]: 'running' }))
+      setExecutionStatus(`⚡ Executing: ${node.data?.componentId || node.type}`)
+      
+      // Add a small delay for visual effect
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      try {
+        // Execute single node
+        const singleNodeResult = await unitePluginSystem.executeComponent(
+          node.data?.componentId || node.type,
+          {}, // inputs from connected nodes
+          node.data?.config || {},
+          nodeId,
+          workflowDefinition.id
+        )
+        
+        if (singleNodeResult.success) {
+          setNodeExecutionStates(prev => ({ ...prev, [nodeId]: 'completed' }))
+          setNodeOutputs(prev => ({ ...prev, [nodeId]: singleNodeResult.outputs }))
+        } else {
+          setNodeExecutionStates(prev => ({ ...prev, [nodeId]: 'error' }))
+          throw new Error(`Node ${nodeId} execution failed: ${singleNodeResult.error}`)
+        }
+        
+        completedNodes++
+        setExecutionProgress((completedNodes / order.length) * 100)
+        
+        // Another small delay between nodes
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+      } catch (error) {
+        setNodeExecutionStates(prev => ({ ...prev, [nodeId]: 'error' }))
+        setCurrentExecutingNode(null)
+        throw error
+      }
+    }
+    
+    setCurrentExecutingNode(null)
+    setExecutionStatus(`✅ Workflow completed successfully! (${completedNodes} nodes executed)`)
+  }, [nodes, unitePluginSystem])
+
   // Execute workflow using new plugin system
   const executeWorkflow = useCallback(async () => {
     if (nodes.length === 0) {
@@ -282,10 +401,23 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     setExecutionError(null)
     setExecutionStatus("Preparing workflow execution...")
 
-    // Clear previous node outputs
+    // Clear previous node outputs and reset animation states
     setNodeOutputs({})
+    setNodeExecutionStates({})
+    setCurrentExecutingNode(null)
+    setExecutionProgress(0)
 
     try {
+      // Calculate execution order first
+      const order = calculateExecutionOrder(nodes, edges)
+      setExecutionOrder(order)
+      
+      // Initialize all nodes as pending
+      const initialStates: Record<string, 'pending' | 'running' | 'completed' | 'error'> = {}
+      nodes.forEach(node => {
+        initialStates[node.id] = 'pending'
+      })
+      setNodeExecutionStates(initialStates)
       // Convert to workflow definition for plugin system
       const workflowDefinition = {
         id: `workflow-${Date.now()}`,
@@ -297,34 +429,37 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           config: node.data?.config || {},
           position: node.position
         })),
-        connections: edges.map(edge => ({
-          id: edge.id,
-          sourceNode: edge.source,
-          sourcePort: edge.sourceHandle || 'output',
-          targetNode: edge.target,
-          targetPort: edge.targetHandle || 'input'
-        }))
+        connections: edges
+          .filter(edge => edge.source && edge.target) // Filter out edges with undefined source/target
+          .map(edge => ({
+            id: edge.id,
+            sourceNode: edge.source,
+            sourcePort: edge.sourceHandle || 'output',
+            targetNode: edge.target,
+            targetPort: edge.targetHandle || 'input'
+          }))
       }
 
-      setExecutionStatus("Executing workflow with plugin system...")
-      
-      // Execute using the new plugin system
-      const result: WorkflowExecutionResult = await unitePluginSystem.executeWorkflow(
-        workflowDefinition,
-        {}, // Initial inputs
-        { environment: 'development' }
-      )
+      console.log("🔍 Raw edges before filtering:", edges.map(e => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle
+      })))
+      console.log("✅ Filtered connections:", workflowDefinition.connections)
 
-      if (result.success) {
-        setExecutionStatus("Workflow completed successfully!")
-        setExecutionResult(result)
-        setNodeOutputs(result.results)
-        
-        // Update node states based on execution results
-        result.nodeResults.forEach(nodeResult => {
-          // Visual feedback for executed nodes could be added here
-          console.log(`Node ${nodeResult.nodeId} completed:`, nodeResult.outputs)
-        })
+      setExecutionStatus("🚀 Starting animated workflow execution...")
+      
+      // Execute with Langflow-style animations
+      await executeWithAnimations(workflowDefinition, order)
+
+      // Success - animation function handles the completion
+      toast({
+        title: "🎉 Workflow Executed Successfully",
+        description: `${order.length} nodes completed with animations`,
+        variant: "default"
+      })
         
         // Automatically generate code after successful execution
         try {
@@ -349,11 +484,6 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           console.error('Code generation failed:', codeError)
           setExecutionStatus("Workflow completed (code generation failed)")
         }
-        
-      } else {
-        setExecutionError(result.errors.join(', '))
-        setExecutionStatus("Workflow execution failed")
-      }
 
     } catch (error) {
       console.error('Workflow execution error:', error)

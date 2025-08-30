@@ -19,11 +19,20 @@ import { executionEngine } from './execution-engine'
 import { codeExecutionEngine } from './code-execution'
 import { templateProcessor } from './enhanced-templates'
 import { versionManager } from './versioning-migration'
+import { enhancedNodeTemplates } from './enhanced-node-templates'
 
 // Main plugin system orchestrator
 export class UnitePluginSystem {
   private static instance: UnitePluginSystem
   private initialized = false
+
+  // Public properties for system components
+  public readonly registry = pluginRegistry
+  public readonly executionEngine = executionEngine
+  public readonly codeExecutionEngine = codeExecutionEngine
+  public readonly connectionValidator = connectionValidator
+  public readonly versionManager = versionManager
+  public readonly templateProcessor = templateProcessor
 
   static getInstance(): UnitePluginSystem {
     if (!UnitePluginSystem.instance) {
@@ -332,6 +341,94 @@ export class UnitePluginSystem {
     }
 
     console.log(`✅ Loaded ${builtInComponents.length} built-in components`)
+
+    // Register enhanced node templates as components
+    await this.registerEnhancedNodeTemplates()
+  }
+
+  private async registerEnhancedNodeTemplates(): Promise<void> {
+    console.log('📋 Registering enhanced node templates...')
+
+    for (const [templateId, template] of Object.entries(enhancedNodeTemplates)) {
+      // Convert template to component definition
+      const component: any = {
+        id: templateId,
+        name: template.name,
+        description: template.description,
+        category: template.category,
+        version: '1.0.0',
+        template: template,
+        executor: {
+          type: 'javascript',
+          code: this.generateDefaultExecutorCode(templateId, template)
+        }
+      }
+
+      // Register as built-in component
+      await pluginRegistry.registerPlugin({
+        id: `enhanced-${templateId}`,
+        name: template.name,
+        version: '1.0.0',
+        author: 'Unite DeFi Team',
+        description: template.description,
+        components: [component],
+        permissions: [],
+        compatibility: { minVersion: '1.0.0' },
+        tags: [template.category.toLowerCase()]
+      })
+
+      console.log(`✅ Registered template: ${template.name}`)
+    }
+
+    console.log(`✅ Registered ${Object.keys(enhancedNodeTemplates).length} enhanced node templates`)
+  }
+
+  private generateDefaultExecutorCode(templateId: string, template: any): string {
+    // Generate basic executor code based on template type
+    switch (templateId) {
+      case 'walletConnector':
+        return `
+          async function execute(inputs, config, context) {
+            const { walletType = 'metamask', autoConnect = true } = config;
+
+            // Simulate wallet connection for demo purposes
+            const mockAddress = '0x' + Math.random().toString(16).substr(2, 40);
+            const mockChainId = 1; // Ethereum mainnet
+
+            return {
+              address: mockAddress,
+              chainId: mockChainId,
+              provider: { type: walletType, connected: true }
+            };
+          }
+        `;
+
+      case 'oneInchSwap':
+        return `
+          async function execute(inputs, config, context) {
+            const { fromToken, toToken, amount, slippage = 1.0 } = inputs;
+            const { apiKey, enableFusion = true } = config;
+
+            // Mock swap execution for demo
+            const mockTxHash = '0x' + Math.random().toString(16).substr(2, 64);
+            const mockOutputAmount = amount * 0.99; // 1% slippage simulation
+
+            return {
+              transactionHash: mockTxHash,
+              outputAmount: mockOutputAmount,
+              gasUsed: 21000
+            };
+          }
+        `;
+
+      default:
+        return `
+          async function execute(inputs, config, context) {
+            // Default executor - just pass through inputs
+            return { ...inputs, executed: true, timestamp: Date.now() };
+          }
+        `;
+    }
   }
 
   private async initializeBuiltInTransformers(): Promise<void> {
@@ -478,6 +575,63 @@ export class UnitePluginSystem {
   }
 
   // Public API methods
+  async executeComponent(
+    componentId: string,
+    inputs: Record<string, any> = {},
+    config: Record<string, any> = {},
+    context: any = {}
+  ): Promise<any> {
+    console.log(`🎯 Executing component: ${componentId}`)
+
+    try {
+      // Get component definition
+      const component = pluginRegistry.getComponent(componentId)
+      if (!component) {
+        throw new Error(`Component not found: ${componentId}`)
+      }
+
+      // Execute component using the execution engine
+      const result = await executionEngine.executeComponent(
+        componentId,
+        inputs,
+        config,
+        {
+          workflowId: context.workflowId || 'single-execution',
+          executionId: context.executionId || `exec_${Date.now()}`,
+          nodeId: context.nodeId || componentId,
+          environment: context.environment || 'development',
+          variables: new Map(),
+          secrets: new Map(),
+          services: new Map(),
+          cache: new Map(),
+          events: new (EventTarget as any)(),
+          logger: console,
+          config: {
+            timeout: 30000,
+            retries: 3,
+            enableCaching: true,
+            enableLogging: true,
+            enableProfiling: false,
+            sandboxed: true,
+            resourceLimits: {
+              memory: 128,
+              cpu: 1,
+              network: 100,
+              storage: 256,
+              duration: 30
+            },
+            permissions: []
+          }
+        }
+      )
+
+      return result
+    } catch (error) {
+      console.error(`❌ Component execution failed:`, error)
+      throw error
+    }
+  }
+
   async executeWorkflow(
     workflowDefinition: any,
     inputs: Record<string, any> = {},

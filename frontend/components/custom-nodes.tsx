@@ -168,6 +168,16 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
 }
 
   const getNodeStateClasses = () => {
+    // Check workflow execution state first (for Langflow-style animations)
+    const workflowExecutionState = data.executionState
+    const isCurrentlyExecuting = data.isCurrentlyExecuting
+    
+    if (workflowExecutionState === 'error') return "ring-2 ring-red-500 bg-red-50 animate-pulse"
+    if (workflowExecutionState === 'running' || isCurrentlyExecuting) return "ring-2 ring-yellow-500 bg-yellow-50 animate-pulse shadow-lg"
+    if (workflowExecutionState === 'completed') return "ring-2 ring-green-500 bg-green-50"
+    if (workflowExecutionState === 'pending') return "ring-1 ring-gray-300 bg-gray-50"
+    
+    // Fallback to individual node execution state
     if (executionState.status === 'error') return "ring-2 ring-red-500 bg-red-50"
     if (executionState.status === 'running') return "ring-2 ring-yellow-500 bg-yellow-50"
     if (executionState.status === 'success') return "ring-2 ring-green-500 bg-green-50"
@@ -176,6 +186,16 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
   }
 
   const getStatusIcon = () => {
+    // Check workflow execution state first
+    const workflowExecutionState = data.executionState
+    const isCurrentlyExecuting = data.isCurrentlyExecuting
+    
+    if (workflowExecutionState === 'running' || isCurrentlyExecuting) return <Loader2 className="w-4 h-4 animate-spin text-yellow-600" />
+    if (workflowExecutionState === 'completed') return <CheckCircle className="w-4 h-4 text-green-600" />
+    if (workflowExecutionState === 'error') return <AlertCircle className="w-4 h-4 text-red-600" />
+    if (workflowExecutionState === 'pending') return <Clock className="w-4 h-4 text-gray-500" />
+    
+    // Fallback to individual node execution state
     switch (executionState.status) {
       case 'running': return <Loader2 className="w-4 h-4 animate-spin" />
       case 'success': return <CheckCircle className="w-4 h-4 text-green-600" />

@@ -33,11 +33,14 @@ export interface WorkflowDefinition {
 export interface ExecutionContext {
     workflowId: string;
     executionId: string;
+    nodeId?: string;
     userId?: string;
     environment: 'test' | 'production';
     startTime: number;
     variables: Record<string, any>;
     secrets: Record<string, string>;
+    signTransaction?: (unsignedTx: any) => Promise<string>;
+    userSocket?: any;
 }
 export interface NodeExecutionResult {
     success: boolean;

@@ -47,6 +47,7 @@ const getIconForCategory = (category: string) => {
     case 'UI': return <Layout className="w-4 h-4" />
     case 'Infrastructure': return <Server className="w-4 h-4" />
     case 'Analytics': return <TrendingUp className="w-4 h-4" />
+    case 'Avalanche': return <span className="text-xs">❄️</span>
     default: return <Activity className="w-4 h-4" />
   }
 }

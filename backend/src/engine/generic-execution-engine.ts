@@ -30,12 +30,13 @@ interface ValidationRule {
 }
 
 interface ExecutorConfig {
-  type: 'javascript' | 'python' | 'defi' | 'api' | 'generic'
+  type: 'javascript' | 'python' | 'defi' | 'api' | 'generic' | 'avalanche'
   code?: string
   endpoint?: string
   method?: string
   timeout?: number
   retries?: number
+  instance?: any // Direct executor instance for custom executors
 }
 
 // Legacy interfaces for backward compatibility
@@ -130,6 +131,8 @@ export class GenericExecutionEngine extends EventEmitter {
   private executions = new Map<string, WorkflowExecution>()
   private pluginRegistry = new Map<string, PluginDefinition>()
   private logger: Logger
+  // Avalanche integration: Storage for unsigned transactions
+  private unsignedTxStore = new Map<string, Map<string, any>>()
 
   constructor(logger: Logger) {
     super()
@@ -896,5 +899,44 @@ export class GenericExecutionEngine extends EventEmitter {
    */
   getPlugin(pluginId: string): PluginDefinition | undefined {
     return this.pluginRegistry.get(pluginId)
+  }
+
+  /**
+   * Store unsigned transaction for later signing (Avalanche integration)
+   */
+  storeUnsignedTx(executionId: string, nodeId: string, unsignedTx: any): void {
+    if (!this.unsignedTxStore.has(executionId)) {
+      this.unsignedTxStore.set(executionId, new Map())
+    }
+    this.unsignedTxStore.get(executionId)!.set(nodeId, unsignedTx)
+    this.logger.info(`Stored unsigned transaction for execution ${executionId}, node ${nodeId}`)
+  }
+
+  /**
+   * Resume execution with signed transaction (Avalanche integration)
+   */
+  resumeWithSignedTx(executionId: string, nodeId: string, signedTx: string): void {
+    const execution = this.getExecution(executionId)
+    if (!execution) {
+      throw new Error(`Execution ${executionId} not found`)
+    }
+
+    const unsignedTx = this.unsignedTxStore.get(executionId)?.get(nodeId)
+    if (!unsignedTx) {
+      throw new Error(`Unsigned transaction not found for ${executionId}:${nodeId}`)
+    }
+
+    // Clean up stored transaction
+    this.unsignedTxStore.get(executionId)?.delete(nodeId)
+
+    // Emit event for frontend to handle signed transaction
+    this.emit('signed-transaction-ready', {
+      executionId,
+      nodeId,
+      signedTx,
+      unsignedTx
+    })
+
+    this.logger.info(`Resumed execution with signed transaction for ${executionId}:${nodeId}`)
   }
 }

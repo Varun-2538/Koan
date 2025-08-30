@@ -35,11 +35,15 @@ export interface WorkflowDefinition {
 export interface ExecutionContext {
   workflowId: string
   executionId: string
+  nodeId?: string // ID of the current executing node
   userId?: string
   environment: 'test' | 'production'
   startTime: number
   variables: Record<string, any>
   secrets: Record<string, string>
+  // Avalanche integration additions
+  signTransaction?: (unsignedTx: any) => Promise<string>
+  userSocket?: any // Socket.IO socket for interactive operations
 }
 
 export interface NodeExecutionResult {

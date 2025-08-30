@@ -13,6 +13,12 @@ import oneInchRoutes from './routes/oneinch'
 import { GenericExecutionEngine } from '@/engine/generic-execution-engine'
 // Legacy imports for compatibility
 import { OneInchSwapExecutor } from '@/nodes/oneinch-swap-executor'
+// Avalanche ICM imports
+import { IcmSenderExecutor } from '@/nodes/icm-sender-executor'
+import { IcmReceiverExecutor } from '@/nodes/icm-receiver-executor'
+// Avalanche L1 imports
+import { L1ConfigExecutor } from '@/nodes/l1-config-executor'
+import { L1SimulatorDeployerExecutor } from '@/nodes/l1-simulator-deployer-executor'
 import './preview-server';
 import {
   WorkflowDefinition,
@@ -143,6 +149,112 @@ const initializeEngine = async () => {
       }
     })
   }
+
+  // Register Avalanche executors (direct registration for better control)
+  const icmSenderExecutor = new IcmSenderExecutor(logger)
+  const icmReceiverExecutor = new IcmReceiverExecutor(logger)
+  const l1ConfigExecutor = new L1ConfigExecutor(logger)
+  const l1SimulatorDeployerExecutor = new L1SimulatorDeployerExecutor(logger)
+
+  // Register ICM plugins with executor instances
+  executionEngine.registerPlugin({
+    id: 'icmSender',
+    name: 'ICM Sender',
+    version: '1.0.0',
+    description: 'Send cross-chain messages using Avalanche Teleporter',
+    category: 'Avalanche',
+    inputs: [
+      { key: 'sourceChain', type: 'string', label: 'Source Chain', required: true },
+      { key: 'destinationChainID', type: 'subnetID', label: 'Destination Chain ID', required: true },
+      { key: 'recipient', type: 'address', label: 'Recipient Address', required: true },
+      { key: 'amount', type: 'number', label: 'Amount', required: false },
+      { key: 'payloadType', type: 'string', label: 'Payload Type', required: false, defaultValue: 'string' },
+      { key: 'walletAddress', type: 'address', label: 'Wallet Address', required: true }
+    ],
+    outputs: [
+      { key: 'transactionHash', type: 'string', label: 'Transaction Hash', required: true },
+      { key: 'messageID', type: 'string', label: 'Message ID', required: false },
+      { key: 'status', type: 'string', label: 'Status', required: true }
+    ],
+    executor: {
+      type: 'avalanche',
+      timeout: 60000,
+      retries: 2,
+      instance: icmSenderExecutor // Direct executor instance
+    }
+  })
+
+  executionEngine.registerPlugin({
+    id: 'icmReceiver',
+    name: 'ICM Receiver',
+    version: '1.0.0',
+    description: 'Receive and process cross-chain messages',
+    category: 'Avalanche',
+    inputs: [
+      { key: 'messageID', type: 'string', label: 'Message ID', required: true },
+      { key: 'sourceChainID', type: 'subnetID', label: 'Source Chain ID', required: true }
+    ],
+    outputs: [
+      { key: 'decodedPayload', type: 'icmPayload', label: 'Decoded Payload', required: true },
+      { key: 'status', type: 'string', label: 'Status', required: true }
+    ],
+    executor: {
+      type: 'avalanche',
+      timeout: 30000,
+      retries: 1,
+      instance: icmReceiverExecutor // Direct executor instance
+    }
+  })
+
+  executionEngine.registerPlugin({
+    id: 'l1Config',
+    name: 'L1 Config Generator',
+    version: '1.0.0',
+    description: 'Generate Avalanche subnet configuration and genesis',
+    category: 'Avalanche',
+    inputs: [
+      { key: 'vmType', type: 'string', label: 'VM Type', required: true, defaultValue: 'SubnetEVM' },
+      { key: 'chainId', type: 'number', label: 'Chain ID', required: true },
+      { key: 'tokenSymbol', type: 'string', label: 'Token Symbol', required: false },
+      { key: 'initialSupply', type: 'number', label: 'Initial Supply', required: false },
+      { key: 'gasLimit', type: 'number', label: 'Gas Limit', required: false, defaultValue: 8000000 }
+    ],
+    outputs: [
+      { key: 'genesisJson', type: 'avalancheConfig', label: 'Genesis JSON', required: true },
+      { key: 'subnetConfig', type: 'avalancheConfig', label: 'Subnet Config', required: true }
+    ],
+    executor: {
+      type: 'avalanche',
+      timeout: 10000,
+      retries: 0,
+      instance: l1ConfigExecutor // Direct executor instance
+    }
+  })
+
+  executionEngine.registerPlugin({
+    id: 'l1SimulatorDeployer',
+    name: 'L1 Simulator Deployer',
+    version: '1.0.0',
+    description: 'Simulate Avalanche subnet deployment',
+    category: 'Avalanche',
+    inputs: [
+      { key: 'genesisJson', type: 'avalancheConfig', label: 'Genesis JSON', required: true },
+      { key: 'controlKeys', type: 'array', label: 'Control Keys', required: false },
+      { key: 'threshold', type: 'number', label: 'Threshold', required: false, defaultValue: 1 }
+    ],
+    outputs: [
+      { key: 'subnetID', type: 'subnetID', label: 'Subnet ID', required: true },
+      { key: 'txHash', type: 'string', label: 'Transaction Hash', required: true },
+      { key: 'blockchainID', type: 'string', label: 'Blockchain ID', required: true },
+      { key: 'status', type: 'string', label: 'Status', required: true }
+    ],
+    executor: {
+      type: 'avalanche',
+      timeout: 60000,
+      retries: 1,
+      instance: l1SimulatorDeployerExecutor // Direct executor instance
+    }
+  })
 }
 
 // Track WebSocket connections
@@ -206,12 +318,64 @@ io.on('connection', (socket) => {
   socket.on('get-execution-status', (data: { executionId: string }) => {
     const execution = executionEngine.getExecution(data.executionId)
     const stats = executionEngine.getExecutionStats(data.executionId)
-    
+
     socket.emit('execution-status', {
       executionId: data.executionId,
       execution,
       stats
     })
+  })
+
+  // Avalanche Integration: Handle transaction signing requests
+  socket.on('sign-transaction', async (data: {
+    executionId: string,
+    unsignedTx: any,
+    nodeId: string
+  }) => {
+    try {
+      logger.info(`Received sign-transaction request for execution ${data.executionId}, node ${data.nodeId}`)
+
+      // Store unsigned transaction for later signing
+      executionEngine.storeUnsignedTx(data.executionId, data.nodeId, data.unsignedTx)
+
+      // Notify frontend that transaction is ready for signing
+      socket.emit('transaction-ready-for-signing', {
+        executionId: data.executionId,
+        nodeId: data.nodeId,
+        unsignedTx: data.unsignedTx
+      })
+
+      logger.info(`Unsigned transaction stored and ready for signing: ${data.executionId}:${data.nodeId}`)
+    } catch (error: any) {
+      logger.error('Transaction signing request failed:', error)
+      socket.emit('signing-error', {
+        executionId: data.executionId,
+        nodeId: data.nodeId,
+        error: error.message
+      })
+    }
+  })
+
+  // Avalanche Integration: Handle signed transaction responses
+  socket.on('transaction-signed', async (data: {
+    executionId: string,
+    nodeId: string,
+    signedTx: string
+  }) => {
+    try {
+      logger.info(`Received signed transaction for execution ${data.executionId}, node ${data.nodeId}`)
+
+      // Resume workflow execution with signed transaction
+      executionEngine.resumeWithSignedTx(data.executionId, data.nodeId, data.signedTx)
+
+      logger.info(`Workflow execution resumed with signed transaction: ${data.executionId}:${data.nodeId}`)
+    } catch (error: any) {
+      logger.error('Signed transaction processing failed:', error)
+      socket.emit('execution-error', {
+        executionId: data.executionId,
+        error: error.message
+      })
+    }
   })
 })
 

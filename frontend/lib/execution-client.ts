@@ -73,6 +73,9 @@ export class ExecutionClient {
       this.socket.on('execution-cancelled', (data) => {
         this.emit('execution.cancelled', data)
       })
+
+      // Setup Avalanche signing handlers
+      this.setupSigningHandlers()
     })
   }
 
@@ -84,6 +87,72 @@ export class ExecutionClient {
       this.socket.disconnect()
       this.socket = null
     }
+  }
+
+  /**
+   * Sign a transaction using the connected wallet (Avalanche integration)
+   */
+  async signTransaction(unsignedTx: any): Promise<string> {
+    if (!window.ethereum) {
+      throw new Error('MetaMask/Core Wallet not available')
+    }
+
+    try {
+      const signedTx = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [unsignedTx]
+      })
+
+      console.log('✅ Transaction signed successfully:', signedTx)
+      return signedTx
+    } catch (error: any) {
+      console.error('❌ Transaction signing failed:', error)
+      throw new Error(`Transaction signing failed: ${error.message}`)
+    }
+  }
+
+  /**
+   * Setup signing event handlers (Avalanche integration)
+   */
+  private setupSigningHandlers(): void {
+    if (!this.socket) return
+
+    this.socket.on('transaction-ready-for-signing', async (data) => {
+      console.log('📝 Received transaction ready for signing:', data)
+
+      try {
+        const signedTx = await this.signTransaction(data.unsignedTx)
+
+        // Send signed transaction back to backend
+        this.socket?.emit('transaction-signed', {
+          executionId: data.executionId,
+          nodeId: data.nodeId,
+          signedTx: signedTx
+        })
+
+        console.log('📤 Signed transaction sent to backend')
+      } catch (error: any) {
+        console.error('❌ Signing failed:', error)
+
+        // Notify backend of signing failure
+        this.socket?.emit('signing-error', {
+          executionId: data.executionId,
+          nodeId: data.nodeId,
+          error: error.message
+        })
+
+        this.emit('signing.failed', {
+          executionId: data.executionId,
+          nodeId: data.nodeId,
+          error: error.message
+        })
+      }
+    })
+
+    this.socket.on('signing-error', (data) => {
+      console.error('❌ Backend signing error:', data)
+      this.emit('signing.failed', data)
+    })
   }
 
   /**

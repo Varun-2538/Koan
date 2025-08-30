@@ -28,7 +28,7 @@ class PreviewServerManager {
             }
         });
         app.use((0, cors_1.default)({
-            origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
+            origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3004'],
             credentials: true,
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -37,7 +37,7 @@ class PreviewServerManager {
         // Add security headers for iframe compatibility
         app.use((req, res, next) => {
             res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-            res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost:3000 http://localhost:3001 http://localhost:3002");
+            res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost:3000 http://localhost:3001 http://localhost:3002 http://localhost:3004");
             res.setHeader('Access-Control-Allow-Origin', '*');
             res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
             res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
@@ -129,14 +129,14 @@ class PreviewServerManager {
                 console.log('Preview client disconnected');
             });
         });
-        const PORT = process.env.PREVIEW_SERVER_PORT || 3002;
+        const PORT = process.env.PREVIEW_SERVER_PORT || 3004;
         server.listen(PORT, () => {
             console.log(`Preview server running on port ${PORT}`);
         });
     }
     getNextAvailablePort() {
         const usedPorts = Array.from(this.instances.values()).map(i => i.port);
-        const reservedPorts = [3000, 3001, 3002]; // Reserved for main services
+        const reservedPorts = [3000, 3001, 3002, 3004]; // Reserved for main services
         let port = this.basePort;
         // Find next available port, skipping reserved ports
         while (usedPorts.includes(port) || reservedPorts.includes(port)) {

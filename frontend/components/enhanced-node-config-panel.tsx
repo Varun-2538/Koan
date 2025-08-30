@@ -82,6 +82,52 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
   const [executing, setExecuting] = useState(false)
   const [executionResult, setExecutionResult] = useState<CodeExecutionResponse | null>(null)
   const [generatedCode, setGeneratedCode] = useState<string | null>(null)
+  const [chainOptions, setChainOptions] = useState<{ label: string; value: string }[]>([])
+  const [tokenOptions, setTokenOptions] = useState<{ label: string; value: string }[]>([])
+  const [tokensLoading, setTokensLoading] = useState(false)
+
+  // Popular defaults for quick selection when API key isn't provided yet
+  const DEFAULT_TOKENS: Record<string, Array<{ address: string; symbol: string; name: string }>> = {
+    '1': [ // Ethereum
+      { address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', symbol: 'ETH', name: 'Ethereum' },
+      { address: '0xA0b86991c6218b36c1d19d4a2e9Eb0cE3606eB48', symbol: 'USDC', name: 'USD Coin' },
+      { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', symbol: 'USDT', name: 'Tether USD' },
+      { address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', symbol: 'WETH', name: 'Wrapped Ether' },
+      { address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', symbol: 'DAI', name: 'Dai Stablecoin' },
+      { address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', symbol: 'WBTC', name: 'Wrapped BTC' }
+    ],
+    '137': [ // Polygon
+      { address: '0x0000000000000000000000000000000000001010', symbol: 'MATIC', name: 'Polygon' },
+      { address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', symbol: 'USDC', name: 'USD Coin (PoS)' },
+      { address: '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619', symbol: 'WETH', name: 'Wrapped Ether (PoS)' },
+      { address: '0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6', symbol: 'WBTC', name: 'Wrapped BTC (PoS)' },
+      { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', symbol: 'USDT', name: 'Tether USD (PoS)' }
+    ],
+    '56': [ // BSC
+      { address: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', symbol: 'WBNB', name: 'Wrapped BNB' },
+      { address: '0x55d398326f99059fF775485246999027B3197955', symbol: 'USDT', name: 'Tether USD' },
+      { address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', symbol: 'USDC', name: 'USD Coin' },
+      { address: '0x7130d2a12b9bcBFAe4f2634d864A1Ee1Ce3Ead9c', symbol: 'BTCB', name: 'Binance-Peg BTCB' }
+    ],
+    '42161': [ // Arbitrum
+      { address: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1', symbol: 'WETH', name: 'Wrapped Ether' },
+      { address: '0xAf88d065e77c8C2239327C5EDb3A432268e5831e', symbol: 'USDC', name: 'USD Coin' },
+      { address: '0xff970a61a04b1ca14834a43f5de4533ebddb5cc8', symbol: 'USDC.e', name: 'Bridged USDC' },
+      { address: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f', symbol: 'WBTC', name: 'Wrapped BTC' }
+    ],
+    '10': [ // Optimism
+      { address: '0x4200000000000000000000000000000000000006', symbol: 'WETH', name: 'Wrapped Ether' },
+      { address: '0x7F5c764cBc14f9669B88837ca1490cCa17c31607', symbol: 'USDC', name: 'USD Coin' },
+      { address: '0x94b008Aa00579c1307B0EF2c499aD98a8ce58e58', symbol: 'USDT', name: 'Tether USD' },
+      { address: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1', symbol: 'DAI', name: 'Dai Stablecoin' }
+    ],
+    '43114': [ // Avalanche
+      { address: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7', symbol: 'WAVAX', name: 'Wrapped AVAX' },
+      { address: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', symbol: 'USDC', name: 'USD Coin' },
+      { address: '0xc7198437980c041c805A1EDcbA50c1Ce5db95118', symbol: 'USDT.e', name: 'Tether USD (bridged)' },
+      { address: '0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB', symbol: 'WETH.e', name: 'Wrapped Ether (bridged)' }
+    ]
+  }
 
   // Load plugin definition when node changes
   useEffect(() => {
@@ -150,6 +196,73 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
 
     loadPlugin()
   }, [node?.type, node?.data?.componentId, node?.data?.config])
+
+  // Load chain options for 1inch nodes (quote/swap)
+  useEffect(() => {
+    const loadChains = async () => {
+      if (plugin?.id !== 'oneInchQuote' && plugin?.id !== 'oneInchSwap') return
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL || ''
+        const res = await fetch(`${base}/api/config`)
+        const data = await res.json()
+        const idToName: Record<string, string> = {
+          '1': 'Ethereum',
+          '137': 'Polygon',
+          '56': 'BSC',
+          '42161': 'Arbitrum One',
+          '10': 'Optimism',
+          '43114': 'Avalanche'
+        }
+        const options = (data.supportedChains || []).map((id: string) => ({
+          value: String(id),
+          label: idToName[String(id)] || String(id)
+        }))
+        setChainOptions(options)
+      } catch {
+        setChainOptions([
+          { value: '1', label: 'Ethereum' },
+          { value: '137', label: 'Polygon' }
+        ])
+      }
+    }
+    loadChains()
+  }, [plugin?.id])
+
+  // Load token options when chainId and apiKey present (quote/swap)
+  useEffect(() => {
+    const loadTokens = async () => {
+      if (plugin?.id !== 'oneInchQuote' && plugin?.id !== 'oneInchSwap') return
+      if (!config.chainId || !config.apiKey) {
+        setTokenOptions([])
+        return
+      }
+      try {
+        setTokensLoading(true)
+        // If API key present, fetch full list; else fall back to curated defaults
+        if (config.apiKey) {
+          const base = process.env.NEXT_PUBLIC_BACKEND_URL || ''
+          const res = await fetch(`${base}/api/1inch/tokens?chainId=${encodeURIComponent(config.chainId)}&apiKey=${encodeURIComponent(config.apiKey)}`)
+          const data = await res.json()
+          const tokensObj = data.tokens || {}
+          const options = Object.values(tokensObj).map((t: any) => ({
+            value: t.address,
+            label: t.symbol ? `${t.symbol} — ${t.name || t.address}` : (t.name || t.address)
+          }))
+          options.sort((a, b) => a.label.localeCompare(b.label))
+          setTokenOptions(options)
+        } else {
+          const defaults = DEFAULT_TOKENS[String(config.chainId)] || []
+          setTokenOptions(defaults.map(t => ({ value: t.address, label: `${t.symbol} — ${t.name}` })))
+        }
+      } catch {
+        const defaults = DEFAULT_TOKENS[String(config.chainId)] || []
+        setTokenOptions(defaults.map(t => ({ value: t.address, label: `${t.symbol} — ${t.name}` })))
+      } finally {
+        setTokensLoading(false)
+      }
+    }
+    loadTokens()
+  }, [plugin?.id, config.chainId, config.apiKey])
 
   if (!node || loading) {
     return (
@@ -406,6 +519,56 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
     const commonProps = {
       id: field.key,
       className: validationErrors[field.key] ? "border-red-500" : ""
+    }
+
+    // Custom rendering for 1inch Quote/Swap nodes
+    if (plugin?.id === 'oneInchQuote' || plugin?.id === 'oneInchSwap') {
+      if (field.key === 'chainId') {
+        return (
+          <Select
+            value={value || ''}
+            onValueChange={(newValue) => {
+              // Reset tokens on chain change
+              setTokenOptions([])
+              handleConfigChange('chainId', newValue)
+              handleConfigChange('src', '')
+              handleConfigChange('dst', '')
+            }}
+          >
+            <SelectTrigger className={commonProps.className}>
+              <SelectValue placeholder="Select chain" />
+            </SelectTrigger>
+            <SelectContent>
+              {chainOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )
+      }
+
+      if (field.key === 'src' || field.key === 'dst') {
+        return (
+          <div>
+            <Select
+              value={value || ''}
+              onValueChange={(newValue) => handleConfigChange(field.key, newValue)}
+            >
+              <SelectTrigger className={commonProps.className}>
+                <SelectValue placeholder={tokensLoading ? 'Loading tokens...' : 'Select token'} />
+              </SelectTrigger>
+              <SelectContent>
+                {tokenOptions.map(opt => (
+                  <SelectItem key={`${field.key}-${opt.value}`} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(!config.apiKey || !config.chainId) && (
+              <p className="text-xs text-gray-400 mt-1">Enter API key and chain to load tokens</p>
+            )}
+          </div>
+        )
+      }
     }
 
     switch (field.type) {
@@ -758,7 +921,13 @@ export function EnhancedNodeConfigPanel({ node, onClose, onUpdateNode }: NodeCon
                     {executionResult.error && (
                       <div>
                         <Label className="text-xs font-medium text-red-600">Error:</Label>
-                        <p className="text-xs text-red-600 mt-1">{executionResult.error}</p>
+                        {typeof executionResult.error === 'string' ? (
+                          <p className="text-xs text-red-600 mt-1">{executionResult.error}</p>
+                        ) : (
+                          <pre className="text-xs text-red-600 bg-red-50 p-2 rounded mt-1 overflow-auto">
+                            {JSON.stringify(executionResult.error, null, 2)}
+                          </pre>
+                        )}
                       </div>
                     )}
 

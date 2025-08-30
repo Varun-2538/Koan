@@ -158,22 +158,162 @@ export class GenericExecutionEngine extends EventEmitter {
         id: 'oneInchSwap',
         name: '1inch Swap',
         version: '1.0.0',
-        description: 'Execute token swaps with 1inch aggregation',
+        description: 'Execute token swaps with 1inch aggregation (backend proxy)',
         category: 'DeFi',
-        inputs: [
-          { key: 'from_token', type: 'token', label: 'From Token', required: true },
-          { key: 'to_token', type: 'token', label: 'To Token', required: true },
-          { key: 'amount', type: 'number', label: 'Amount', required: true },
-          { key: 'slippage', type: 'number', label: 'Slippage %', required: false, defaultValue: 1 }
-        ],
+        inputs: [],
         outputs: [
-          { key: 'transaction', type: 'transaction', label: 'Transaction', required: true },
-          { key: 'route', type: 'object', label: 'Route Info', required: false }
+          { key: 'transaction', type: 'object', label: 'Transaction', required: false },
+          { key: 'route', type: 'object', label: 'Route Info', required: false },
+          { key: 'validationOk', type: 'boolean', label: 'Validation OK', required: false }
         ],
         executor: {
-          type: 'defi',
+          type: 'javascript',
+          code: `
+            async function execute(inputs, context) {
+              const base = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+              const chainId = String(inputs.chain_id || inputs.chainId || '1');
+              const src = String(inputs.src || inputs.from_token || inputs.fromToken || '');
+              const dst = String(inputs.dst || inputs.to_token || inputs.toToken || '');
+              const amount = String(inputs.amount || '');
+              const from = String(inputs.from || inputs.from_address || inputs.wallet_address || '');
+              const slippage = inputs.slippage != null ? String(inputs.slippage) : undefined;
+              const apiKey = inputs.apiKey;
+
+              if (!chainId || !src || !dst || !amount) {
+                throw new Error('Missing required field(s) for swap/quote');
+              }
+
+              if (inputs.validateOnly === true || inputs.template_creation_mode === true) {
+                const params = new URLSearchParams();
+                params.append('chainId', chainId);
+                params.append('src', src);
+                params.append('dst', dst);
+                params.append('amount', amount);
+                if (from) params.append('from', from);
+                if (slippage) params.append('slippage', slippage);
+                if (apiKey) params.append('apiKey', apiKey);
+                const res = await fetch(base + '/api/1inch/quote?' + params.toString(), { method: 'GET', headers: { 'accept': 'application/json' } });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) return { success: false, error: data.error || ('HTTP ' + res.status), outputs: {} };
+                return { success: true, outputs: { transaction: null, route: data, validationOk: true } };
+              }
+
+              const body = { chainId, src, dst, amount, from, slippage, apiKey };
+              const res = await fetch(base + '/api/1inch/swap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) return { success: false, error: data.error || ('HTTP ' + res.status), outputs: {} };
+              return { success: true, outputs: { transaction: data.tx || data, route: data.route || data.protocols, validationOk: true } };
+            }
+          `,
           timeout: 30000,
           retries: 3
+        }
+      },
+      {
+        id: 'inputProvider',
+        name: 'Input Provider',
+        version: '1.0.0',
+        description: 'Provide manual inputs to downstream nodes (chain, tokens, amount, address, apiKey)',
+        category: 'Data',
+        inputs: [],
+        outputs: [
+          { key: 'chainId', type: 'string', label: 'Chain ID', required: false },
+          { key: 'chain_id', type: 'string', label: 'Chain ID (snake)', required: false },
+          { key: 'src', type: 'string', label: 'From Token Address', required: false },
+          { key: 'dst', type: 'string', label: 'To Token Address', required: false },
+          { key: 'from_token', type: 'string', label: 'From Token (alias)', required: false },
+          { key: 'to_token', type: 'string', label: 'To Token (alias)', required: false },
+          { key: 'amount', type: 'string', label: 'Amount (wei)', required: false },
+          { key: 'from', type: 'string', label: 'From Address', required: false },
+          { key: 'slippage', type: 'number', label: 'Slippage %', required: false },
+          { key: 'apiKey', type: 'string', label: 'API Key', required: false }
+        ],
+        executor: {
+          type: 'javascript',
+          code: `
+            async function execute(inputs) {
+              const chainId = String(inputs.chain_id || inputs.chainId || '')
+              const src = String(inputs.src || inputs.from_token || inputs.fromToken || '')
+              const dst = String(inputs.dst || inputs.to_token || inputs.toToken || '')
+              const amount = String(inputs.amount || '')
+              const from = String(inputs.from || inputs.from_address || inputs.address || '')
+              const slippage = inputs.slippage != null ? Number(inputs.slippage) : undefined
+              const apiKey = inputs.apiKey
+
+              return {
+                success: true,
+                outputs: {
+                  chainId,
+                  chain_id: chainId,
+                  src,
+                  dst,
+                  from_token: src,
+                  to_token: dst,
+                  amount,
+                  from,
+                  slippage,
+                  apiKey
+                }
+              }
+            }
+          `
+        }
+      },
+      {
+        id: 'oneInchQuote',
+        name: '1inch Quote',
+        version: '1.0.0',
+        description: 'Fetch swap quote from 1inch backend proxy',
+        category: 'DeFi',
+        inputs: [],
+        outputs: [
+          { key: 'quote', type: 'object', label: 'Quote Data', required: true }
+        ],
+        executor: {
+          type: 'javascript',
+          code: `
+            async function execute(inputs) {
+              const base = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+              
+              // Debug log all inputs received
+              console.log('🔍 oneInchQuote inputs received:', JSON.stringify(inputs, null, 2));
+              
+              // Extract values with proper fallbacks
+              const chainId = String(inputs.chain_id || inputs.chainId || '1');
+              const src = String(inputs.src || inputs.from_token || inputs.fromToken || '');
+              const dst = String(inputs.dst || inputs.to_token || inputs.toToken || '');
+              const amount = String(inputs.amount || '');
+              const from = String(inputs.from || inputs.from_address || inputs.address || '');
+              const slippage = inputs.slippage != null ? String(inputs.slippage) : undefined;
+              const apiKey = inputs.apiKey;
+
+              console.log('🔍 Extracted values: chainId=' + chainId + ', src=' + src + ', dst=' + dst + ', amount=' + amount);
+
+              if (!chainId || !src || !dst || !amount) {
+                throw new Error('Missing required fields: chainId=' + chainId + ', src=' + src + ', dst=' + dst + ', amount=' + amount);
+              }
+
+              const params = new URLSearchParams();
+              params.append('chainId', chainId);
+              params.append('src', src);
+              params.append('dst', dst);
+              params.append('amount', amount);
+              if (from) params.append('from', from);
+              if (slippage) params.append('slippage', slippage);
+              if (apiKey) params.append('apiKey', apiKey);
+              
+              const res = await fetch(base + '/api/1inch/quote?' + params.toString(), { 
+                method: 'GET', 
+                headers: { 'accept': 'application/json' } 
+              });
+              const data = await res.json().catch(() => ({}));
+              return {
+                success: res.ok,
+                outputs: res.ok ? { quote: data } : {},
+                error: res.ok ? undefined : (data.error || ('HTTP ' + res.status))
+              };
+            }
+          `
         }
       },
       {
@@ -258,6 +398,76 @@ export class GenericExecutionEngine extends EventEmitter {
                   error: error.message
                 };
               }
+            }
+          `
+        }
+      },
+      {
+        id: 'tokenSelector',
+        name: 'Token Selector',
+        version: '1.0.0',
+        description: 'Select tokens and emit outputs for DeFi operations',
+        category: 'Wallet',
+        inputs: [],
+        outputs: [
+          { key: 'fromToken', type: 'string', label: 'From Token', required: false },
+          { key: 'toToken', type: 'string', label: 'To Token', required: false },
+          { key: 'src', type: 'string', label: 'Source Token Address', required: false },
+          { key: 'dst', type: 'string', label: 'Destination Token Address', required: false },
+          { key: 'amount', type: 'string', label: 'Amount', required: false }
+        ],
+        executor: {
+          type: 'javascript',
+          code: `
+            function execute(inputs) {
+              // Use configured values or defaults for template mode
+              const fromToken = inputs.fromToken || inputs.src || "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+              const toToken = inputs.toToken || inputs.dst || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+              const amount = inputs.amount || "100000000000000000"; // 0.1 ETH
+              
+              return {
+                success: true,
+                outputs: {
+                  fromToken,
+                  toToken,
+                  src: fromToken,
+                  dst: toToken,
+                  amount
+                }
+              };
+            }
+          `
+        }
+      },
+      {
+        id: 'walletConnector',
+        name: 'Wallet Connector',
+        version: '1.0.0',
+        description: 'Connect to crypto wallets and provide address/chain info',
+        category: 'Wallet',
+        inputs: [],
+        outputs: [
+          { key: 'address', type: 'string', label: 'Wallet Address', required: false },
+          { key: 'chainId', type: 'string', label: 'Chain ID', required: false },
+          { key: 'from', type: 'string', label: 'From Address', required: false }
+        ],
+        executor: {
+          type: 'javascript',
+          code: `
+            function execute(inputs) {
+              // Use configured values or mock for template mode
+              const address = inputs.address || "0xAe3068f47B279D24a68C701eDf16cC180388d974";
+              const chainId = inputs.chainId || inputs.chain_id || "1";
+              
+              return {
+                success: true,
+                outputs: {
+                  address,
+                  chainId,
+                  from: address,
+                  chain_id: chainId
+                }
+              };
             }
           `
         }
@@ -374,6 +584,15 @@ export class GenericExecutionEngine extends EventEmitter {
       throw new Error('Invalid workflow: edges must be an array')
     }
 
+    // If no edges supplied, create linear dependencies in node order
+    let autoEdges: FlowEdge[] = []
+    if (edges.length === 0 && nodes.length > 1) {
+      for (let i = 1; i < nodes.length; i++) {
+        autoEdges.push({ id: `auto_${nodes[i-1].id}_${nodes[i].id}` as any, source: nodes[i-1].id, target: nodes[i].id })
+      }
+    }
+    const effectiveEdges = edges.length === 0 ? autoEdges : edges
+
     // Create execution steps for each node
     for (const node of nodes) {
       // Validate node structure
@@ -381,11 +600,14 @@ export class GenericExecutionEngine extends EventEmitter {
         throw new Error(`Invalid node: missing id or type - ${JSON.stringify(node)}`)
       }
       
-      const dependencies = this.findNodeDependencies(node.id, edges)
+      const dependencies = this.findNodeDependencies(node.id, effectiveEdges)
       
       // Safely access node data and config
       const nodeData = node.data || {}
       const nodeConfig = nodeData.config || {}
+      
+      // Debug log the node configuration
+      this.logger.info(`Node ${node.id} (${node.type}) config:`, JSON.stringify(nodeConfig, null, 2))
       
       steps.set(node.id, {
         nodeId: node.id,
@@ -865,10 +1087,13 @@ export class GenericExecutionEngine extends EventEmitter {
     const normalized: Record<string, any> = {}
     for (const [key, value] of Object.entries(inputs)) {
       switch (key) {
-        case 'fromToken': normalized['from_token'] = value; break
-        case 'toToken': normalized['to_token'] = value; break
+        case 'fromToken': normalized['from_token'] = value; normalized['src'] = value; break
+        case 'toToken': normalized['to_token'] = value; normalized['dst'] = value; break
+        case 'src': normalized['src'] = value; break
+        case 'dst': normalized['dst'] = value; break
         case 'fromAddress': normalized['from_address'] = value; break
-        case 'chainId': normalized['chain_id'] = value; break
+        case 'chainId': normalized['chain_id'] = value; normalized['chainId'] = value; break
+        case 'address': normalized['from'] = value; normalized['from_address'] = value; break
         case 'walletAddress': normalized['wallet_address'] = value; break
         case 'walletProvider': normalized['wallet_provider'] = value; break
         case 'supportedWallets': normalized['supported_wallets'] = value; break
@@ -883,6 +1108,18 @@ export class GenericExecutionEngine extends EventEmitter {
     }
     inputs = normalized
 
+    // Add aliasing for 1inch expectations
+    if (!inputs['src']) {
+      if (inputs['from_token']) inputs['src'] = inputs['from_token']
+      else if (inputs['fromToken']) inputs['src'] = inputs['fromToken']
+    }
+    if (!inputs['dst']) {
+      if (inputs['to_token']) inputs['dst'] = inputs['to_token']
+      else if (inputs['toToken']) inputs['dst'] = inputs['toToken']
+    }
+    // If a wallet address is present, prefer it as 'from'
+    if (!inputs['from'] && inputs['from_address']) inputs['from'] = inputs['from_address']
+
     // Merge outputs from dependency nodes
     for (const depId of step.dependencies) {
       const depStep = allSteps.get(depId)
@@ -890,6 +1127,42 @@ export class GenericExecutionEngine extends EventEmitter {
         inputs = { ...inputs, ...depStep.outputs }
       }
     }
+
+    // Re-run aliasing after merging dependency outputs
+    if (!inputs['chain_id'] && inputs['chainId']) inputs['chain_id'] = inputs['chainId']
+    if (!inputs['src']) {
+      if (inputs['from_token']) inputs['src'] = inputs['from_token']
+      else if (inputs['fromToken']) inputs['src'] = inputs['fromToken']
+    }
+    if (!inputs['dst']) {
+      if (inputs['to_token']) inputs['dst'] = inputs['to_token']
+      else if (inputs['toToken']) inputs['dst'] = inputs['toToken']
+    }
+    if (!inputs['from'] && (inputs['from_address'] || inputs['wallet_address'] || inputs['address'])) {
+      inputs['from'] = inputs['from_address'] || inputs['wallet_address'] || inputs['address']
+    }
+
+    // Final safety: if critical fields are still missing, scan all completed steps' outputs
+    const fillIfMissing = (key: string, candidates: string[]) => {
+      if (inputs[key] !== undefined && inputs[key] !== '') return
+      for (const step of Array.from(allSteps.values())) {
+        if (step.status === 'completed' && step.outputs) {
+          for (const candidate of candidates) {
+            const value = (step.outputs as any)[candidate]
+            if (value !== undefined && value !== null && value !== '') {
+              inputs[key] = value
+              return
+            }
+          }
+        }
+      }
+    }
+
+    fillIfMissing('chain_id', ['chain_id', 'chainId'])
+    fillIfMissing('src', ['src', 'from_token', 'fromToken'])
+    fillIfMissing('dst', ['dst', 'to_token', 'toToken'])
+    fillIfMissing('amount', ['amount'])
+    if (!inputs['chainId'] && inputs['chain_id']) inputs['chainId'] = inputs['chain_id']
 
     return inputs
   }

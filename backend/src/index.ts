@@ -282,6 +282,44 @@ const initializeEngine = async () => {
       type: 'generic'
     }
   })
+
+  // Register a token selector plugin so backend can execute tokenSelector nodes
+  executionEngine.registerPlugin({
+    id: 'tokenSelector',
+    name: 'Token Selector',
+    version: '1.0.0',
+    description: 'Select and emit tokens for downstream nodes',
+    category: 'Wallet',
+    inputs: [
+      { key: 'selected_token', type: 'token', label: 'Selected Token', required: false },
+      { key: 'role', type: 'string', label: 'Role (from|to|both)', required: false, defaultValue: 'both' }
+    ],
+    outputs: [
+      { key: 'selected_token', type: 'token', label: 'Selected Token', required: false },
+      { key: 'from_token', type: 'token', label: 'From Token', required: false },
+      { key: 'to_token', type: 'token', label: 'To Token', required: false }
+    ],
+    executor: {
+      type: 'javascript',
+      timeout: 5000,
+      retries: 0,
+      code: `
+        function execute(inputs) {
+          const role = (inputs.role || 'both').toLowerCase();
+          const token = inputs.selected_token || inputs.token || null;
+          const outputs = {};
+
+          if (token) {
+            outputs.selected_token = token;
+            if (role === 'from' || role === 'both') outputs.from_token = token;
+            if (role === 'to' || role === 'both') outputs.to_token = token;
+          }
+
+          return { success: true, outputs };
+        }
+      `
+    }
+  })
 }
 
 // Track WebSocket connections

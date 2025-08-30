@@ -3,7 +3,7 @@
  * Executes any component type without 1:1 frontend/backend coupling
  */
 
-import { ComponentTemplate, ExecutorDefinition, ComponentBehavior } from './types'
+import { ComponentTemplate, ExecutorDefinition, ComponentBehavior, ExecutionError } from './types'
 import { pluginRegistry } from './plugin-registry'
 import { connectionValidator } from './connection-validator'
 
@@ -57,14 +57,7 @@ export interface ExecutionResult {
   artifacts?: Artifact[]
 }
 
-export interface ExecutionError {
-  type: 'validation' | 'runtime' | 'timeout' | 'permission' | 'resource'
-  message: string
-  details?: any
-  stack?: string
-  nodeId?: string
-  code?: string
-}
+// Using ExecutionError class from types
 
 export interface ExecutionMetrics {
   duration: number
@@ -168,20 +161,37 @@ export class GenericExecutionEngine {
       // Get component definition
       const component = pluginRegistry.getComponent(componentId)
       if (!component) {
-        throw new ExecutionError('validation', `Component ${componentId} not found`)
+        throw new ExecutionError(`Component ${componentId} not found`, 'VALIDATION_FAILED')
       }
 
       // Validate inputs
       const validation = await this.validateExecution(component.template, inputs, config)
       if (!validation.valid) {
-        throw new ExecutionError('validation', `Validation failed: ${validation.errors.join(', ')}`)
+        throw new ExecutionError(`Validation failed: ${validation.errors.join(', ')}`, 'VALIDATION_FAILED')
       }
 
       // Transform inputs if needed
       const transformedInputs = await this.transformInputs(component.template, inputs, context)
 
       // Select appropriate executor
-      const executor = await this.selectExecutor(component.template)
+      let executor: GenericExecutor
+      const registeredExecutor = (pluginRegistry as any).getExecutor?.(componentId)
+      if (registeredExecutor?.type === 'javascript') {
+        executor = this.executors.get('javascript-executor')!
+      } else if (registeredExecutor?.type === 'python') {
+        executor = this.executors.get('python-executor')!
+      } else {
+        executor = await this.selectExecutor(component.template)
+      }
+
+      // If registry provided an executor definition with inline code (e.g., javascript), surface it to the executor via config
+      let effectiveConfig: Record<string, any> = { ...config }
+      try {
+        const regExec = (pluginRegistry as any).getExecutor?.(componentId)
+        if (regExec?.type === 'javascript' && regExec?.code && !effectiveConfig.code) {
+          effectiveConfig.code = regExec.code
+        }
+      } catch {}
 
       // Create execution instance
       const instance = new ExecutionInstance(
@@ -196,7 +206,7 @@ export class GenericExecutionEngine {
       const result = await this.executeWithMonitoring(
         instance,
         transformedInputs,
-        config,
+        effectiveConfig,
         context
       )
 
@@ -219,15 +229,15 @@ export class GenericExecutionEngine {
         }
       }
 
-    } catch (error) {
+    } catch (error: any) {
       this.runningExecutions.delete(executionId)
       
       return {
         success: false,
         outputs: {},
         error: error instanceof ExecutionError ? error : new ExecutionError(
-          'runtime',
-          error.message,
+          error?.message || 'Execution failed',
+          'RUNTIME_ERROR',
           error
         ),
         warnings: [],
@@ -247,8 +257,8 @@ export class GenericExecutionEngine {
   // Automatic executor selection
   private async selectExecutor(template: ComponentTemplate): Promise<GenericExecutor> {
     // Check if component has specific executor definition
-    if (template.metadata.executorId) {
-      const executor = this.executors.get(template.metadata.executorId)
+    if (template.metadata?.executorId) {
+      const executor = this.executors.get(template.metadata?.executorId)
       if (executor) return executor
     }
 
@@ -257,12 +267,12 @@ export class GenericExecutionEngine {
     if (categoryExecutor) return categoryExecutor
 
     // Use JavaScript executor for code-based components
-    if (template.behavior.execution.type === 'sync' || template.behavior.execution.type === 'async') {
+    if (template.behavior?.execution?.type === 'sync' || template.behavior?.execution?.type === 'async') {
       return this.executors.get('javascript-executor')!
     }
 
     // Use streaming executor for streaming components
-    if (template.behavior.execution.type === 'streaming') {
+    if (template.behavior?.execution?.type === 'streaming') {
       return this.executors.get('streaming-executor')!
     }
 
@@ -407,6 +417,16 @@ export class GenericExecutionEngine {
     
     try {
       monitor.start()
+      // Ensure required services are available
+      if (!(context.services as any).has || !(context.services as any).set) {
+        // Normalize to Map-like if needed
+        const map = new Map<string, any>()
+        ;(context as any).services = map
+      }
+      const services = context.services as unknown as Map<string, any>
+      if (!services.has('codeInterpreter')) {
+        services.set('codeInterpreter', this.codeInterpreter)
+      }
       
       const result = await instance.executor.execute(
         instance.template,
@@ -550,7 +570,7 @@ class JavaScriptExecutor implements GenericExecutor {
     const code = this.extractCode(template, config)
     
     if (!code) {
-      throw new ExecutionError('runtime', 'No executable code found in component')
+      throw new ExecutionError('No executable code found in component', 'RUNTIME_ERROR')
     }
 
     return await context.services.get('codeInterpreter').execute(code, {
@@ -587,7 +607,7 @@ class JavaScriptExecutor implements GenericExecutor {
   private extractCode(template: ComponentTemplate, config: Record<string, any>): string | null {
     // Extract code from various sources
     if (config.code) return config.code
-    if (template.behavior.lifecycle.transform) return template.behavior.lifecycle.transform
+    if (template.behavior?.lifecycle?.transform) return template.behavior.lifecycle.transform
     
     // Look for code fields in configuration
     for (const field of template.configuration) {
@@ -613,7 +633,7 @@ class PythonExecutor implements GenericExecutor {
     context: ExecutionContext
   ): Promise<ExecutionResult> {
     // Execute Python code (requires backend service)
-    throw new ExecutionError('runtime', 'Python execution not implemented')
+    throw new ExecutionError('Python execution not implemented', 'RUNTIME_ERROR')
   }
 
   async validate(): Promise<ValidationResult> {
@@ -651,7 +671,7 @@ class DeFiExecutor implements GenericExecutor {
       case 'bridge':
         return await this.executeBridge(template, inputs, config, context)
       default:
-        throw new ExecutionError('runtime', `Unsupported DeFi operation: ${category}`)
+        throw new ExecutionError(`Unsupported DeFi operation: ${category}`, 'RUNTIME_ERROR')
     }
   }
 
@@ -812,11 +832,16 @@ class CodeInterpreter {
     // Simplified code execution
     try {
       const func = new Function('inputs', 'config', 'context', `
-        ${code}
-        return typeof result !== 'undefined' ? result : {};
+        return (async () => {
+          ${code}
+          if (typeof execute === 'function') {
+            return await execute(inputs, config, context);
+          }
+          return typeof result !== 'undefined' ? result : {};
+        })();
       `)
       
-      const result = func(context.inputs, context.config, context.context)
+      const result = await func(context.inputs, context.config, context.context)
       
       return {
         success: true,

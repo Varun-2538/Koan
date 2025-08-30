@@ -297,6 +297,24 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     ],
     nodes: [
       {
+        id: "input-provider-1",
+        type: "inputProvider",
+        position: { x: 250, y: 40 },
+        data: {
+          label: "Input Provider",
+          config: {
+            template_creation_mode: true,
+            chainId: "1",
+            // Default mainnet ETH -> USDC (can be edited in UI)
+            src: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+            dst: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            amount: "100000000000000000", // 0.1 ETH
+            from: "0xAe3068f47B279D24a68C701eDf16cC180388d974",
+            slippage: 1
+          }
+        }
+      },
+      {
         id: "wallet-connector-1",
         type: "walletConnector",
         position: { x: 100, y: 150 },
@@ -392,9 +410,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     edges: [
       { id: "e1-2", source: "wallet-connector-1", target: "token-input-1", type: "default" },
       { id: "e2-3", source: "token-input-1", target: "oneinch-quote-1", type: "default" },
+      { id: "e0-2", source: "input-provider-1", target: "oneinch-quote-1", type: "default" },
       { id: "e3-4", source: "oneinch-quote-1", target: "slippage-control-1", type: "default" },
       { id: "e3-5", source: "oneinch-quote-1", target: "oneinch-swap-1", type: "default" },
       { id: "e4-5", source: "slippage-control-1", target: "oneinch-swap-1", type: "default" },
+      { id: "e0-4", source: "input-provider-1", target: "oneinch-swap-1", type: "default" },
       { id: "e5-6", source: "oneinch-swap-1", target: "swap-interface-1", type: "default" }
     ],
     requiredInputs: [

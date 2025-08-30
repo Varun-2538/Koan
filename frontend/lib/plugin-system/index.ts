@@ -61,85 +61,70 @@ export class UnitePluginSystem {
       {
         id: 'oneInchSwap',
         name: '1inch Swap',
-        description: 'Execute token swaps using 1inch aggregator',
+        description: 'Swap execution (panel validates only by default)',
         category: 'DeFi',
         version: '1.0.0',
         template: {
-          inputs: [
-            { id: 'fromToken', name: 'From Token', dataType: 'token', required: true },
-            { id: 'toToken', name: 'To Token', dataType: 'token', required: true },
-            { id: 'amount', name: 'Amount', dataType: 'number', required: true },
-            { id: 'slippage', name: 'Slippage %', dataType: 'number', required: false }
-          ],
+          inputs: [],
           outputs: [
-            { id: 'transactionHash', name: 'Transaction Hash', dataType: 'string' },
-            { id: 'amountOut', name: 'Amount Received', dataType: 'number' },
-            { id: 'gasUsed', name: 'Gas Used', dataType: 'number' }
+            { id: 'transaction', name: 'Transaction', dataType: 'object' },
+            { id: 'route', name: 'Route Info', dataType: 'object' },
+            { id: 'validationOk', name: 'Validation OK', dataType: 'boolean' }
           ],
           configuration: [
-            {
-              key: 'apiKey',
-              name: '1inch API Key',
-              type: 'text',
-              required: true,
-              sensitive: true,
-              ui: { placeholder: 'Enter your 1inch API key' }
-            },
-            {
-              key: 'enableFusion',
-              name: 'Enable Fusion Mode',
-              type: 'boolean',
-              defaultValue: true,
-              ui: { helpText: 'Use gasless swaps with MEV protection' }
-            },
-            {
-              key: 'customScript',
-              name: 'Custom Logic Script',
-              type: 'code',
-              required: false,
-              ui: { 
-                helpText: 'Optional JavaScript code for custom swap logic',
-                widget: { type: 'code-editor', props: { language: 'javascript' } }
-              }
-            }
+            { key: 'chainId', name: 'Chain ID', type: 'text', required: true },
+            { key: 'src', name: 'From Token Address', type: 'text', required: true },
+            { key: 'dst', name: 'To Token Address', type: 'text', required: true },
+            { key: 'amount', name: 'Amount (smallest units)', type: 'text', required: true },
+            { key: 'from', name: 'From Address', type: 'text', required: true },
+            { key: 'slippage', name: 'Slippage %', type: 'number', required: false, defaultValue: 1 },
+            { key: 'apiKey', name: '1inch API Key', type: 'text', required: true, sensitive: true },
+            { key: 'validateOnly', name: 'Validate Only (don’t broadcast)', type: 'boolean', required: false, defaultValue: true }
           ]
         },
         executor: {
           type: 'javascript',
           code: `
-            // Built-in 1inch swap execution logic
             async function execute(inputs, config, context) {
-              const { fromToken, toToken, amount, slippage = 1.0 } = inputs;
-              const { apiKey, enableFusion, customScript } = config;
-              
-              // Execute custom script if provided
-              if (customScript) {
-                const customResult = await context.services.codeExecution.execute(customScript, {
-                  inputs, config, context
-                });
-                if (customResult.success && customResult.outputs.override) {
-                  return customResult.outputs;
+              const required = ['chainId','src','dst','amount','from','apiKey'];
+              const missing = required.filter(k => !config[k]);
+              if (missing.length) throw new Error('Missing required field(s): ' + missing.join(', '));
+              // Validation-only or template mode: verify with quote endpoint
+              if (config.validateOnly === true || config.template_creation_mode === true) {
+                const params = new URLSearchParams();
+                params.append('chainId', String(config.chainId));
+                params.append('src', String(config.src));
+                params.append('dst', String(config.dst));
+                params.append('amount', String(config.amount));
+                if (config.from) params.append('from', String(config.from));
+                if (config.slippage != null) params.append('slippage', String(config.slippage));
+                if (config.apiKey) params.append('apiKey', String(config.apiKey));
+                const base = "${process.env.NEXT_PUBLIC_BACKEND_URL || ''}";
+                const res = await fetch(base + '/api/1inch/quote?' + params.toString(), { method: 'GET' });
+                if (!res.ok) {
+                  let err; try { err = await res.json(); } catch {}
+                  throw new Error((err && err.error) || ('HTTP ' + res.status));
                 }
+                const data = await res.json();
+                return { transaction: null, route: data || null, validationOk: true };
               }
-              
-              // Default 1inch swap logic
-              const quote = await context.services.defi.get1inchQuote({
-                fromToken: fromToken.address,
-                toToken: toToken.address,
-                amount,
-                slippage
-              });
-              
-              const transaction = await context.services.defi.execute1inchSwap(quote, {
-                enableFusion,
-                apiKey
-              });
-              
-              return {
-                transactionHash: transaction.hash,
-                amountOut: quote.toAmount,
-                gasUsed: transaction.gasUsed
+              const body = {
+                chainId: String(config.chainId),
+                src: String(config.src),
+                dst: String(config.dst),
+                amount: String(config.amount),
+                from: String(config.from),
+                slippage: config.slippage != null ? String(config.slippage) : undefined,
+                apiKey: String(config.apiKey)
               };
+              const base = "${process.env.NEXT_PUBLIC_BACKEND_URL || ''}";
+              const res = await fetch(base + '/api/1inch/swap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+              if (!res.ok) {
+                let err; try { err = await res.json(); } catch {}
+                throw new Error((err && err.error) || ('HTTP ' + res.status));
+              }
+              const data = await res.json();
+              return { transaction: data.tx || data, route: data.route || data.protocols, validationOk: true };
             }
           `
         }
@@ -310,6 +295,419 @@ export class UnitePluginSystem {
                 result: result,
                 [result ? 'true' : 'false']: true 
               };
+            }
+          `
+        }
+      }
+      ,
+      // 1inch Quote (Frontend built-in)
+      {
+        id: 'oneInchQuote',
+        name: '1inch Quote',
+        description: 'Get token swap quotes via backend 1inch API',
+        category: 'DeFi',
+        version: '1.0.0',
+        template: {
+          inputs: [
+            { id: 'chainId', name: 'Chain ID', dataType: 'text', required: false },
+            { id: 'src', name: 'From Token Address', dataType: 'text', required: false },
+            { id: 'dst', name: 'To Token Address', dataType: 'text', required: false },
+            { id: 'amount', name: 'Amount (wei)', dataType: 'text', required: false },
+            { id: 'from', name: 'From Address', dataType: 'text', required: false },
+            { id: 'slippage', name: 'Slippage %', dataType: 'number', required: false },
+            { id: 'apiKey', name: 'API Key', dataType: 'text', required: false }
+          ],
+          outputs: [
+            { id: 'quote', name: 'Quote Data', dataType: 'object' },
+            { id: 'estimatedGas', name: 'Estimated Gas', dataType: 'number' }
+          ],
+          configuration: [
+            { key: 'chainId', name: 'Chain ID', type: 'text', required: true, placeholder: '1' },
+            { key: 'src', name: 'From Token Address', type: 'text', required: true, placeholder: '0xeeeeeeee...' },
+            { key: 'dst', name: 'To Token Address', type: 'text', required: true, placeholder: '0xA0b8...' },
+            { key: 'amount', name: 'Amount (wei)', type: 'text', required: true, placeholder: '1000000000000000000' },
+            { key: 'from', name: 'From Address (optional)', type: 'text', required: false, placeholder: '0x...' },
+            { key: 'slippage', name: 'Slippage %', type: 'number', required: false, defaultValue: 1 },
+            { key: 'apiKey', name: '1inch API Key', type: 'text', required: true, sensitive: true }
+          ]
+        },
+        executor: {
+          type: 'javascript',
+          code: `
+            // Calls backend 1inch proxy. Backend must have ONEINCH_API_KEY set.
+            async function execute(inputs, config, context) {
+              const params = new URLSearchParams();
+              
+              // Merge inputs from connected nodes with config values (inputs take priority)
+              const chainId = inputs.chainId || config.chainId;
+              const src = inputs.src || config.src;
+              const dst = inputs.dst || config.dst;
+              const amount = inputs.amount || config.amount;
+              const from = inputs.from || config.from;
+              const slippage = inputs.slippage != null ? inputs.slippage : config.slippage;
+              const apiKey = inputs.apiKey || config.apiKey;
+              
+              const required = [
+                {key: 'chainId', value: chainId},
+                {key: 'src', value: src},
+                {key: 'dst', value: dst},
+                {key: 'amount', value: amount}
+              ];
+              
+              for (const {key, value} of required) {
+                if (!value) throw new Error('Missing required field: ' + key);
+                params.append(key, String(value));
+              }
+              if (from) params.append('from', String(from));
+              if (slippage != null) params.append('slippage', String(slippage));
+              // Enforce apiKey
+              if (!apiKey) throw new Error('Missing required field: apiKey');
+              params.append('apiKey', String(apiKey));
+
+              const base = "${process.env.NEXT_PUBLIC_BACKEND_URL || ''}";
+              const res = await fetch(base + '/api/1inch/quote?' + params.toString(), { method: 'GET' });
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || ('HTTP ' + res.status));
+              }
+              const data = await res.json();
+              return { quote: data, estimatedGas: Number(data?.gas ?? 0) };
+            }
+          `
+        }
+      }
+      ,
+      {
+        id: 'oneInchSwap',
+        name: '1inch Swap',
+        description: 'Execute swaps via backend 1inch API (panel validates only by default)',
+        category: 'DeFi',
+        version: '1.0.0',
+        template: {
+          inputs: [
+            { id: 'chainId', name: 'Chain ID', dataType: 'text', required: false },
+            { id: 'src', name: 'From Token Address', dataType: 'text', required: false },
+            { id: 'dst', name: 'To Token Address', dataType: 'text', required: false },
+            { id: 'amount', name: 'Amount (wei)', dataType: 'text', required: false },
+            { id: 'from', name: 'From Address', dataType: 'text', required: false },
+            { id: 'slippage', name: 'Slippage %', dataType: 'number', required: false },
+            { id: 'apiKey', name: 'API Key', dataType: 'text', required: false },
+            { id: 'quote', name: 'Quote Data', dataType: 'object', required: false }
+          ],
+          outputs: [
+            { id: 'transaction', name: 'Transaction', dataType: 'object' },
+            { id: 'route', name: 'Route Info', dataType: 'object' },
+            { id: 'validationOk', name: 'Validation OK', dataType: 'boolean' }
+          ],
+          configuration: [
+            { key: 'chainId', name: 'Chain ID', type: 'text', required: true },
+            { key: 'src', name: 'From Token Address', type: 'text', required: true },
+            { key: 'dst', name: 'To Token Address', type: 'text', required: true },
+            { key: 'amount', name: 'Amount (smallest units)', type: 'text', required: true },
+            { key: 'from', name: 'From Address', type: 'text', required: true },
+            { key: 'slippage', name: 'Slippage %', type: 'number', required: false, defaultValue: 1 },
+            { key: 'apiKey', name: '1inch API Key', type: 'text', required: true, sensitive: true },
+            { key: 'validateOnly', name: 'Validate Only (don’t broadcast)', type: 'boolean', required: false, defaultValue: true },
+            { key: 'template_creation_mode', name: 'Template Creation Mode', type: 'boolean', required: false, defaultValue: false }
+          ]
+        },
+        executor: {
+          type: 'javascript',
+          code: `
+            async function execute(inputs, config, context) {
+              // Merge inputs from connected nodes with config values (inputs take priority)
+              const chainId = inputs.chainId || config.chainId;
+              const src = inputs.src || config.src;
+              const dst = inputs.dst || config.dst;
+              const amount = inputs.amount || config.amount;
+              const from = inputs.from || config.from;
+              const slippage = inputs.slippage != null ? inputs.slippage : config.slippage;
+              const apiKey = inputs.apiKey || config.apiKey;
+              
+              const required = [
+                {key: 'chainId', value: chainId},
+                {key: 'src', value: src},
+                {key: 'dst', value: dst},
+                {key: 'amount', value: amount},
+                {key: 'from', value: from},
+                {key: 'apiKey', value: apiKey}
+              ];
+              
+              for (const {key, value} of required) {
+                if (!value) throw new Error('Missing required field: ' + key);
+              }
+              
+              // In the config panel we default to validation-only; also support template mode
+              if (config.validateOnly === true || config.template_creation_mode === true) {
+                const params = new URLSearchParams();
+                params.append('chainId', String(chainId));
+                params.append('src', String(src));
+                params.append('dst', String(dst));
+                params.append('amount', String(amount));
+                if (from) params.append('from', String(from));
+                if (slippage != null) params.append('slippage', String(slippage));
+                if (apiKey) params.append('apiKey', String(apiKey));
+                const base = (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_BACKEND_URL) ? process.env.NEXT_PUBLIC_BACKEND_URL : '';
+                const res = await fetch(base + '/api/1inch/quote?' + params.toString(), { method: 'GET' });
+                if (!res.ok) {
+                  let err; try { err = await res.json(); } catch {}
+                  throw new Error((err && err.error) || ('HTTP ' + res.status));
+                }
+                const data = await res.json();
+                return { transaction: null, route: data || null, validationOk: true };
+              }
+              const body = {
+                chainId: String(chainId),
+                src: String(src),
+                dst: String(dst),
+                amount: String(amount),
+                from: String(from),
+                slippage: slippage != null ? String(slippage) : undefined,
+                apiKey: String(apiKey)
+              };
+              const base = (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_BACKEND_URL) ? process.env.NEXT_PUBLIC_BACKEND_URL : '';
+              const res = await fetch(base + '/api/1inch/swap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+              if (!res.ok) {
+                let err; try { err = await res.json(); } catch {}
+                throw new Error((err && err.error) || ('HTTP ' + res.status));
+              }
+              const data = await res.json();
+              return { transaction: data.tx || data, route: data.route || data.protocols, validationOk: true };
+            }
+          `
+        }
+      }
+      ,
+      // Wallet Connector
+      {
+        id: 'walletConnector',
+        name: 'Wallet Connector',
+        description: 'Connect to crypto wallets (MetaMask, WalletConnect, Coinbase Wallet)',
+        category: 'Wallet',
+        version: '1.0.0',
+        template: {
+          inputs: [],
+          outputs: [
+            { id: 'address', name: 'Wallet Address', dataType: 'address' },
+            { id: 'chainId', name: 'Chain ID', dataType: 'number' },
+            { id: 'provider', name: 'Provider', dataType: 'object' }
+          ],
+          configuration: [
+            {
+              key: 'walletType',
+              name: 'Wallet Type',
+              type: 'select',
+              required: true,
+              options: [
+                { label: 'MetaMask', value: 'metamask' },
+                { label: 'WalletConnect', value: 'walletconnect' },
+                { label: 'Coinbase Wallet', value: 'coinbase' }
+              ],
+              defaultValue: 'metamask'
+            },
+            {
+              key: 'autoConnect',
+              name: 'Auto Connect',
+              type: 'boolean',
+              required: false,
+              defaultValue: true
+            }
+          ]
+        },
+        executor: {
+          type: 'javascript',
+          code: `
+            // Development-time wallet connector mock
+            async function execute(inputs, config, context) {
+              const address = '0x' + Math.random().toString(16).substr(2, 40).padEnd(40, '0')
+              const chainId = 1
+              const provider = { type: config.walletType || 'metamask', connected: true }
+              return { address, chainId, provider }
+            }
+          `
+        }
+      },
+      // Token Selector (frontend utility)
+      {
+        id: 'tokenSelector',
+        name: 'Token Selector',
+        description: 'Select tokens and emit basic selection outputs',
+        category: 'Wallet',
+        version: '1.0.0',
+        template: {
+          inputs: [],
+          outputs: [
+            { id: 'selectedToken', name: 'Selected Token', dataType: 'token' },
+            { id: 'fromToken', name: 'From Token', dataType: 'token' },
+            { id: 'toToken', name: 'To Token', dataType: 'token' },
+            { id: 'amount', name: 'Amount', dataType: 'string' },
+            { id: 'tokens', name: 'Token List', dataType: 'array' }
+          ],
+          configuration: [
+            { key: 'defaultTokens', name: 'Default Token List', type: 'multiselect', required: false },
+            { key: 'fromToken', name: 'From Token', type: 'text', required: false },
+            { key: 'toToken', name: 'To Token', type: 'text', required: false },
+            { key: 'amount', name: 'Amount', type: 'text', required: false },
+            { key: 'showTokenSearch', name: 'Show Token Search', type: 'boolean', required: false, defaultValue: true },
+            { key: 'template_creation_mode', name: 'Template Creation Mode', type: 'boolean', required: false, defaultValue: true }
+          ]
+        },
+        executor: {
+          type: 'javascript',
+          code: `
+            async function execute(inputs, config, context) {
+              const tokens = Array.isArray(config.defaultTokens) ? config.defaultTokens : [];
+              const selectedToken = config.selectedToken || config.fromToken || null;
+              const fromToken = config.fromToken || null;
+              const toToken = config.toToken || null;
+              const amount = (config.amount != null) ? String(config.amount) : null;
+              return { selectedToken, fromToken, toToken, amount, tokens };
+            }
+          `
+        }
+      },
+      // Input Provider (manual inputs for flows)
+      {
+        id: 'inputProvider',
+        name: 'Input Provider',
+        description: 'Provide manual inputs (chainId, src, dst, amount, from, slippage, apiKey) to downstream nodes',
+        category: 'Data',
+        version: '1.0.0',
+        template: {
+          inputs: [],
+          outputs: [
+            { id: 'chainId', name: 'Chain ID', dataType: 'text' },
+            { id: 'src', name: 'From Token Address', dataType: 'text' },
+            { id: 'dst', name: 'To Token Address', dataType: 'text' },
+            { id: 'amount', name: 'Amount (wei)', dataType: 'text' },
+            { id: 'from', name: 'From Address', dataType: 'text' },
+            { id: 'slippage', name: 'Slippage %', dataType: 'number' },
+            { id: 'apiKey', name: '1inch API Key', dataType: 'text' }
+          ],
+          configuration: [
+            { key: 'chainId', name: 'Chain ID', type: 'text', required: false, placeholder: '1' },
+            { key: 'src', name: 'From Token Address', type: 'text', required: false },
+            { key: 'dst', name: 'To Token Address', type: 'text', required: false },
+            { key: 'amount', name: 'Amount (wei)', type: 'text', required: false },
+            { key: 'from', name: 'From Address', type: 'text', required: false },
+            { key: 'slippage', name: 'Slippage %', type: 'number', required: false, defaultValue: 1 },
+            { key: 'apiKey', name: '1inch API Key', type: 'text', required: false, sensitive: true }
+          ]
+        },
+        executor: {
+          type: 'javascript',
+          code: `
+            async function execute(inputs, config, context) {
+              return {
+                chainId: String(config.chainId ?? inputs.chainId ?? ''),
+                src: config.src ?? inputs.src ?? '',
+                dst: config.dst ?? inputs.dst ?? '',
+                amount: String(config.amount ?? inputs.amount ?? ''),
+                from: config.from ?? inputs.from ?? '',
+                slippage: (config.slippage != null ? Number(config.slippage) : (inputs.slippage != null ? Number(inputs.slippage) : undefined)),
+                apiKey: config.apiKey ?? inputs.apiKey ?? ''
+              }
+            }
+          `
+        }
+      },
+      // Price Impact Calculator
+      {
+        id: 'priceImpactCalculator',
+        name: 'Price Impact Calculator',
+        description: 'Calculate price impact and minimum received based on slippage',
+        category: 'Analytics',
+        version: '1.0.0',
+        template: {
+          inputs: [],
+          outputs: [
+            { id: 'priceImpact', name: 'Price Impact %', dataType: 'number' },
+            { id: 'minimumReceived', name: 'Minimum Received', dataType: 'number' }
+          ],
+          configuration: [
+            { key: 'tradeAmount', name: 'Trade Amount', type: 'number', required: false },
+            { key: 'liquidity', name: 'Pool Liquidity', type: 'number', required: false },
+            { key: 'slippageTolerance', name: 'Slippage Tolerance %', type: 'number', required: false, defaultValue: 1 },
+            { key: 'autoSlippage', name: 'Auto Slippage', type: 'boolean', required: false, defaultValue: false },
+            { key: 'minSlippage', name: 'Min Slippage %', type: 'number', required: false, defaultValue: 0.1 },
+            { key: 'maxSlippage', name: 'Max Slippage %', type: 'number', required: false, defaultValue: 5 },
+            { key: 'template_creation_mode', name: 'Template Creation Mode', type: 'boolean', required: false, defaultValue: true }
+          ]
+        },
+        executor: {
+          type: 'javascript',
+          code: `
+            async function execute(inputs, config, context) {
+              const tradeAmount = parseFloat(config.tradeAmount || 0);
+              const liquidity = parseFloat(config.liquidity || 0);
+              let slippage = parseFloat(config.slippageTolerance != null ? config.slippageTolerance : 1);
+              if (config.autoSlippage) {
+                const minS = parseFloat(config.minSlippage != null ? config.minSlippage : 0.1);
+                const maxS = parseFloat(config.maxSlippage != null ? config.maxSlippage : 5);
+                slippage = Math.min(maxS, Math.max(minS, tradeAmount && liquidity ? (tradeAmount / (liquidity || 1)) * 100 : 1));
+              }
+              // If template mode and no numbers yet, return safe defaults
+              if ((config.template_creation_mode === true) && (!tradeAmount || !liquidity)) {
+                return { priceImpact: 0, minimumReceived: 0 };
+              }
+              const priceImpact = liquidity > 0 ? (tradeAmount / liquidity) * 100 : 0;
+              const minimumReceived = tradeAmount * (1 - (slippage / 100));
+              return { priceImpact, minimumReceived };
+            }
+          `
+        }
+      },
+      // DeFi Dashboard (UI)
+      {
+        id: 'defiDashboard',
+        name: 'DeFi Dashboard',
+        description: 'Display DeFi metrics and charts based on inputs',
+        category: 'UI',
+        version: '1.0.0',
+        template: {
+          inputs: [],
+          outputs: [
+            { id: 'dashboardState', name: 'Dashboard State', dataType: 'object' }
+          ],
+          configuration: [
+            { key: 'title', name: 'Title', type: 'text', required: false, defaultValue: 'DeFi Dashboard' },
+            { key: 'theme', name: 'Theme', type: 'select', required: false, options: [
+              { label: 'Light', value: 'light' },
+              { label: 'Dark', value: 'dark' },
+              { label: 'Modern', value: 'modern' }
+            ], defaultValue: 'light' },
+            { key: 'chartType', name: 'Chart Type', type: 'select', required: false, options: [
+              { label: 'Line', value: 'line' },
+              { label: 'Bar', value: 'bar' },
+              { label: 'Pie', value: 'pie' }
+            ], defaultValue: 'line' },
+            { key: 'refreshInterval', name: 'Refresh Interval (s)', type: 'number', required: false, defaultValue: 30 },
+            { key: 'showPnL', name: 'Show P&L', type: 'boolean', required: false, defaultValue: true },
+            { key: 'enablePriceChart', name: 'Enable Price Chart', type: 'boolean', required: false, defaultValue: true },
+            { key: 'showPriceImpact', name: 'Show Price Impact', type: 'boolean', required: false, defaultValue: false },
+            { key: 'showAdvancedSettings', name: 'Show Advanced Settings', type: 'boolean', required: false, defaultValue: false },
+            { key: 'template_creation_mode', name: 'Template Creation Mode', type: 'boolean', required: false, defaultValue: true }
+          ]
+        },
+        executor: {
+          type: 'javascript',
+          code: `
+            async function execute(inputs, config, context) {
+              const dashboardState = {
+                title: config.title || 'DeFi Dashboard',
+                theme: config.theme || 'light',
+                chartType: config.chartType || 'line',
+                refreshInterval: Number(config.refreshInterval || 30),
+                showPnL: Boolean(config.showPnL),
+                enablePriceChart: Boolean(config.enablePriceChart),
+                showPriceImpact: Boolean(config.showPriceImpact),
+                showAdvancedSettings: Boolean(config.showAdvancedSettings),
+                widgets: [
+                  { id: 'summary', type: 'summary', data: { pnl: 0, positions: 0 } },
+                  { id: 'chart', type: 'price', visible: Boolean(config.enablePriceChart) }
+                ]
+              };
+              return { dashboardState };
             }
           `
         }

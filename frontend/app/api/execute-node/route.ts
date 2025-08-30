@@ -40,10 +40,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Execute the node using the generic execution engine
+    // Merge inputs into config to satisfy components that expect configuration fields
+    const mergedConfig = {
+      ...(node?.data?.config || {}),
+      ...pluginInputs
+    }
+
     const executionResult = await executionEngine.executeComponent(
       pluginId,
       pluginInputs,
-      node?.data?.config || {},
+      mergedConfig,
       {
         workflowId: 'api_execution',
         executionId: `exec_${Date.now()}`,
@@ -105,13 +111,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Return execution result
+    // Return execution result with normalized error string
+    const errorMessage = executionResult.error
+      ? (typeof executionResult.error === 'string'
+          ? executionResult.error
+          : (executionResult.error as any).message || JSON.stringify(executionResult.error))
+      : undefined
+
     return NextResponse.json({
       success: executionResult.success,
       nodeId: nodeIdentifier,
       result: executionResult.outputs,
       logs: executionResult.logs,
-      error: executionResult.error,
+      error: errorMessage,
       executionTime: new Date().toISOString(),
       pluginUsed: component.name,
       pluginVersion: component.version
@@ -123,8 +135,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false,
-        error: 'Node execution failed',
-        details: error instanceof Error ? error.message : 'Unknown execution error'
+        error: error instanceof Error ? error.message : 'Node execution failed',
+        details: error instanceof Error ? undefined : String(error)
       },
       { status: 500 }
     )

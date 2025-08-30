@@ -592,12 +592,16 @@ export const useCustomNodes = () => {
       // Add universal plugin node type
       nodeComponents['universalPlugin'] = UniversalPluginNode
       
-      // Add legacy nodes for backward compatibility
-      nodeComponents['oneInchSwap'] = OneInchSwapNode
-      nodeComponents['oneInchQuote'] = OneInchQuoteNode
-      nodeComponents['dataProcessor'] = DataProcessorNode
-      nodeComponents['conditionalLogic'] = ConditionalLogicNode
-      nodeComponents['walletConnector'] = WalletConnectorNode
+      // Add legacy nodes for backward compatibility - now using UniversalPluginNode
+      nodeComponents['oneInchSwap'] = (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'oneInchSwap'}} />
+      nodeComponents['oneInchQuote'] = (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'oneInchQuote'}} />
+      nodeComponents['dataProcessor'] = (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'dataProcessor'}} />
+      nodeComponents['conditionalLogic'] = (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'conditionalLogic'}} />
+      nodeComponents['walletConnector'] = (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'walletConnector'}} />
+      nodeComponents['tokenSelector'] = (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'tokenSelector'}} />
+      nodeComponents['priceImpactCalculator'] = (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'priceImpactCalculator'}} />
+      nodeComponents['defiDashboard'] = (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'defiDashboard'}} />
+      nodeComponents['inputProvider'] = (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'inputProvider'}} />
       
       setNodes(nodeComponents)
     }
@@ -623,12 +627,16 @@ export const useCustomNodes = () => {
 
 // Static export for immediate use (will be populated after initialization)
 export const CustomNodes: Record<string, React.ComponentType<any>> = {
-  // Core nodes always available
-  oneInchSwap: OneInchSwapNode,
-  oneInchQuote: OneInchQuoteNode, 
-  dataProcessor: DataProcessorNode,
-  conditionalLogic: ConditionalLogicNode,
-  walletConnector: WalletConnectorNode
+  // Core nodes always available - now using UniversalPluginNode
+  oneInchSwap: (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'oneInchSwap'}} />,
+  oneInchQuote: (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'oneInchQuote'}} />, 
+  dataProcessor: (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'dataProcessor'}} />,
+  conditionalLogic: (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'conditionalLogic'}} />,
+  walletConnector: (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'walletConnector'}} />,
+  tokenSelector: (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'tokenSelector'}} />,
+  priceImpactCalculator: (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'priceImpactCalculator'}} />,
+  defiDashboard: (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'defiDashboard'}} />,
+  inputProvider: (props: any) => <UniversalPluginNode {...props} data={{...props.data, componentId: 'inputProvider'}} />
 }
 
 // Initialize and populate dynamic nodes

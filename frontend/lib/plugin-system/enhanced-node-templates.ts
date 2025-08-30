@@ -150,6 +150,30 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
     ]
   },
 
+  // Update oneInchSwap to use backend API and expose real config fields
+  oneInchSwap: {
+    type: 'oneInchSwap',
+    name: '1inch Swap',
+    description: 'Execute token swaps using 1inch via backend',
+    category: 'DeFi',
+    icon: '🔄',
+    color: '#0066FF',
+    inputs: [],
+    outputs: [
+      { id: 'transaction', name: 'Transaction', dataType: 'object' },
+      { id: 'route', name: 'Route Info', dataType: 'object' }
+    ],
+    fields: [
+      { key: 'chainId', type: 'text', label: 'Chain ID', required: true },
+      { key: 'src', type: 'text', label: 'From Token Address', required: true },
+      { key: 'dst', type: 'text', label: 'To Token Address', required: true },
+      { key: 'amount', type: 'text', label: 'Amount (smallest units)', required: true },
+      { key: 'from', type: 'text', label: 'From Address', required: true },
+      { key: 'slippage', type: 'number', label: 'Slippage %', required: false, defaultValue: 1 },
+      { key: 'apiKey', type: 'text', label: '1inch API Key', required: true }
+    ]
+  },
+
   limitOrder: {
     type: 'limitOrder',
     name: 'Limit Order',
@@ -635,79 +659,52 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
     id: 'oneInchQuote',
     type: 'oneInchQuote',
     name: '1inch Quote',
-    description: 'Get token swap quotes',
+    description: 'Get token swap quotes via backend 1inch API',
     category: 'DeFi',
     version: '1.0.0',
     icon: '💱',
     color: '#0066FF',
-    inputs: [
-      {
-        id: 'fromToken',
-        name: 'From Token',
-        description: 'Token to swap from',
-        dataType: 'token',
-        required: true,
-        multiple: false,
-        streaming: false
-      },
-      {
-        id: 'toToken',
-        name: 'To Token',
-        description: 'Token to swap to',
-        dataType: 'token',
-        required: true,
-        multiple: false,
-        streaming: false
-      },
-      {
-        id: 'amount',
-        name: 'Amount',
-        description: 'Amount to swap',
-        dataType: 'number',
-        required: true,
-        multiple: false,
-        streaming: false
-      }
-    ],
+    inputs: [],
     outputs: [
-      {
-        id: 'quote',
-        name: 'Quote Data',
-        description: 'Swap quote information',
-        dataType: 'object',
-        required: true,
-        multiple: false,
-        streaming: false
-      },
-      {
-        id: 'estimatedGas',
-        name: 'Estimated Gas',
-        description: 'Estimated gas cost',
-        dataType: 'number',
-        required: false,
-        multiple: false,
-        streaming: false
-      }
+      { id: 'quote', name: 'Quote Data', description: 'Swap quote information', dataType: 'object', required: true, multiple: false, streaming: false },
+      { id: 'estimatedGas', name: 'Estimated Gas', description: 'Estimated gas cost', dataType: 'number', required: false, multiple: false, streaming: false }
     ],
     configuration: [
-      {
-        key: 'apiKey',
-        label: '1inch API Key',
-        description: 'API key for 1inch aggregator',
-        type: 'text',
-        required: true,
-        sensitive: true,
-        placeholder: 'Enter your 1inch API key'
-      },
-      {
-        key: 'slippage',
-        label: 'Slippage Tolerance %',
-        description: 'Maximum slippage tolerance',
-        type: 'number',
-        required: false,
-        defaultValue: 1.0
+      { key: 'chainId', label: 'Chain ID', description: 'EVM Chain ID', type: 'text', required: true, placeholder: '1' },
+      { key: 'src', label: 'From Token Address', description: 'Token to swap from', type: 'text', required: true, placeholder: '0xeeee...' },
+      { key: 'dst', label: 'To Token Address', description: 'Token to swap to', type: 'text', required: true, placeholder: '0xA0b8...' },
+      { key: 'amount', label: 'Amount (wei)', description: 'Amount in wei', type: 'text', required: true, placeholder: '1000000000000000000' },
+      { key: 'from', label: 'From Address (optional)', description: 'Wallet address', type: 'text', required: false, placeholder: '0x...' },
+      { key: 'slippage', label: 'Slippage Tolerance %', description: 'Maximum slippage tolerance', type: 'number', required: false, defaultValue: 1.0 },
+      { key: 'apiKey', label: '1inch API Key', description: 'Per-user API key (required)', type: 'text', required: true }
+    ],
+    // Provide inline code so JS executor can run without mock behavior
+    behavior: {
+      execution: { type: 'sync' },
+      caching: { enabled: false },
+      error: { strategy: 'fail_fast', propagation: 'stop' },
+      progress: { reportable: false },
+      lifecycle: {
+        transform: `
+          const params = new URLSearchParams();
+          const required = ['chainId','src','dst','amount'];
+          for (const key of required) {
+            if (!config[key]) throw new Error('Missing required field: ' + key);
+            params.append(key, String(config[key]));
+          }
+          if (config.from) params.append('from', String(config.from));
+          if (config.slippage != null) params.append('slippage', String(config.slippage));
+
+          const res = await fetch('/api/1inch/quote?' + params.toString(), { method: 'GET' });
+          if (!res.ok) {
+            let err; try { err = await res.json(); } catch {}
+            throw new Error((err && err.error) || ('HTTP ' + res.status));
+          }
+          const data = await res.json();
+          const result = { quote: data, estimatedGas: Number(data?.gas ?? 0) };
+        `
       }
-    ]
+    }
   },
 
   // Missing components that need to be added

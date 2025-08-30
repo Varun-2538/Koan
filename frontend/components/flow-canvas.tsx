@@ -1305,22 +1305,29 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           if (projectId.startsWith('template-')) {
             // For oneInchQuote, provide default values if missing
             if (node.type === "oneInchQuote") {
-              backendConfig.from_token = backendConfig.from_token || "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
-              backendConfig.to_token = backendConfig.to_token || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+              // Set both src/dst and from_token/to_token for compatibility
+              backendConfig.src = backendConfig.src || backendConfig.from_token || "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+              backendConfig.dst = backendConfig.dst || backendConfig.to_token || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+              backendConfig.from_token = backendConfig.from_token || backendConfig.src
+              backendConfig.to_token = backendConfig.to_token || backendConfig.dst
               // Use a smaller default amount for template mode to avoid large transaction amounts
               // Only set default if no amount is provided
               if (!backendConfig.amount) {
                 backendConfig.amount = "100000000000000000" // 0.1 ETH instead of 1 ETH
               }
-              backendConfig.chain_id = backendConfig.chain_id || "1"
+              backendConfig.chainId = backendConfig.chainId || backendConfig.chain_id || "1"
+              backendConfig.chain_id = backendConfig.chain_id || backendConfig.chainId || "1"
             }
 
             // For oneInchSwap, ensure we use the same amount as the quote
             if (node.type === "oneInchSwap") {
-              // Don't override the amount if it's already set (should come from quote)
-              backendConfig.from_token = backendConfig.from_token || "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
-              backendConfig.to_token = backendConfig.to_token || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-              backendConfig.chain_id = backendConfig.chain_id || "1"
+              // Set both src/dst and from_token/to_token for compatibility
+              backendConfig.src = backendConfig.src || backendConfig.from_token || "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+              backendConfig.dst = backendConfig.dst || backendConfig.to_token || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+              backendConfig.from_token = backendConfig.from_token || backendConfig.src
+              backendConfig.to_token = backendConfig.to_token || backendConfig.dst
+              backendConfig.chainId = backendConfig.chainId || backendConfig.chain_id || "1"
+              backendConfig.chain_id = backendConfig.chain_id || backendConfig.chainId || "1"
               // Note: amount should be passed from the quote node, not set as default
               // The backend execution engine will automatically pass the amount from the quote node
               // to the swap node through the collectStepInputs method

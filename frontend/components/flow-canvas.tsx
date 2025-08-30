@@ -299,16 +299,74 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         })),
         connections: edges.map(edge => ({
           id: edge.id,
-          sourceNode: edge.source,
-          sourcePort: edge.sourceHandle || 'output',
-          targetNode: edge.target,
-          targetPort: edge.targetHandle || 'input'
+          source: edge.source,
+          sourceHandle: edge.sourceHandle || 'output',
+          target: edge.target,
+          targetHandle: edge.targetHandle || 'input'
         }))
       }
 
-      setExecutionStatus("Executing workflow with plugin system...")
-      
-      // Execute using the new plugin system
+      setExecutionStatus("Executing workflow...")
+
+      // For template projects, use backend execution since UnitePluginSystem doesn't have all components
+      if (projectId.startsWith('template-')) {
+        console.log('🎯 Using backend execution for template workflow')
+
+        // Use backend execution path
+        const executionId = await executionClient.executeWorkflow(workflowDefinition)
+
+        // Set up event listeners for backend execution
+        const handleExecutionStarted = (data: any) => {
+          setExecutionStatus(`Execution started: ${data?.executionId || 'unknown'}`)
+          console.log('🚀 Backend execution started:', data)
+        }
+
+        const handleNodeStarted = (data: any) => {
+          setExecutionStatus(`Executing node: ${data?.nodeId || 'unknown'}`)
+          console.log('⚡ Backend node started:', data)
+        }
+
+        const handleNodeCompleted = (data: any) => {
+          setExecutionStatus(`Node completed: ${data?.nodeId || 'unknown'}`)
+          console.log('✅ Backend node completed:', data)
+        }
+
+        const handleExecutionCompleted = (data: any) => {
+          setExecutionStatus("Execution completed successfully!")
+          setExecutionResult(data)
+          console.log('🎉 Backend execution completed:', data)
+        }
+
+        const handleExecutionFailed = (data: any) => {
+          setExecutionStatus("Execution failed")
+          setExecutionError(data?.error || data?.message || 'Unknown error')
+          console.error('❌ Backend execution failed:', data)
+        }
+
+        // Add event listeners
+        executionClient.on('execution.started', handleExecutionStarted)
+        executionClient.on('node.started', handleNodeStarted) 
+        executionClient.on('node.completed', handleNodeCompleted)
+        executionClient.on('execution.completed', handleExecutionCompleted)
+        executionClient.on('execution.failed', handleExecutionFailed)
+
+        // Clean up event listeners when component unmounts or execution completes
+        const cleanup = () => {
+          executionClient.off('execution.started', handleExecutionStarted)
+          executionClient.off('node.started', handleNodeStarted)
+          executionClient.off('node.completed', handleNodeCompleted) 
+          executionClient.off('execution.completed', handleExecutionCompleted)
+          executionClient.off('execution.failed', handleExecutionFailed)
+        }
+
+        // Set up cleanup on completion or error
+        setTimeout(cleanup, 60000) // Clean up after 1 minute max
+
+        return // Exit early, backend will handle the rest
+      }
+
+      // For custom workflows, use UnitePluginSystem
+      console.log('🎯 Using UnitePluginSystem for custom workflow')
       const result: WorkflowExecutionResult = await unitePluginSystem.executeWorkflow(
         workflowDefinition,
         {}, // Initial inputs
@@ -1229,7 +1287,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         nodes: nodes.map(node => {
           // Prepare config for backend
           const backendConfig: any = node.data?.config ? { ...node.data.config } : {}
-          
+
           // For 1inch nodes, inject the API key from template inputs
           if (node.type === "oneInchSwap" || node.type === "oneInchQuote" || node.type === "portfolioAPI") {
             if (templateInputs.oneInchApiKey) {
@@ -1242,7 +1300,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
               backendConfig.api_key = backendConfig.apiKey
             }
           }
-          
+
           // For template execution, ensure we pass the required fields
           if (projectId.startsWith('template-')) {
             // For oneInchQuote, provide default values if missing
@@ -1256,7 +1314,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
               }
               backendConfig.chain_id = backendConfig.chain_id || "1"
             }
-            
+
             // For oneInchSwap, ensure we use the same amount as the quote
             if (node.type === "oneInchSwap") {
               // Don't override the amount if it's already set (should come from quote)
@@ -1325,7 +1383,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
               backendConfig.wait_for_confirmations = backendConfig.waitForConfirmations
             }
           }
-          
+
           // Add template mode flag for execution
           if (projectId.startsWith('template-')) {
             backendConfig.template_creation_mode = true
@@ -1334,7 +1392,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           // FOR ALL TOKEN SELECTOR NODES, ALSO ADD:
           if (node.type === 'tokenSelector') {
             backendConfig.template_creation_mode = true
-            
+
             // Convert camelCase token fields to snake_case for backend
             if (backendConfig.fromToken) {
               backendConfig.from_token = backendConfig.fromToken
@@ -1405,33 +1463,59 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         })
       })
 
-      // Set up execution event listeners
-      executionClient.on('execution.started', (data: any) => {
-        setExecutionStatus(`Execution started: ${data.executionId}`)
+      console.log('🔗 Workflow edges:', workflow.edges.length)
+      workflow.edges.forEach(edge => {
+        console.log(`  - ${edge.id}: ${edge.source} → ${edge.target}`)
+      })
+
+      console.log('📋 Workflow definition:', workflow)
+
+      // Set up execution event listeners (existing executeFlow function)
+      const handleExecutionStarted2 = (data: any) => {
+        setExecutionStatus(`Execution started: ${data?.executionId || 'unknown'}`)
         console.log('🚀 Execution started:', data)
-      })
+      }
 
-      executionClient.on('node.started', (data: any) => {
-        setExecutionStatus(`Executing node: ${data.nodeId}`)
+      const handleNodeStarted2 = (data: any) => {
+        setExecutionStatus(`Executing node: ${data?.nodeId || 'unknown'}`)
         console.log('⚡ Node started:', data)
-      })
+      }
 
-      executionClient.on('node.completed', (data: any) => {
-        setExecutionStatus(`Node completed: ${data.nodeId}`)
+      const handleNodeCompleted2 = (data: any) => {
+        setExecutionStatus(`Node completed: ${data?.nodeId || 'unknown'}`)
         console.log('✅ Node completed:', data)
-      })
+      }
 
-      executionClient.on('execution.completed', (data: any) => {
+      const handleExecutionCompleted2 = (data: any) => {
         setExecutionStatus("Execution completed successfully!")
         setExecutionResult(data)
         console.log('🎉 Execution completed:', data)
-      })
+      }
 
-      executionClient.on('execution.failed', (data: any) => {
+      const handleExecutionFailed2 = (data: any) => {
         setExecutionStatus("Execution failed")
-        setExecutionError(data.error || 'Unknown error')
+        setExecutionError(data?.error || data?.message || 'Unknown error')
         console.error('❌ Execution failed:', data)
-      })
+      }
+
+      // Add event listeners
+      executionClient.on('execution.started', handleExecutionStarted2)
+      executionClient.on('node.started', handleNodeStarted2)
+      executionClient.on('node.completed', handleNodeCompleted2)
+      executionClient.on('execution.completed', handleExecutionCompleted2)
+      executionClient.on('execution.failed', handleExecutionFailed2)
+
+      // Clean up event listeners
+      const cleanup2 = () => {
+        executionClient.off('execution.started', handleExecutionStarted2)
+        executionClient.off('node.started', handleNodeStarted2)
+        executionClient.off('node.completed', handleNodeCompleted2)
+        executionClient.off('execution.completed', handleExecutionCompleted2)
+        executionClient.off('execution.failed', handleExecutionFailed2)
+      }
+
+      // Set up cleanup
+      setTimeout(cleanup2, 60000) // Clean up after 1 minute max
 
       // Execute the workflow
       const executionId = await executionClient.executeWorkflow(workflow)

@@ -175,7 +175,9 @@ export class ExecutionClient {
 
       this.socket!.once('execution-error', (data) => {
         clearTimeout(timeout)
-        reject(new Error(data.error))
+        // Handle case where data might not have the expected structure
+        const errorMessage = data?.error || data?.message || JSON.stringify(data) || 'Unknown execution error'
+        reject(new Error(errorMessage))
       })
 
       this.socket!.emit('execute-workflow', { workflow, context })
@@ -231,7 +233,7 @@ export class ExecutionClient {
    */
   off(event: string, handler: Function): void {
     const handlers = this.eventHandlers.get(event)
-    if (handlers) {
+    if (handlers && Array.isArray(handlers)) {
       const index = handlers.indexOf(handler)
       if (index > -1) {
         handlers.splice(index, 1)
@@ -244,8 +246,14 @@ export class ExecutionClient {
    */
   private emit(event: string, data: any): void {
     const handlers = this.eventHandlers.get(event)
-    if (handlers) {
-      handlers.forEach(handler => handler(data))
+    if (handlers && Array.isArray(handlers)) {
+      handlers.forEach(handler => {
+        try {
+          handler(data)
+        } catch (error) {
+          console.error(`Error in event handler for ${event}:`, error)
+        }
+      })
     }
   }
 

@@ -12,6 +12,7 @@ import uuid
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agents.architecture_mapper import ArchitectureMapperAgent
+import os
 from api.backend_client import DeFiBackendClient
 from workflow.generator import WorkflowGenerator
 
@@ -46,7 +47,14 @@ class ConversationResponse(BaseModel):
 
 class AppState:
     def __init__(self):
-        self.architecture_agent = ArchitectureMapperAgent()
+        # Initialize agent with environment variables
+        provider = os.getenv("AI_PROVIDER", "openai")
+        model_id = os.getenv("AI_MODEL", "gpt-4o-mini")
+
+        self.architecture_agent = ArchitectureMapperAgent(
+            provider=provider,
+            model_id=model_id
+        )
         self.backend_client = DeFiBackendClient()
         self.workflow_generator = WorkflowGenerator()
         # Store conversation contexts

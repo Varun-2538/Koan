@@ -25,3 +25,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+#documentation
+limitations.md
+plan.md
+WARP.md
+prompt_context.md
+context.md
+CLAUDE.md

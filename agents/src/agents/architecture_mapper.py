@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 
 from agno.agent import Agent
 from agno.models.anthropic import Claude
+from agno.models.openai import OpenAIChat
 
 # NOTE: If your agno installation names or import paths differ, adjust accordingly.
 
@@ -51,9 +52,11 @@ class ArchitectureMapperAgent:
 
     def __init__(
         self,
-        model_id: str = "claude-sonnet-4-20250514",
+        provider: str = "openai",  # Changed default to OpenAI
+        model_id: str = "gpt-4o-mini",  # Using available OpenAI model instead of GPT-5-nano
         temperature: float = 0.0,
     ) -> None:
+        self.provider = provider
         self.model_id = model_id
         self.temperature = temperature
         self._agent = None
@@ -61,10 +64,17 @@ class ArchitectureMapperAgent:
     async def initialize(self) -> None:
         """Initialize the agno agent - required before use"""
         # Initialize underlying LLM via agno-agi.
-        claude = Claude(id=self.model_id, temperature=self.temperature)
+        if self.provider.lower() == "openai":
+            # Use OpenAI GPT model
+            model = OpenAIChat(id=self.model_id, temperature=self.temperature)
+        elif self.provider.lower() == "anthropic" or self.provider.lower() == "claude":
+            # Use Anthropic Claude model
+            model = Claude(id=self.model_id, temperature=self.temperature)
+        else:
+            raise ValueError(f"Unsupported provider: {self.provider}. Use 'openai' or 'anthropic'")
 
         self._agent = Agent(
-            model=claude,
+            model=model,
             instructions=self._system_prompt(),
             name="ArchitectureMapperAgent",
             markdown=False,

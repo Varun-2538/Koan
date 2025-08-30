@@ -232,7 +232,8 @@ GET  /api/health                # Health check
 ## Current Dependencies
 
 - **agno**: Multi-agent orchestration framework
-- **anthropic**: AI/LLM integration for intelligent decision making
+- **openai**: Primary AI/LLM integration for intelligent decision making
+- **anthropic**: Alternative AI/LLM integration (optional)
 - **fastapi**: REST API framework for agent endpoints
 - **uvicorn**: ASGI server for FastAPI
 - **pandas**: Data manipulation and analysis
@@ -244,8 +245,9 @@ GET  /api/health                # Health check
 Create a `.env` file in the agents directory (not committed to git):
 
 ```env
-# API Keys
-ANTHROPIC_API_KEY=your_api_key_here
+# API Keys (Choose one or both)
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
 # DeFi Protocol Endpoints
 ETH_RPC_URL=your_ethereum_rpc_url
@@ -254,6 +256,8 @@ POLYGON_RPC_URL=your_polygon_rpc_url
 # Agent Configuration
 AGENT_MODE=development
 LOG_LEVEL=INFO
+AI_PROVIDER=openai  # or 'anthropic'
+AI_MODEL=gpt-4o-mini  # or other OpenAI model
 ```
 
 ## Troubleshooting

@@ -37,6 +37,10 @@ export interface ComponentDefinition {
   template: ComponentTemplate
   executor: ExecutorDefinition
   examples?: ComponentExample[]
+  author?: string
+  tags?: string[]
+  dependencies?: string[]
+  permissions?: PluginPermission[]
 }
 
 export interface ExecutorDefinition {

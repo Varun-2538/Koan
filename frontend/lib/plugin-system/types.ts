@@ -129,6 +129,8 @@ export interface ComponentTemplate {
   description: string
   category: string
   version: string
+  icon?: string
+  color?: string
   inputs: PortDefinition[]
   outputs: PortDefinition[]
   configuration: ConfigurationField[]
@@ -390,7 +392,7 @@ export const BUILT_IN_DATA_TYPES: Record<string, DataType> = {
     category: 'structured',
     schema: {
       type: 'array',
-      items: {}
+      items: { type: 'string' } // Default to string items
     },
     color: '#F97316',
     version: '1.0.0',
@@ -499,7 +501,7 @@ export const BUILT_IN_DATA_TYPES: Record<string, DataType> = {
       properties: {
         id: { type: 'string' },
         type: { type: 'string' },
-        data: {},
+        data: { type: 'string' }, // Default to string data
         timestamp: { type: 'number' },
         metadata: { type: 'object' }
       },
@@ -535,26 +537,6 @@ export const BUILT_IN_DATA_TYPES: Record<string, DataType> = {
 }
 
 // Additional interfaces needed by the plugin system
-
-export interface ComponentTemplate {
-  type: string
-  name: string
-  description: string
-  category: string
-  icon?: string
-  color?: string
-  inputs: PortDefinition[]
-  outputs: PortDefinition[]
-  fields: FieldDefinition[]
-}
-
-export interface PortDefinition {
-  id: string
-  name: string
-  dataType: string
-  required?: boolean
-  description?: string
-}
 
 export interface FieldDefinition {
   key: string
@@ -677,8 +659,8 @@ export interface WorkflowDefinition {
 
 export interface ValidationResult {
   valid: boolean
-  errors: string[]
-  warnings: string[]
+  errors?: string[]
+  warnings?: string[]
 }
 
 // Custom error classes for better error handling

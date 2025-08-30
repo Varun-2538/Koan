@@ -13,6 +13,7 @@ import oneInchRoutes from './routes/oneinch'
 import { GenericExecutionEngine } from '@/engine/generic-execution-engine'
 // Legacy imports for compatibility
 import { OneInchSwapExecutor } from '@/nodes/oneinch-swap-executor'
+import { AvalancheL1Executor } from '@/nodes/avalanche-l1-executor'
 import './preview-server';
 import {
   WorkflowDefinition,
@@ -143,6 +144,52 @@ const initializeEngine = async () => {
       }
     })
   }
+
+  // Register Avalanche L1 Deployment plugin
+  executionEngine.registerPlugin({
+    id: 'avalancheL1Deploy',
+    name: 'Avalanche L1 Deployment',
+    version: '1.0.0',
+    description: 'Deploy a custom Avalanche L1 subnet with specified configuration',
+    category: 'Infrastructure',
+    inputs: [
+      { key: 'l1Name', type: 'string', label: 'L1 Name', required: true },
+      { key: 'chainId', type: 'number', label: 'Chain ID', required: true },
+      { key: 'tokenSymbol', type: 'string', label: 'Token Symbol', required: true },
+      { key: 'tokenName', type: 'string', label: 'Token Name', required: true },
+      { key: 'initialSupply', type: 'string', label: 'Initial Supply', required: true },
+      { key: 'vmType', type: 'string', label: 'VM Type', required: true },
+      { key: 'consensusMechanism', type: 'string', label: 'Consensus Mechanism', required: true },
+      { key: 'gasLimit', type: 'number', label: 'Gas Limit', required: false, defaultValue: 12000000 },
+      { key: 'gasPriceStrategy', type: 'string', label: 'Gas Price Strategy', required: false, defaultValue: 'constant' },
+      { key: 'baseFee', type: 'string', label: 'Base Fee', required: false },
+      { key: 'priorityFee', type: 'string', label: 'Priority Fee', required: false },
+      { key: 'feeRecipient', type: 'address', label: 'Fee Recipient', required: false },
+      { key: 'feeBurning', type: 'boolean', label: 'Fee Burning', required: false, defaultValue: false },
+      { key: 'minBaseFee', type: 'string', label: 'Min Base Fee', required: false },
+      { key: 'allocations', type: 'array', label: 'Initial Allocations', required: false },
+      { key: 'precompiledContracts', type: 'object', label: 'Precompiled Contracts', required: false },
+      { key: 'adminAddresses', type: 'array', label: 'Admin Addresses', required: false },
+      { key: 'controlKeyName', type: 'string', label: 'Control Key Name', required: true },
+      { key: 'validatorStakeAmount', type: 'string', label: 'Validator Stake Amount', required: true },
+      { key: 'stakeDuration', type: 'string', label: 'Stake Duration', required: true },
+      { key: 'additionalValidators', type: 'array', label: 'Additional Validators', required: false },
+      { key: 'targetNetwork', type: 'string', label: 'Target Network', required: false, defaultValue: 'fuji' },
+      { key: 'customRpcUrl', type: 'string', label: 'Custom RPC URL', required: false },
+      { key: 'enableBlockExplorer', type: 'boolean', label: 'Enable Block Explorer', required: false, defaultValue: false },
+      { key: 'customExplorerUrl', type: 'string', label: 'Custom Explorer URL', required: false },
+      { key: 'enableMetrics', type: 'boolean', label: 'Enable Metrics', required: false, defaultValue: false },
+      { key: 'webhookUrls', type: 'array', label: 'Webhook URLs', required: false }
+    ],
+    outputs: [
+      { key: 'l1Info', type: 'object', label: 'L1 Information', required: true }
+    ],
+    executor: {
+      type: 'generic',
+      timeout: 300000, // 5 minutes for deployment
+      retries: 1
+    }
+  })
 }
 
 // Track WebSocket connections
@@ -264,7 +311,7 @@ app.post('/api/workflows/execute', async (req, res) => {
       environment: 'production'
     })
     
-    res.json({
+    return res.json({
       executionId: execution.id,
       status: execution.status,
       startTime: execution.startTime
@@ -272,7 +319,7 @@ app.post('/api/workflows/execute', async (req, res) => {
     
   } catch (error: any) {
     logger.error('REST: Workflow execution failed', error)
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message,
       type: error.constructor.name
     })
@@ -290,7 +337,7 @@ app.get('/api/executions/:executionId', (req, res) => {
   
   const stats = executionEngine.getExecutionStats(executionId)
   
-  res.json({
+  return res.json({
     execution: {
       id: execution.id,
       workflowId: execution.workflowId,
@@ -326,7 +373,7 @@ app.get('/api/executions/:executionId/logs', (req, res) => {
     }
   }
   
-  res.json({ logs })
+  return res.json({ logs })
 })
 
 // Return generated code artifacts (if any) for an execution
@@ -369,7 +416,7 @@ app.get('/api/executions/:executionId/code', async (req, res) => {
     return res.status(404).json({ error: 'No generated code available for this execution' })
   }
 
-  res.json({ executionId, generated })
+  return res.json({ executionId, generated })
 })
 
 // Cancel execution
@@ -410,7 +457,7 @@ app.post('/api/test/oneinch', async (req, res) => {
     // Mock validation for testing
     const gasEstimate = '21000'
     
-    res.json({
+    return res.json({
       success: true,
       chainId,
       fromToken,
@@ -424,7 +471,7 @@ app.post('/api/test/oneinch', async (req, res) => {
     
   } catch (error: any) {
     logger.error('1inch API test failed', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: error.message,
       apiConnected: false
@@ -462,7 +509,7 @@ app.get('/api/plugins/:pluginId', (req, res) => {
     return res.status(404).json({ error: 'Plugin not found' })
   }
   
-  res.json({ plugin })
+  return res.json({ plugin })
 })
 
 // Error handling middleware

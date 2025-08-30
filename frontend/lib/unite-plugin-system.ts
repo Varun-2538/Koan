@@ -17,6 +17,7 @@ import type {
 
 class UnitePluginSystem {
   private initialized = false
+  public readonly version = '2.0.0'
 
   async initialize(): Promise<void> {
     if (this.initialized) return

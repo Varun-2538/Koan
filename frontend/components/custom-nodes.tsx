@@ -18,10 +18,13 @@ import { connectionValidator } from "@/lib/plugin-system/connection-validator"
 import { codeExecutionEngine } from "@/lib/plugin-system/code-execution"
 import type { 
   ComponentDefinition, 
-  EnhancedComponentTemplate, 
+  ComponentTemplate, 
   DataType,
   ExecutionResult
 } from "@/lib/plugin-system/types"
+
+// Import Avalanche L1 Node
+import AvalancheL1Node from "./nodes/avalanche-l1-node"
 
 // Enhanced NodeProps with plugin system integration
 interface EnhancedNodeProps extends NodeProps {
@@ -75,15 +78,17 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
   // Load component definition
   React.useEffect(() => {
     const loadComponent = async () => {
-      const comp = pluginRegistry.getComponent(data.componentId)
-      console.log('Loading component:', {
-        componentId: data.componentId,
-        component: comp,
-        inputs: comp?.template?.inputs,
-        outputs: comp?.template?.outputs,
-        fields: comp?.template?.fields || comp?.template?.configuration
-      })
-      setComponent(comp)
+      const comp = pluginRegistry.getComponent(data.componentId) as ComponentDefinition | null
+      if (comp) {
+        console.log('Loading component:', {
+          componentId: data.componentId,
+          component: comp,
+          inputs: comp?.template?.inputs,
+          outputs: comp?.template?.outputs,
+          configuration: comp?.template?.configuration
+        })
+        setComponent(comp)
+      }
     }
     
     if (data.componentId) {
@@ -93,9 +98,9 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
 
   // Check if configuration is complete
   const isConfigurationComplete = () => {
-    if (!component?.template?.configuration && !component?.template?.fields) return true
+    if (!component?.template?.configuration) return true
     
-    const fields = component.template?.configuration || component.template?.fields || []
+    const fields = component.template?.configuration || []
     const requiredFields = fields.filter(field => field.required)
     
     if (requiredFields.length === 0) return true
@@ -127,14 +132,13 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
     
     try {
       const result = await unitePluginSystem.executeWorkflow({
-        nodes: [{ id: id!, type: data.componentId, config: data.config }],
+        nodes: [{ id: id!, type: data.componentId, data: data.config }],
         connections: []
       })
       
       if (result.success) {
         // Handle different result structures
-        const nodeOutputs = result.nodeResults?.[0]?.outputs || 
-                           result.outputs || 
+        const nodeOutputs = result.outputs || 
                            Object.values(result.outputs || {})[0] || {}
         setOutputs(nodeOutputs)
         setExecutionState({ 
@@ -144,12 +148,12 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
         })
         onOutputsUpdate?.(id!, nodeOutputs)
       } else {
-        throw new Error(result.errors[0] || 'Execution failed')
+        throw new Error(typeof result.error === 'string' ? result.error : 'Execution failed')
       }
     } catch (error) {
       setExecutionState({ 
         status: 'error', 
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         duration: Date.now() - (executionState.startTime || Date.now())
       })
     }
@@ -316,9 +320,9 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
             <div className="mt-2 pt-2 border-t border-gray-200">
               <div className="text-xs text-gray-500 mb-1">Quick Config:</div>
               <div className="space-y-1 max-h-24 overflow-y-auto">
-                {(component.template?.configuration || component.template?.fields || []).slice(0, 3).map((field) => (
+                {(component.template?.configuration || []).slice(0, 3).map((field) => (
                   <div key={field.key} className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">{field.label || field.name}:</span>
+                    <span className="text-xs text-gray-600">{field.label}:</span>
                     <span className="text-xs font-mono">
                       {(() => {
                         const value = data.config?.[field.key] || field.defaultValue
@@ -560,6 +564,7 @@ export const useCustomNodes = () => {
       nodeComponents['dataProcessor'] = DataProcessorNode
       nodeComponents['conditionalLogic'] = ConditionalLogicNode
       nodeComponents['walletConnector'] = WalletConnectorNode
+      nodeComponents['avalancheL1Deploy'] = AvalancheL1Node
       
       setNodes(nodeComponents)
     }
@@ -590,7 +595,8 @@ export const CustomNodes: Record<string, React.ComponentType<any>> = {
   oneInchQuote: OneInchQuoteNode, 
   dataProcessor: DataProcessorNode,
   conditionalLogic: ConditionalLogicNode,
-  walletConnector: WalletConnectorNode
+  walletConnector: WalletConnectorNode,
+  avalancheL1Deploy: AvalancheL1Node
 }
 
 // Initialize and populate dynamic nodes

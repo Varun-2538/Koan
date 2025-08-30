@@ -23,7 +23,7 @@ import {
   Loader2
 } from "lucide-react"
 import { unitePluginSystem } from "@/lib/unite-plugin-system"
-import { PluginDefinition } from "@/lib/plugin-system/types"
+import { ComponentDefinition } from "@/lib/plugin-system/types"
 
 interface ComponentItem {
   id: string
@@ -33,7 +33,7 @@ interface ComponentItem {
   icon: React.ReactNode
   version?: string
   tags?: string[]
-  plugin?: PluginDefinition
+  plugin?: ComponentDefinition
 }
 
 // Icon mapping for plugin categories

@@ -8,10 +8,11 @@ import { ComponentTemplate } from './types'
 export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
   // DeFi Components
   oneInchSwap: {
-    type: 'oneInchSwap',
+    id: 'oneInchSwap',
     name: '1inch Swap',
     description: 'Execute token swaps using 1inch aggregator with fusion mode',
     category: 'DeFi',
+    version: '1.0.0',
     icon: '🔄',
     color: '#0066FF',
     inputs: [
@@ -49,18 +50,21 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'transactionHash',
         name: 'Transaction Hash',
         dataType: 'string',
+        required: false,
         description: 'Blockchain transaction hash'
       },
       {
         id: 'outputAmount',
         name: 'Output Amount',
         dataType: 'number',
+        required: false,
         description: 'Amount received after swap'
       },
       {
         id: 'gasUsed',
         name: 'Gas Used',
         dataType: 'number',
+        required: false,
         description: 'Gas consumed by transaction'
       }
     ],
@@ -94,10 +98,11 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
   },
 
   fusionSwap: {
-    type: 'fusionSwap',
+    id: 'fusionSwap',
     name: 'Fusion Swap',
     description: 'Gasless token swaps with MEV protection',
     category: 'DeFi',
+    version: '1.0.0',
     icon: '⚡',
     color: '#FF6B35',
     inputs: [
@@ -132,29 +137,32 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         dataType: 'number'
       }
     ],
-    fields: [
+    configuration: [
       {
         key: 'deadline',
+        name: 'Order Deadline',
+        description: 'Deadline for the order execution',
         type: 'date',
-        label: 'Order Deadline',
         required: true,
         defaultValue: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       },
       {
         key: 'minReturn',
+        name: 'Minimum Return',
+        description: 'Minimum amount to receive',
         type: 'number',
-        label: 'Minimum Return',
-        required: false,
-        description: 'Minimum amount to receive'
+        required: false
       }
     ]
   },
 
   limitOrder: {
+    id: 'limitOrder',
     type: 'limitOrder',
     name: 'Limit Order',
     description: 'Create gasless limit orders',
     category: 'DeFi',
+    version: '1.0.0',
     icon: '📋',
     color: '#28A745',
     inputs: [
@@ -181,37 +189,42 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
       {
         id: 'orderHash',
         name: 'Order Hash',
-        dataType: 'string'
+        dataType: 'string',
+        required: false,
+        description: 'Hash of the created limit order'
       },
       {
         id: 'status',
         name: 'Order Status',
-        dataType: 'string'
+        dataType: 'string',
+        required: false,
+        description: 'Current status of the limit order'
       }
     ],
-    fields: [
+    configuration: [
       {
         key: 'targetPrice',
+        name: 'Target Price',
+        description: 'Price per token to execute order',
         type: 'number',
-        label: 'Target Price',
-        required: true,
-        description: 'Price per token to execute order'
+        required: true
       },
       {
         key: 'expiration',
-        type: 'date',
-        label: 'Expiration Date',
+        name: 'Expiration Date',
+        description: 'When the order expires',
+        type: 'datetime',
         required: true
       }
     ]
   },
 
-  // Wallet Components
   walletConnector: {
-    type: 'walletConnector',
+    id: 'walletConnector',
     name: 'Wallet Connector',
     description: 'Connect to crypto wallets',
     category: 'Wallet',
+    version: '1.0.0',
     icon: '👛',
     color: '#8B5CF6',
     inputs: [],
@@ -219,24 +232,31 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
       {
         id: 'address',
         name: 'Wallet Address',
-        dataType: 'address'
+        dataType: 'address',
+        required: false,
+        description: 'Connected wallet address'
       },
       {
         id: 'chainId',
         name: 'Chain ID',
-        dataType: 'number'
+        dataType: 'number',
+        required: false,
+        description: 'Current chain ID'
       },
       {
         id: 'provider',
         name: 'Provider',
-        dataType: 'object'
+        dataType: 'object',
+        required: false,
+        description: 'Web3 provider instance'
       }
     ],
-    fields: [
+    configuration: [
       {
         key: 'walletType',
+        name: 'Wallet Type',
+        description: 'Type of wallet to connect',
         type: 'select',
-        label: 'Wallet Type',
         required: true,
         options: [
           { label: 'MetaMask', value: 'metamask' },
@@ -246,8 +266,10 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
       },
       {
         key: 'autoConnect',
+        name: 'Auto Connect',
+        description: 'Automatically connect on load',
         type: 'boolean',
-        label: 'Auto Connect',
+        required: false,
         defaultValue: true
       }
     ]
@@ -255,10 +277,12 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
 
   // Data Processing
   dataProcessor: {
+    id: 'dataProcessor',
     type: 'dataProcessor',
     name: 'Data Processor',
     description: 'Transform and manipulate data',
     category: 'Data',
+    version: '1.0.0',
     icon: '🔧',
     color: '#17A2B8',
     inputs: [
@@ -266,21 +290,25 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'data',
         name: 'Input Data',
         dataType: 'any',
-        required: true
+        required: true,
+        description: 'Data to be processed'
       }
     ],
     outputs: [
       {
         id: 'result',
         name: 'Processed Data',
-        dataType: 'any'
+        dataType: 'any',
+        required: false,
+        description: 'Result of the data processing operation'
       }
     ],
-    fields: [
+    configuration: [
       {
         key: 'operation',
+        name: 'Operation',
+        description: 'Type of data processing operation',
         type: 'select',
-        label: 'Operation',
         required: true,
         options: [
           { label: 'Format Number', value: 'formatNumber' },
@@ -290,19 +318,18 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
       },
       {
         key: 'decimals',
+        name: 'Decimal Places',
+        description: 'Number of decimal places for formatting',
         type: 'number',
-        label: 'Decimal Places',
         required: false,
-        defaultValue: 2,
-        conditional: { field: 'operation', value: 'formatNumber' }
+        defaultValue: 2
       },
       {
         key: 'fieldPath',
+        name: 'Field Path',
+        description: 'Path to extract from object',
         type: 'text',
-        label: 'Field Path',
-        required: false,
-        placeholder: 'e.g., user.profile.name',
-        conditional: { field: 'operation', value: 'extractField' }
+        required: false
       }
     ]
   },
@@ -320,30 +347,38 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'input',
         name: 'Input Value',
         dataType: 'any',
-        required: true
+        required: true,
+        description: 'Value to evaluate in the condition'
       },
       {
         id: 'compareValue',
         name: 'Compare Value',
         dataType: 'any',
-        required: false
+        required: false,
+        description: 'Value to compare against (optional)'
       }
     ],
     outputs: [
       {
         id: 'result',
         name: 'Result',
-        dataType: 'boolean'
+        dataType: 'boolean',
+        required: false,
+        description: 'Boolean result of the condition evaluation'
       },
       {
         id: 'truePath',
         name: 'True Path',
-        dataType: 'execution'
+        dataType: 'execution',
+        required: false,
+        description: 'Execution path when condition is true'
       },
       {
-        id: 'falsePath', 
+        id: 'falsePath',
         name: 'False Path',
-        dataType: 'execution'
+        dataType: 'execution',
+        required: false,
+        description: 'Execution path when condition is false'
       }
     ],
     fields: [
@@ -394,14 +429,17 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'supportedTokens',
         name: 'Supported Tokens',
         dataType: 'array',
-        required: true
+        required: true,
+        description: 'List of tokens supported for swapping'
       }
     ],
     outputs: [
       {
         id: 'swapData',
         name: 'Swap Data',
-        dataType: 'object'
+        dataType: 'object',
+        required: false,
+        description: 'Swap configuration and parameters'
       }
     ],
     fields: [
@@ -436,7 +474,8 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'data',
         name: 'Dashboard Data',
         dataType: 'object',
-        required: true
+        required: true,
+        description: 'Data to display in the dashboard'
       }
     ],
     outputs: [],
@@ -474,19 +513,24 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'walletAddress',
         name: 'Wallet Address',
         dataType: 'address',
-        required: true
+        required: true,
+        description: 'Wallet address to track portfolio for'
       }
     ],
     outputs: [
       {
         id: 'portfolio',
         name: 'Portfolio Data',
-        dataType: 'object'
+        dataType: 'object',
+        required: false,
+        description: 'Complete portfolio information'
       },
       {
         id: 'totalValue',
         name: 'Total Value',
-        dataType: 'number'
+        dataType: 'number',
+        required: false,
+        description: 'Total portfolio value in USD'
       }
     ],
     fields: [
@@ -529,14 +573,17 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'chainId',
         name: 'Chain ID',
         dataType: 'number',
-        required: false
+        required: false,
+        description: 'Chain ID to filter tokens by'
       }
     ],
     outputs: [
       {
         id: 'selectedToken',
         name: 'Selected Token',
-        dataType: 'token'
+        dataType: 'token',
+        required: false,
+        description: 'Token selected by the user'
       }
     ],
     fields: [
@@ -567,12 +614,16 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
       {
         id: 'chainId',
         name: 'Chain ID',
-        dataType: 'number'
+        dataType: 'number',
+        required: false,
+        description: 'Selected chain ID'
       },
       {
         id: 'chainName',
         name: 'Chain Name',
-        dataType: 'string'
+        dataType: 'string',
+        required: false,
+        description: 'Selected chain name'
       }
     ],
     fields: [
@@ -605,19 +656,24 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'transactionHash',
         name: 'Transaction Hash',
         dataType: 'string',
-        required: true
+        required: true,
+        description: 'Hash of the transaction to monitor'
       }
     ],
     outputs: [
       {
         id: 'status',
         name: 'Status',
-        dataType: 'string'
+        dataType: 'string',
+        required: false,
+        description: 'Current transaction status'
       },
       {
         id: 'receipt',
         name: 'Receipt',
-        dataType: 'object'
+        dataType: 'object',
+        required: false,
+        description: 'Transaction receipt when confirmed'
       }
     ],
     fields: [
@@ -723,25 +779,31 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'tradeAmount',
         name: 'Trade Amount',
         dataType: 'number',
-        required: true
+        required: true,
+        description: 'Amount of tokens to trade'
       },
       {
         id: 'liquidity',
         name: 'Pool Liquidity',
         dataType: 'number',
-        required: true
+        required: true,
+        description: 'Total liquidity in the trading pool'
       }
     ],
     outputs: [
       {
         id: 'priceImpact',
         name: 'Price Impact %',
-        dataType: 'number'
+        dataType: 'number',
+        required: false,
+        description: 'Calculated price impact percentage'
       },
       {
         id: 'minimumReceived',
         name: 'Minimum Received',
-        dataType: 'number'
+        dataType: 'number',
+        required: false,
+        description: 'Minimum tokens received after slippage'
       }
     ],
     fields: [
@@ -767,43 +829,52 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'sourceChain',
         name: 'Source Chain',
         dataType: 'chain',
-        required: true
+        required: true,
+        description: 'Source blockchain network'
       },
       {
         id: 'targetChain',
         name: 'Target Chain',
         dataType: 'chain',
-        required: true
+        required: true,
+        description: 'Target blockchain network'
       },
       {
         id: 'fromToken',
         name: 'From Token',
         dataType: 'token',
-        required: true
+        required: true,
+        description: 'Token to bridge from'
       },
       {
         id: 'toToken',
         name: 'To Token',
         dataType: 'token',
-        required: true
+        required: true,
+        description: 'Token to receive on target chain'
       },
       {
         id: 'amount',
         name: 'Amount',
         dataType: 'number',
-        required: true
+        required: true,
+        description: 'Amount of tokens to bridge'
       }
     ],
     outputs: [
       {
         id: 'bridgeTxHash',
         name: 'Bridge Transaction',
-        dataType: 'string'
+        dataType: 'string',
+        required: false,
+        description: 'Bridge transaction hash'
       },
       {
         id: 'estimatedTime',
         name: 'Estimated Time',
-        dataType: 'number'
+        dataType: 'number',
+        required: false,
+        description: 'Estimated time for bridge completion'
       }
     ],
     fields: [
@@ -833,25 +904,31 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'walletAddress',
         name: 'Wallet Address',
         dataType: 'address',
-        required: true
+        required: true,
+        description: 'Wallet address to fetch portfolio for'
       },
       {
         id: 'chainIds',
         name: 'Chain IDs',
         dataType: 'array',
-        required: false
+        required: false,
+        description: 'Specific chain IDs to include in portfolio'
       }
     ],
     outputs: [
       {
         id: 'portfolioData',
         name: 'Portfolio Data',
-        dataType: 'object'
+        dataType: 'object',
+        required: false,
+        description: 'Complete portfolio information from API'
       },
       {
         id: 'totalValue',
         name: 'Total Value USD',
-        dataType: 'number'
+        dataType: 'number',
+        required: false,
+        description: 'Total portfolio value in USD'
       }
     ],
     fields: [
@@ -877,7 +954,7 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
   },
 
   defiDashboard: {
-    type: 'defiDashboard',
+    id: 'defiDashboard',
     name: 'DeFi Dashboard',
     description: 'Display comprehensive DeFi metrics',
     category: 'UI',
@@ -888,27 +965,33 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         id: 'portfolioData',
         name: 'Portfolio Data',
         dataType: 'object',
-        required: true
+        required: true,
+        description: 'Portfolio data to display in dashboard'
       },
       {
         id: 'priceData',
         name: 'Price Data',
         dataType: 'object',
-        required: false
+        required: false,
+        description: 'Price data for portfolio assets'
       }
     ],
     outputs: [
       {
         id: 'dashboardState',
         name: 'Dashboard State',
-        dataType: 'object'
+        dataType: 'object',
+        required: false,
+        description: 'Current state of the dashboard'
       }
     ],
-    fields: [
+    configuration: [
       {
         key: 'chartType',
+        name: 'Chart Type',
+        description: 'Type of chart to display',
         type: 'select',
-        label: 'Chart Type',
+        required: false,
         options: [
           { label: 'Line Chart', value: 'line' },
           { label: 'Bar Chart', value: 'bar' },
@@ -918,14 +1001,272 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
       },
       {
         key: 'refreshInterval',
+        name: 'Refresh Interval (seconds)',
+        description: 'How often to refresh data',
         type: 'number',
-        label: 'Refresh Interval (seconds)',
+        required: false,
         defaultValue: 30
       },
       {
         key: 'showPnL',
+        name: 'Show P&L',
+        description: 'Display profit and loss information',
         type: 'boolean',
-        label: 'Show P&L',
+        required: false,
+        defaultValue: true
+      }
+    ]
+  },
+
+  // Avalanche L1 Deployment Component
+  avalancheL1Deploy: {
+    id: 'avalancheL1Deploy',
+    name: 'Avalanche L1 Deployment',
+    description: 'Deploy custom Avalanche L1 blockchain with comprehensive configuration',
+    category: 'Infrastructure',
+    version: '1.0.0',
+    icon: '🏔️',
+    color: '#E53E3E',
+    inputs: [
+      {
+        id: 'deploymentConfig',
+        name: 'Deployment Config',
+        description: 'Configuration for L1 deployment',
+        dataType: 'object',
+        required: false,
+        multiple: false,
+        streaming: false
+      }
+    ],
+    outputs: [
+      {
+        id: 'deploymentResult',
+        name: 'Deployment Result',
+        description: 'Result of the L1 deployment',
+        dataType: 'object',
+        required: true,
+        multiple: false,
+        streaming: false
+      },
+      {
+        id: 'chainId',
+        name: 'Chain ID',
+        description: 'Assigned chain ID for the new L1',
+        dataType: 'number',
+        required: true,
+        multiple: false,
+        streaming: false
+      },
+      {
+        id: 'rpcUrl',
+        name: 'RPC URL',
+        description: 'RPC endpoint for the deployed L1',
+        dataType: 'string',
+        required: true,
+        multiple: false,
+        streaming: false
+      },
+      {
+        id: 'explorerUrl',
+        name: 'Explorer URL',
+        description: 'Block explorer URL for the deployed L1',
+        dataType: 'string',
+        required: false,
+        multiple: false,
+        streaming: false
+      }
+    ],
+    configuration: [
+      {
+        key: 'l1Name',
+        name: 'L1 Name',
+        description: 'Name of the Avalanche L1 network',
+        type: 'text',
+        required: true,
+        defaultValue: ''
+      },
+      {
+        key: 'chainId',
+        name: 'Chain ID',
+        description: 'Unique chain identifier',
+        type: 'number',
+        required: true,
+        defaultValue: 0
+      },
+      {
+        key: 'tokenSymbol',
+        name: 'Token Symbol',
+        description: 'Native token symbol (3-6 uppercase letters)',
+        type: 'text',
+        required: true,
+        defaultValue: ''
+      },
+      {
+        key: 'tokenName',
+        name: 'Token Name',
+        description: 'Native token name',
+        type: 'text',
+        required: true,
+        defaultValue: ''
+      },
+      {
+        key: 'initialSupply',
+        name: 'Initial Supply',
+        description: 'Initial token supply',
+        type: 'number',
+        required: true,
+        defaultValue: 1000000000
+      },
+      {
+        key: 'vmType',
+        name: 'VM Type',
+        description: 'Virtual machine type for the subnet',
+        type: 'select',
+        required: true,
+        options: [
+          { label: 'Subnet-EVM', value: 'subnet-evm' },
+          { label: 'Custom VM', value: 'custom-vm' }
+        ],
+        defaultValue: 'subnet-evm'
+      },
+      {
+        key: 'consensusMechanism',
+        name: 'Consensus Mechanism',
+        description: 'Consensus protocol to use',
+        type: 'select',
+        required: true,
+        options: [
+          { label: 'Proof of Authority (PoA)', value: 'poa' },
+          { label: 'Proof of Stake (PoS)', value: 'pos' }
+        ],
+        defaultValue: 'poa'
+      },
+      {
+        key: 'gasLimit',
+        name: 'Block Gas Limit',
+        description: 'Maximum gas per block',
+        type: 'number',
+        required: false,
+        defaultValue: 12000000
+      },
+      {
+        key: 'gasPriceStrategy',
+        name: 'Gas Price Strategy',
+        description: 'How gas prices are determined',
+        type: 'select',
+        required: false,
+        options: [
+          { label: 'Constant', value: 'constant' },
+          { label: 'Dynamic', value: 'dynamic' }
+        ],
+        defaultValue: 'constant'
+      },
+      {
+        key: 'baseFee',
+        name: 'Base Fee (gwei)',
+        description: 'Base fee for dynamic pricing',
+        type: 'number',
+        required: false,
+        defaultValue: 25
+      },
+      {
+        key: 'priorityFee',
+        name: 'Priority Fee (gwei)',
+        description: 'Priority fee for dynamic pricing',
+        type: 'number',
+        required: false,
+        defaultValue: 2
+      },
+      {
+        key: 'feeRecipient',
+        name: 'Fee Recipient',
+        description: 'Address to receive transaction fees',
+        type: 'text',
+        required: false,
+        defaultValue: ''
+      },
+      {
+        key: 'feeBurning',
+        name: 'Enable Fee Burning',
+        description: 'Burn portion of transaction fees',
+        type: 'boolean',
+        required: false,
+        defaultValue: false
+      },
+      {
+        key: 'minBaseFee',
+        name: 'Min Base Fee (gwei)',
+        description: 'Minimum base fee allowed',
+        type: 'number',
+        required: false,
+        defaultValue: 25
+      },
+      {
+        key: 'controlKeyName',
+        name: 'Control Key Name',
+        description: 'Name for the control key',
+        type: 'text',
+        required: true,
+        defaultValue: ''
+      },
+      {
+        key: 'validatorStakeAmount',
+        name: 'Validator Stake Amount (AVAX)',
+        description: 'Amount each validator must stake',
+        type: 'number',
+        required: true,
+        defaultValue: 2000
+      },
+      {
+        key: 'stakeDuration',
+        name: 'Stake Duration',
+        description: 'How long validators must stake',
+        type: 'text',
+        required: true,
+        defaultValue: '336h'
+      },
+      {
+        key: 'targetNetwork',
+        name: 'Target Network',
+        description: 'Network to deploy to',
+        type: 'select',
+        required: true,
+        options: [
+          { label: 'Fuji Testnet', value: 'fuji' },
+          { label: 'Local Network', value: 'local' }
+        ],
+        defaultValue: 'fuji'
+      },
+      {
+        key: 'customRpcUrl',
+        name: 'Custom RPC URL',
+        description: 'Custom RPC endpoint (optional)',
+        type: 'text',
+        required: false,
+        defaultValue: ''
+      },
+      {
+        key: 'enableBlockExplorer',
+        name: 'Enable Block Explorer',
+        description: 'Deploy block explorer for the L1',
+        type: 'boolean',
+        required: false,
+        defaultValue: true
+      },
+      {
+        key: 'customExplorerUrl',
+        name: 'Custom Explorer URL',
+        description: 'Custom block explorer URL',
+        type: 'text',
+        required: false,
+        defaultValue: ''
+      },
+      {
+        key: 'enableMetrics',
+        name: 'Enable Metrics',
+        description: 'Enable metrics collection',
+        type: 'boolean',
+        required: false,
         defaultValue: true
       }
     ]

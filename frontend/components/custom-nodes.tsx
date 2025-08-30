@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { 
   Coins, Vote, Layout, Server, Bot, Repeat, Link, Clock, Database, 
   Wallet, TrendingUp, Activity, Search, Zap, Play, Square, AlertCircle,
-  CheckCircle, Loader2, Code, Settings, MoreHorizontal
+  CheckCircle, Loader2, Code, Settings, MoreHorizontal, ArrowRight, ArrowLeft
 } from "lucide-react"
 
 // Import the new plugin system
@@ -184,37 +184,25 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
     }
   }
 
+  const inputs = component?.template?.inputs || []
+  const outputPorts = component?.template?.outputs || []
+
   return (
     <div className="relative">
-      {/* Dynamic Input Handles */}
-      {component.template?.inputs?.map((input, index) => (
-        <EnhancedHandle
-          key={`input-${input.id}`}
-          id={input.id}
-      type="target"
-          position={Position.Left}
-          dataType={input.dataType}
-          label={input.name}
-          required={input.required}
-          style={{ top: 70 + index * 30 }}
-          nodeId={id!}
-        />
-      ))}
-
-      <Card className={`min-w-[320px] max-w-[400px] w-full min-h-[120px] relative group cursor-pointer transition-all duration-200 ${getNodeStateClasses()}`}>
-        <CardContent className="p-4">
+      <Card className={`min-w-[320px] max-w-[450px] w-full relative group cursor-pointer transition-all duration-300 ${getNodeStateClasses()}`}>
+        <CardContent className="p-0">
           {/* Node Header */}
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between p-4 pb-2">
             <div className="flex items-center gap-2">
               {getStatusIcon()}
               <div>
                 <div className="font-medium text-sm">{component.name}</div>
                 <div className="text-xs text-gray-500">{component.category}</div>
-      </div>
-    </div>
+              </div>
+            </div>
 
             {/* Node Actions */}
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1">
               <Button
                 size="sm"
                 variant="ghost"
@@ -245,111 +233,161 @@ const UniversalPluginNode: React.FC<PluginNodeProps> = ({
               >
                 <Settings className="w-3 h-3" />
               </Button>
-      </div>
-    </div>
-
-          {/* Execution Progress */}
-          {executionState.status === 'running' && (
-            <div className="mb-2">
-              <div className="flex items-center gap-2 text-xs text-blue-600 mb-1">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                <span>Executing...</span>
-      </div>
-              <div className="w-full bg-gray-200 rounded-full h-1">
-                <div className="bg-blue-600 h-1 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-    </div>
-    </div>
-          )}
-
-          {/* Execution Results */}
-          {executionState.status === 'success' && Object.keys(outputs).length > 0 && (
-            <div className="mb-2">
-              <div className="text-xs font-medium text-green-700 mb-1">
-                Results ({executionState.duration}ms):
-              </div>
-              <div className="space-y-1 max-h-20 overflow-y-auto">
-                {Object.entries(outputs).slice(0, 3).map(([key, value]) => (
-                  <div key={key} className="text-xs bg-green-50 rounded px-2 py-1">
-                    <span className="font-medium text-green-800">{key}:</span>{' '}
-                    <span className="text-green-700 font-mono">
-                      {typeof value === 'object' ? JSON.stringify(value).slice(0, 30) : String(value).slice(0, 30)}
-                      {String(value).length > 30 ? '...' : ''}
-                    </span>
-      </div>
-                ))}
-    </div>
-    </div>
-          )}
-
-          {/* Error Display */}
-          {executionState.status === 'error' && (
-            <div className="mb-2">
-              <div className="text-xs bg-red-50 border border-red-200 rounded p-2">
-                <div className="flex items-center gap-1 text-red-700 font-medium mb-1">
-                  <AlertCircle className="w-3 h-3" />
-                  <span>Execution Failed</span>
-                </div>
-                <div className="text-red-600 text-xs">
-                  {executionState.error}
-      </div>
-    </div>
-    </div>
-          )}
-
-          {/* Configuration Summary */}
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-600">
-              {Object.keys(data.config || {}).length} parameters configured
-            </span>
-            {/* Configuration Status */}
-            <div className="flex items-center gap-1">
-              {isConfigurationComplete() ? (
-                <CheckCircle className="w-3 h-3 text-green-600" />
-              ) : (
-                <AlertCircle className="w-3 h-3 text-yellow-600" />
-              )}
             </div>
           </div>
 
+          {/* Main Content Area */}
+          <div className="px-4 pb-2">
+            {/* Execution Status */}
+            {executionState.status === 'running' && (
+              <div className="mb-3">
+                <div className="flex items-center gap-2 text-xs text-blue-600 mb-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Executing...</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-1">
+                  <div className="bg-blue-600 h-1 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                </div>
+              </div>
+            )}
+
+            {/* Error Display */}
+            {executionState.status === 'error' && (
+              <div className="mb-3">
+                <div className="text-xs bg-red-50 border border-red-200 rounded p-2">
+                  <div className="flex items-center gap-1 text-red-700 font-medium mb-1">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>Execution Failed</span>
+                  </div>
+                  <div className="text-red-600 text-xs">
+                    {executionState.error}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Configuration Summary */}
+            <div className="flex items-center justify-between text-xs mb-2">
+              <span className="text-gray-600">
+                {Object.keys(data.config || {}).length} parameters configured
+              </span>
+              {/* Configuration Status */}
+              <div className="flex items-center gap-1">
+                {isConfigurationComplete() ? (
+                  <CheckCircle className="w-3 h-3 text-green-600" />
+                ) : (
+                  <AlertCircle className="w-3 h-3 text-yellow-600" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Parameters Section - Always Visible */}
+          <div className="border-t border-gray-200 bg-gray-50/50">
+              {/* Input Parameters */}
+              {inputs.length > 0 && (
+                <div className="p-3 pb-2">
+                  <div className="text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
+                    <ArrowRight className="w-3 h-3" />
+                    Inputs
+                  </div>
+                  <div className="space-y-1">
+                    {inputs.map((input, index) => (
+                      <div key={input.id} className="flex items-center gap-2 relative">
+                        {/* Input Handle */}
+                        <EnhancedHandle
+                          id={input.id}
+                          type="target"
+                          position={Position.Left}
+                          dataType={input.dataType}
+                          label={input.name}
+                          required={input.required}
+                          style={{ 
+                            position: 'absolute', 
+                            left: '-24px', 
+                            top: '50%', 
+                            transform: 'translateY(-50%)'
+                          }}
+                          nodeId={id!}
+                        />
+                        <div className="text-xs text-gray-600 ml-4">
+                          <span className="font-medium">{input.name}</span>
+                          {input.required && <span className="text-red-500 ml-1">*</span>}
+                          <div className="text-gray-500">{input.dataType}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Output Parameters */}
+              {outputPorts.length > 0 && (
+                <div className="p-3 pt-1 pb-3">
+                  <div className="text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
+                    <ArrowLeft className="w-3 h-3" />
+                    Outputs
+                  </div>
+                  <div className="space-y-1">
+                    {outputPorts.map((output, index) => (
+                      <div key={output.id} className="flex items-center justify-end gap-2 relative">
+                        <div className="text-xs text-gray-600 mr-4 text-right">
+                          <span className="font-medium">{output.name}</span>
+                          <div className="text-gray-500">{output.dataType}</div>
+                          {executionState.status === 'success' && outputs[output.id] && (
+                            <div className="text-green-600 font-mono text-[10px]">
+                              {String(outputs[output.id]).substring(0, 20)}
+                              {String(outputs[output.id]).length > 20 ? '...' : ''}
+                            </div>
+                          )}
+                        </div>
+                        {/* Output Handle */}
+                        <EnhancedHandle
+                          id={output.id}
+                          type="source"
+                          position={Position.Right}
+                          dataType={output.dataType}
+                          label={output.name}
+                          hasData={!!outputs[output.id]}
+                          style={{ 
+                            position: 'absolute', 
+                            right: '-24px', 
+                            top: '50%', 
+                            transform: 'translateY(-50%)'
+                          }}
+                          nodeId={id!}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
           {/* Quick Config Panel */}
           {showConfig && (
-            <div className="mt-2 pt-2 border-t border-gray-200">
-              <div className="text-xs text-gray-500 mb-1">Quick Config:</div>
-              <div className="space-y-1 max-h-24 overflow-y-auto">
-                {(component.template?.configuration || component.template?.fields || []).slice(0, 3).map((field) => (
+            <div className="border-t border-gray-200 bg-blue-50/30 p-3">
+              <div className="text-xs text-gray-700 font-medium mb-2">Configuration:</div>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {(component.template?.configuration || component.template?.fields || []).slice(0, 4).map((field) => (
                   <div key={field.key} className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">{field.label || field.name}:</span>
-                    <span className="text-xs font-mono">
+                    <span className="text-xs text-gray-600 font-medium">{field.label || field.name}:</span>
+                    <span className="text-xs font-mono text-gray-800 bg-white px-1 py-0.5 rounded">
                       {(() => {
                         const value = data.config?.[field.key] || field.defaultValue
                         if (!value) return 'Not set'
                         if (field.sensitive || field.type === 'password') return '••••••••'
                         if (typeof value === 'string' && value.includes('template-mode-demo-key')) return 'Not configured'
-                        return String(value).length > 15 ? String(value).substring(0, 15) + '...' : String(value)
+                        return String(value).length > 12 ? String(value).substring(0, 12) + '...' : String(value)
                       })()}
                     </span>
-      </div>
+                  </div>
                 ))}
-    </div>
-    </div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Dynamic Output Handles */}
-      {component.template?.outputs?.map((output, index) => (
-        <EnhancedHandle
-          key={`output-${output.id}`}
-          id={output.id}
-          type="source"
-          position={Position.Right}
-          dataType={output.dataType}
-          label={output.name}
-          hasData={!!outputs[output.id]}
-          style={{ top: 70 + index * 30 }}
-          nodeId={id!}
-        />
-      ))}
     </div>
   )
 }

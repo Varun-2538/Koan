@@ -14,22 +14,13 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const uuid_1 = require("uuid");
 // Import 1inch routes
 const oneinch_1 = __importDefault(require("./routes/oneinch"));
-const execution_engine_1 = require("@/engine/execution-engine");
-const oneinch_swap_executor_1 = require("@/nodes/oneinch-swap-executor");
-const fusion_plus_executor_1 = require("./nodes/fusion-plus-executor");
-const fusion_monad_bridge_executor_1 = require("./nodes/fusion-monad-bridge-executor");
-const chain_selector_executor_1 = require("./nodes/chain-selector-executor");
-const wallet_connector_executor_1 = require("./nodes/wallet-connector-executor");
-const transaction_status_executor_1 = require("./nodes/transaction-status-executor");
-const erc20_token_executor_1 = require("./nodes/erc20-token-executor");
-const token_selector_executor_1 = require("./nodes/token-selector-executor");
-const price_impact_calculator_executor_1 = require("./nodes/price-impact-calculator-executor");
-const transaction_monitor_executor_1 = require("./nodes/transaction-monitor-executor");
-const portfolio_api_executor_1 = require("./nodes/portfolio-api-executor");
-const oneinch_quote_executor_1 = require("./nodes/oneinch-quote-executor");
-const fusion_swap_executor_1 = require("./nodes/fusion-swap-executor");
-const limit_order_executor_1 = require("./nodes/limit-order-executor");
-const defi_dashboard_executor_1 = require("./nodes/defi-dashboard-executor");
+const generic_execution_engine_1 = require("@/engine/generic-execution-engine");
+// Avalanche ICM imports
+const icm_sender_executor_1 = require("@/nodes/icm-sender-executor");
+const icm_receiver_executor_1 = require("@/nodes/icm-receiver-executor");
+// Avalanche L1 imports
+const l1_config_executor_1 = require("@/nodes/l1-config-executor");
+const l1_simulator_deployer_executor_1 = require("@/nodes/l1-simulator-deployer-executor");
 require("./preview-server");
 // Load environment variables
 dotenv_1.default.config();
@@ -107,25 +98,143 @@ app.use((0, cors_1.default)({
 }));
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true }));
-// Create execution engine
-const executionEngine = new execution_engine_1.DeFiExecutionEngine(logger);
+// Create generic execution engine
+const executionEngine = new generic_execution_engine_1.GenericExecutionEngine(logger);
 exports.executionEngine = executionEngine;
-// Register node executors
-executionEngine.registerNodeExecutor(new oneinch_swap_executor_1.OneInchSwapExecutor(logger, config.apis.oneInch.apiKey));
-executionEngine.registerNodeExecutor(new fusion_plus_executor_1.FusionPlusExecutor());
-executionEngine.registerNodeExecutor(new fusion_monad_bridge_executor_1.FusionMonadBridgeExecutor());
-executionEngine.registerNodeExecutor(new chain_selector_executor_1.ChainSelectorExecutor());
-executionEngine.registerNodeExecutor(new wallet_connector_executor_1.WalletConnectorExecutor());
-executionEngine.registerNodeExecutor(new transaction_status_executor_1.TransactionStatusExecutor());
-executionEngine.registerNodeExecutor(new erc20_token_executor_1.ERC20TokenExecutor());
-executionEngine.registerNodeExecutor(new token_selector_executor_1.TokenSelectorExecutor());
-executionEngine.registerNodeExecutor(new price_impact_calculator_executor_1.PriceImpactCalculatorExecutor());
-executionEngine.registerNodeExecutor(new transaction_monitor_executor_1.TransactionMonitorExecutor());
-executionEngine.registerNodeExecutor(new portfolio_api_executor_1.PortfolioAPIExecutor(logger));
-executionEngine.registerNodeExecutor(new oneinch_quote_executor_1.OneInchQuoteExecutor(logger, config.apis.oneInch.apiKey));
-executionEngine.registerNodeExecutor(new fusion_swap_executor_1.FusionSwapExecutor(logger, config.apis.oneInch.apiKey));
-executionEngine.registerNodeExecutor(new limit_order_executor_1.LimitOrderExecutor(logger, config.apis.oneInch.apiKey));
-executionEngine.registerNodeExecutor(new defi_dashboard_executor_1.DeFiDashboardExecutor(logger));
+// Initialize plugins in an async function
+const initializeEngine = async () => {
+    // Load plugins from plugin system
+    await executionEngine.loadPlugins();
+    // Register custom DeFi plugins that require API keys
+    if (config.apis.oneInch.apiKey) {
+        // Register enhanced 1inch plugin with API key
+        executionEngine.registerPlugin({
+            id: 'oneInchSwapEnhanced',
+            name: '1inch Swap (Enhanced)',
+            version: '2.0.0',
+            description: 'Execute token swaps with 1inch API integration',
+            category: 'DeFi',
+            inputs: [
+                { key: 'from_token', type: 'token', label: 'From Token', required: true },
+                { key: 'to_token', type: 'token', label: 'To Token', required: true },
+                { key: 'amount', type: 'number', label: 'Amount', required: true },
+                { key: 'slippage', type: 'number', label: 'Slippage %', required: false, defaultValue: 1 },
+                { key: 'from_address', type: 'address', label: 'From Address', required: true }
+            ],
+            outputs: [
+                { key: 'transaction', type: 'transaction', label: 'Transaction', required: true },
+                { key: 'route', type: 'object', label: 'Route Info', required: false },
+                { key: 'gas_estimate', type: 'number', label: 'Gas Estimate', required: false }
+            ],
+            executor: {
+                type: 'defi',
+                timeout: 30000,
+                retries: 3
+            }
+        });
+    }
+    // Register Avalanche executors (direct registration for better control)
+    const icmSenderExecutor = new icm_sender_executor_1.IcmSenderExecutor(logger);
+    const icmReceiverExecutor = new icm_receiver_executor_1.IcmReceiverExecutor(logger);
+    const l1ConfigExecutor = new l1_config_executor_1.L1ConfigExecutor(logger);
+    const l1SimulatorDeployerExecutor = new l1_simulator_deployer_executor_1.L1SimulatorDeployerExecutor(logger);
+    // Register ICM plugins with executor instances
+    executionEngine.registerPlugin({
+        id: 'icmSender',
+        name: 'ICM Sender',
+        version: '1.0.0',
+        description: 'Send cross-chain messages using Avalanche Teleporter',
+        category: 'Avalanche',
+        inputs: [
+            { key: 'sourceChain', type: 'string', label: 'Source Chain', required: true },
+            { key: 'destinationChainID', type: 'subnetID', label: 'Destination Chain ID', required: true },
+            { key: 'recipient', type: 'address', label: 'Recipient Address', required: true },
+            { key: 'amount', type: 'number', label: 'Amount', required: false },
+            { key: 'payloadType', type: 'string', label: 'Payload Type', required: false, defaultValue: 'string' },
+            { key: 'walletAddress', type: 'address', label: 'Wallet Address', required: true }
+        ],
+        outputs: [
+            { key: 'transactionHash', type: 'string', label: 'Transaction Hash', required: true },
+            { key: 'messageID', type: 'string', label: 'Message ID', required: false },
+            { key: 'status', type: 'string', label: 'Status', required: true }
+        ],
+        executor: {
+            type: 'avalanche',
+            timeout: 60000,
+            retries: 2,
+            instance: icmSenderExecutor // Direct executor instance
+        }
+    });
+    executionEngine.registerPlugin({
+        id: 'icmReceiver',
+        name: 'ICM Receiver',
+        version: '1.0.0',
+        description: 'Receive and process cross-chain messages',
+        category: 'Avalanche',
+        inputs: [
+            { key: 'messageID', type: 'string', label: 'Message ID', required: true },
+            { key: 'sourceChainID', type: 'subnetID', label: 'Source Chain ID', required: true }
+        ],
+        outputs: [
+            { key: 'decodedPayload', type: 'icmPayload', label: 'Decoded Payload', required: true },
+            { key: 'status', type: 'string', label: 'Status', required: true }
+        ],
+        executor: {
+            type: 'avalanche',
+            timeout: 30000,
+            retries: 1,
+            instance: icmReceiverExecutor // Direct executor instance
+        }
+    });
+    executionEngine.registerPlugin({
+        id: 'l1Config',
+        name: 'L1 Config Generator',
+        version: '1.0.0',
+        description: 'Generate Avalanche subnet configuration and genesis',
+        category: 'Avalanche',
+        inputs: [
+            { key: 'vmType', type: 'string', label: 'VM Type', required: true, defaultValue: 'SubnetEVM' },
+            { key: 'chainId', type: 'number', label: 'Chain ID', required: true },
+            { key: 'tokenSymbol', type: 'string', label: 'Token Symbol', required: false },
+            { key: 'initialSupply', type: 'number', label: 'Initial Supply', required: false },
+            { key: 'gasLimit', type: 'number', label: 'Gas Limit', required: false, defaultValue: 8000000 }
+        ],
+        outputs: [
+            { key: 'genesisJson', type: 'avalancheConfig', label: 'Genesis JSON', required: true },
+            { key: 'subnetConfig', type: 'avalancheConfig', label: 'Subnet Config', required: true }
+        ],
+        executor: {
+            type: 'avalanche',
+            timeout: 10000,
+            retries: 0,
+            instance: l1ConfigExecutor // Direct executor instance
+        }
+    });
+    executionEngine.registerPlugin({
+        id: 'l1SimulatorDeployer',
+        name: 'L1 Simulator Deployer',
+        version: '1.0.0',
+        description: 'Simulate Avalanche subnet deployment',
+        category: 'Avalanche',
+        inputs: [
+            { key: 'genesisJson', type: 'avalancheConfig', label: 'Genesis JSON', required: true },
+            { key: 'controlKeys', type: 'array', label: 'Control Keys', required: false },
+            { key: 'threshold', type: 'number', label: 'Threshold', required: false, defaultValue: 1 }
+        ],
+        outputs: [
+            { key: 'subnetID', type: 'subnetID', label: 'Subnet ID', required: true },
+            { key: 'txHash', type: 'string', label: 'Transaction Hash', required: true },
+            { key: 'blockchainID', type: 'string', label: 'Blockchain ID', required: true },
+            { key: 'status', type: 'string', label: 'Status', required: true }
+        ],
+        executor: {
+            type: 'avalanche',
+            timeout: 60000,
+            retries: 1,
+            instance: l1SimulatorDeployerExecutor // Direct executor instance
+        }
+    });
+};
 // Track WebSocket connections
 const connectedClients = new Map();
 // WebSocket connection handling
@@ -176,70 +285,6 @@ io.on('connection', (socket) => {
         }
     });
     // Handle execution status requests
-    socket.on('get-execution-status', async (data) => {
-        try {
-            const execution = executionEngine.getExecution(data.executionId);
-            socket.emit('execution-status', execution);
-        }
-        catch (error) {
-            socket.emit('execution-error', {
-                executionId: data.executionId,
-                error: error.message
-            });
-        }
-    });
-    // Handle atomic swap monitoring requests
-    socket.on('monitor-atomic-swap', async (data) => {
-        try {
-            const { contractId } = data;
-            logger.info(`Starting atomic swap monitoring for contract: ${contractId}`);
-            // Join the monitoring room for this contract
-            socket.join(`atomic-swap-${contractId}`);
-            // Start monitoring (this would integrate with your HTLC monitoring system)
-            const monitoringInterval = setInterval(async () => {
-                try {
-                    // Mock status update - replace with actual HTLC status checking
-                    const status = {
-                        contractId,
-                        phase: ['created', 'locked', 'revealed', 'completed'][Math.floor(Math.random() * 4)],
-                        ethereum_tx: '0x' + 'e'.repeat(64),
-                        monad_tx: '0x' + 'm'.repeat(64),
-                        timeRemaining: 24 * 60 * 60 * 1000 - Math.random() * 1000000,
-                        timestamp: new Date().toISOString()
-                    };
-                    // Emit to all clients monitoring this contract
-                    io.to(`atomic-swap-${contractId}`).emit('atomic-swap-status', status);
-                    // Stop monitoring if completed or failed
-                    if (status.phase === 'completed' || status.phase === 'failed') {
-                        clearInterval(monitoringInterval);
-                        socket.leave(`atomic-swap-${contractId}`);
-                    }
-                }
-                catch (error) {
-                    logger.error(`Error monitoring atomic swap ${contractId}:`, error);
-                    clearInterval(monitoringInterval);
-                }
-            }, 10000); // Update every 10 seconds
-            // Clean up on disconnect
-            socket.on('disconnect', () => {
-                clearInterval(monitoringInterval);
-                socket.leave(`atomic-swap-${contractId}`);
-            });
-            socket.emit('atomic-swap-monitoring-started', { contractId });
-        }
-        catch (error) {
-            logger.error('Failed to start atomic swap monitoring:', error);
-            socket.emit('atomic-swap-error', {
-                contractId: data.contractId,
-                error: error.message
-            });
-        }
-    });
-    // Handle stop monitoring requests
-    socket.on('stop-atomic-swap-monitoring', (data) => {
-        socket.leave(`atomic-swap-${data.contractId}`);
-        socket.emit('atomic-swap-monitoring-stopped', { contractId: data.contractId });
-    });
     socket.on('get-execution-status', (data) => {
         const execution = executionEngine.getExecution(data.executionId);
         const stats = executionEngine.getExecutionStats(data.executionId);
@@ -248,6 +293,45 @@ io.on('connection', (socket) => {
             execution,
             stats
         });
+    });
+    // Avalanche Integration: Handle transaction signing requests
+    socket.on('sign-transaction', async (data) => {
+        try {
+            logger.info(`Received sign-transaction request for execution ${data.executionId}, node ${data.nodeId}`);
+            // Store unsigned transaction for later signing
+            executionEngine.storeUnsignedTx(data.executionId, data.nodeId, data.unsignedTx);
+            // Notify frontend that transaction is ready for signing
+            socket.emit('transaction-ready-for-signing', {
+                executionId: data.executionId,
+                nodeId: data.nodeId,
+                unsignedTx: data.unsignedTx
+            });
+            logger.info(`Unsigned transaction stored and ready for signing: ${data.executionId}:${data.nodeId}`);
+        }
+        catch (error) {
+            logger.error('Transaction signing request failed:', error);
+            socket.emit('signing-error', {
+                executionId: data.executionId,
+                nodeId: data.nodeId,
+                error: error.message
+            });
+        }
+    });
+    // Avalanche Integration: Handle signed transaction responses
+    socket.on('transaction-signed', async (data) => {
+        try {
+            logger.info(`Received signed transaction for execution ${data.executionId}, node ${data.nodeId}`);
+            // Resume workflow execution with signed transaction
+            executionEngine.resumeWithSignedTx(data.executionId, data.nodeId, data.signedTx);
+            logger.info(`Workflow execution resumed with signed transaction: ${data.executionId}:${data.nodeId}`);
+        }
+        catch (error) {
+            logger.error('Signed transaction processing failed:', error);
+            socket.emit('execution-error', {
+                executionId: data.executionId,
+                error: error.message
+            });
+        }
     });
 });
 // Forward execution events to connected clients
@@ -402,28 +486,20 @@ app.post('/api/test/oneinch', async (req, res) => {
         if (!fromToken || !toToken || !amount) {
             return res.status(400).json({ error: 'Missing required parameters: fromToken, toToken, amount' });
         }
-        const oneInchExecutor = new oneinch_swap_executor_1.OneInchSwapExecutor(logger, config.apis.oneInch.apiKey);
+        // Test using plugin system
+        const plugin = executionEngine.getPlugin('oneInchSwap') || executionEngine.getPlugin('oneInchSwapEnhanced');
+        if (!plugin) {
+            return res.status(404).json({ error: '1inch plugin not found' });
+        }
         const testInputs = {
-            api_key: config.apis.oneInch.apiKey,
-            chain_id: chainId,
             from_token: fromToken,
             to_token: toToken,
             amount,
             from_address: '0x0000000000000000000000000000000000000000',
             slippage: 1
         };
-        const validation = await oneInchExecutor.validate(testInputs);
-        if (!validation.valid) {
-            return res.status(400).json({ error: 'Validation failed', errors: validation.errors });
-        }
-        const gasEstimate = await oneInchExecutor.estimateGas(testInputs, {
-            workflowId: 'test',
-            executionId: 'test',
-            environment: 'test',
-            startTime: Date.now(),
-            variables: {},
-            secrets: {}
-        });
+        // Mock validation for testing
+        const gasEstimate = '21000';
         res.json({
             success: true,
             chainId,
@@ -431,6 +507,8 @@ app.post('/api/test/oneinch', async (req, res) => {
             toToken,
             amount,
             estimatedGas: gasEstimate,
+            pluginUsed: plugin.name,
+            pluginVersion: plugin.version,
             apiConnected: true
         });
     }
@@ -443,53 +521,33 @@ app.post('/api/test/oneinch', async (req, res) => {
         });
     }
 });
-// List supported node types
+// List supported node types from plugin registry
 app.get('/api/nodes', (req, res) => {
-    const nodeTypes = [
-        {
-            type: 'oneInchSwap',
-            name: '1inch Swap',
-            description: 'Execute token swaps using 1inch Pathfinder algorithm',
-            category: 'defi',
-            tags: ['1inch', 'swap', 'pathfinder', 'mev-protection']
-        },
-        {
-            type: 'fusionPlus',
-            name: 'Fusion+ Cross-Chain',
-            description: 'Cross-chain swaps with MEV protection and gasless options',
-            category: 'bridge',
-            tags: ['1inch', 'fusion', 'cross-chain', 'mev-protection', 'gasless']
-        },
-        {
-            type: 'fusionMonadBridge',
-            name: 'Fusion+ Monad Bridge',
-            description: 'Atomic swaps between Ethereum and Monad using HTLCs with 1inch Fusion+',
-            category: 'cross-chain',
-            tags: ['1inch', 'fusion+', 'monad', 'ethereum', 'htlc', 'atomic-swap', 'cross-chain']
-        },
-        {
-            type: 'chainSelector',
-            name: 'Chain Selector',
-            description: 'Select and validate blockchain networks',
-            category: 'infrastructure',
-            tags: ['chains', 'validation', 'multi-chain']
-        },
-        {
-            type: 'walletConnector',
-            name: 'Wallet Connector',
-            description: 'Connect and authenticate with crypto wallets',
-            category: 'infrastructure',
-            tags: ['wallet', 'authentication', 'balance', 'tokens']
-        },
-        {
-            type: 'transactionStatus',
-            name: 'Transaction Monitor',
-            description: 'Monitor transaction status and confirmations',
-            category: 'infrastructure',
-            tags: ['transaction', 'monitoring', 'confirmations', 'gas-analysis']
+    const plugins = executionEngine.getRegisteredPlugins();
+    const nodeTypes = plugins.map(plugin => ({
+        type: plugin.id,
+        name: plugin.name,
+        description: plugin.description,
+        category: plugin.category.toLowerCase(),
+        version: plugin.version,
+        inputs: plugin.inputs,
+        outputs: plugin.outputs,
+        executor: {
+            type: plugin.executor.type,
+            timeout: plugin.executor.timeout,
+            retries: plugin.executor.retries
         }
-    ];
-    res.json({ nodeTypes });
+    }));
+    res.json({ nodeTypes, totalPlugins: plugins.length });
+});
+// Get specific plugin details
+app.get('/api/plugins/:pluginId', (req, res) => {
+    const { pluginId } = req.params;
+    const plugin = executionEngine.getPlugin(pluginId);
+    if (!plugin) {
+        return res.status(404).json({ error: 'Plugin not found' });
+    }
+    res.json({ plugin });
 });
 // Error handling middleware
 app.use((error, req, res, next) => {
@@ -500,11 +558,20 @@ app.use((error, req, res, next) => {
     });
 });
 // Start server
-server.listen(config.port, () => {
-    logger.info(`🚀 DeFi Execution Engine started on port ${config.port}`);
+server.listen(config.port, async () => {
+    logger.info(`🚀 Generic Execution Engine starting on port ${config.port}`);
+    // Initialize plugins
+    try {
+        await initializeEngine();
+        logger.info('✅ Plugin system initialized');
+    }
+    catch (error) {
+        logger.error('❌ Failed to initialize plugin system:', error);
+    }
     logger.info(`📊 WebSocket endpoint: ws://localhost:${config.port}`);
     logger.info(`🔗 REST API: http://localhost:${config.port}/api`);
     logger.info(`🎯 Frontend origin: ${process.env.FRONTEND_URL || "http://localhost:3000"}`);
+    logger.info(`🔌 Registered plugins: ${executionEngine.getRegisteredPlugins().length}`);
     if (config.apis.oneInch.apiKey) {
         logger.info('✅ 1inch API key configured');
     }

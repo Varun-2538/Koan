@@ -362,15 +362,36 @@ export class GenericExecutionEngine extends EventEmitter {
   private buildExecutionPlan(nodes: FlowNode[], edges: FlowEdge[]): Map<string, ExecutionStep> {
     const steps = new Map<string, ExecutionStep>()
 
+    // Validate input data
+    if (!nodes || !Array.isArray(nodes)) {
+      throw new Error('Invalid workflow: nodes must be an array')
+    }
+    
+    if (!edges) {
+      this.logger.warn('No edges provided in workflow, treating as disconnected nodes')
+      edges = []
+    } else if (!Array.isArray(edges)) {
+      throw new Error('Invalid workflow: edges must be an array')
+    }
+
     // Create execution steps for each node
     for (const node of nodes) {
+      // Validate node structure
+      if (!node.id || !node.type) {
+        throw new Error(`Invalid node: missing id or type - ${JSON.stringify(node)}`)
+      }
+      
       const dependencies = this.findNodeDependencies(node.id, edges)
+      
+      // Safely access node data and config
+      const nodeData = node.data || {}
+      const nodeConfig = nodeData.config || {}
       
       steps.set(node.id, {
         nodeId: node.id,
         nodeType: node.type,
         status: 'pending',
-        inputs: node.data.config || {},
+        inputs: nodeConfig,
         outputs: {},
         dependencies
       })
@@ -395,6 +416,12 @@ export class GenericExecutionEngine extends EventEmitter {
    * Find dependencies for a node based on incoming edges
    */
   private findNodeDependencies(nodeId: string, edges: FlowEdge[]): string[] {
+    // Defensive programming: handle undefined or null edges
+    if (!edges || !Array.isArray(edges)) {
+      this.logger.warn(`No edges provided for node ${nodeId}, assuming no dependencies`)
+      return []
+    }
+    
     return edges
       .filter(edge => edge.target === nodeId)
       .map(edge => edge.source)
@@ -778,14 +805,20 @@ export class GenericExecutionEngine extends EventEmitter {
         throw new Error('No API endpoint provided')
       }
 
-      const response = await fetch(plugin.executor.endpoint, {
+      const fetchOptions: RequestInit = {
         method: plugin.executor.method || 'GET',
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'Unite-DeFi-Engine/1.0.0'
-        },
-        body: plugin.executor.method !== 'GET' ? JSON.stringify(inputs) : undefined
-      })
+        }
+      }
+      
+      // Only add body for non-GET requests
+      if (plugin.executor.method !== 'GET') {
+        fetchOptions.body = JSON.stringify(inputs)
+      }
+      
+      const response = await fetch(plugin.executor.endpoint, fetchOptions)
 
       const data = await response.json()
 
@@ -826,7 +859,29 @@ export class GenericExecutionEngine extends EventEmitter {
    * Collect inputs for a step from its dependencies
    */
   private collectStepInputs(step: ExecutionStep, allSteps: Map<string, ExecutionStep>): Record<string, any> {
-    let inputs = { ...step.inputs }
+    let inputs: Record<string, any> = { ...step.inputs }
+
+    // Normalize common frontend camelCase keys to backend snake_case
+    const normalized: Record<string, any> = {}
+    for (const [key, value] of Object.entries(inputs)) {
+      switch (key) {
+        case 'fromToken': normalized['from_token'] = value; break
+        case 'toToken': normalized['to_token'] = value; break
+        case 'fromAddress': normalized['from_address'] = value; break
+        case 'chainId': normalized['chain_id'] = value; break
+        case 'walletAddress': normalized['wallet_address'] = value; break
+        case 'walletProvider': normalized['wallet_provider'] = value; break
+        case 'supportedWallets': normalized['supported_wallets'] = value; break
+        case 'supportedNetworks': normalized['supported_networks'] = value; break
+        case 'defaultNetwork': normalized['default_network'] = value; break
+        case 'autoConnect': normalized['auto_connect'] = value; break
+        case 'showBalance': normalized['show_balance'] = value; break
+        case 'showNetworkSwitcher': normalized['show_network_switcher'] = value; break
+        default:
+          normalized[key] = value
+      }
+    }
+    inputs = normalized
 
     // Merge outputs from dependency nodes
     for (const depId of step.dependencies) {

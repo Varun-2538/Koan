@@ -255,6 +255,33 @@ const initializeEngine = async () => {
       instance: l1SimulatorDeployerExecutor // Direct executor instance
     }
   })
+
+  // Register a wallet connector plugin to support walletConnector nodes
+  executionEngine.registerPlugin({
+    id: 'walletConnector',
+    name: 'Wallet Connector',
+    version: '1.0.0',
+    description: 'Connect and validate wallet information for flows',
+    category: 'Wallet',
+    inputs: [
+      { key: 'wallet_address', type: 'address', label: 'Wallet Address', required: false },
+      { key: 'wallet_provider', type: 'string', label: 'Wallet Provider', required: false },
+      { key: 'supported_wallets', type: 'array', label: 'Supported Wallets', required: false },
+      { key: 'supported_networks', type: 'array', label: 'Supported Networks', required: false },
+      { key: 'default_network', type: 'number', label: 'Default Network', required: false },
+      { key: 'auto_connect', type: 'boolean', label: 'Auto Connect', required: false },
+      { key: 'show_balance', type: 'boolean', label: 'Show Balance', required: false },
+      { key: 'show_network_switcher', type: 'boolean', label: 'Show Network Switcher', required: false },
+      { key: 'template_creation_mode', type: 'boolean', label: 'Template Mode', required: false }
+    ],
+    outputs: [
+      { key: 'wallet_connection', type: 'object', label: 'Wallet Connection', required: false },
+      { key: 'wallet_config', type: 'object', label: 'Wallet Config', required: false }
+    ],
+    executor: {
+      type: 'generic'
+    }
+  })
 }
 
 // Track WebSocket connections

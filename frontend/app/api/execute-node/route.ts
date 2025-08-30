@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { unitePluginSystem } from '@/lib/plugin-system'
+import { pluginRegistry, executionEngine, codeExecutionEngine } from '@/lib/plugin-system'
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,32 +30,54 @@ export async function POST(request: NextRequest) {
 
     console.log('Executing node via plugin system:', { pluginId, nodeIdentifier, pluginInputs })
 
-    // Get plugin definition
-    const plugin = unitePluginSystem.registry.getPlugin(pluginId)
-    if (!plugin) {
+    // Get component definition
+    const component = pluginRegistry.getComponent(pluginId)
+    if (!component) {
       return NextResponse.json(
-        { error: `Plugin not found: ${pluginId}` },
+        { error: `Component not found: ${pluginId}` },
         { status: 404 }
       )
     }
 
-    // Execute the node using the plugin system
-    const executionResult = await unitePluginSystem.executionEngine.executeComponent(
-      plugin,
+    // Execute the node using the generic execution engine
+    const executionResult = await executionEngine.executeComponent(
+      pluginId,
       pluginInputs,
-      context || {
-        nodeId: nodeIdentifier,
+      node?.data?.config || {},
+      {
         workflowId: 'api_execution',
         executionId: `exec_${Date.now()}`,
-        timestamp: Date.now(),
-        environment: 'development'
+        nodeId: nodeIdentifier,
+        environment: 'development',
+        variables: new Map(),
+        secrets: new Map(),
+        services: new Map(),
+        cache: new Map(),
+        events: new (EventTarget as any)(),
+        logger: console,
+        config: {
+          timeout: 30000,
+          retries: 3,
+          enableCaching: true,
+          enableLogging: true,
+          enableProfiling: false,
+          sandboxed: true,
+          resourceLimits: {
+            memory: 128,
+            cpu: 1,
+            network: 100,
+            storage: 256,
+            duration: 30
+          },
+          permissions: []
+        }
       }
     )
 
     // Handle modular code generation if requested
     if (generateCode && executionResult.success) {
       try {
-        const codeResult = await unitePluginSystem.codeExecutionEngine.generateModularCode({
+        const codeResult = await codeExecutionEngine.generateModularCode({
           template: pluginId,
           parameters: pluginInputs,
           outputType: generateCode.outputType || 'react',
@@ -91,8 +113,8 @@ export async function POST(request: NextRequest) {
       logs: executionResult.logs,
       error: executionResult.error,
       executionTime: new Date().toISOString(),
-      pluginUsed: plugin.name,
-      pluginVersion: plugin.version
+      pluginUsed: component.name,
+      pluginVersion: component.version
     })
 
   } catch (error) {

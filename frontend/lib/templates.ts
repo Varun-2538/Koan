@@ -4,7 +4,7 @@ export interface FlowTemplate {
   id: string
   name: string
   description: string
-  category: "defi" | "dao" | "nft" | "ai" | "infrastructure"
+  category: "defi" | "dao" | "nft" | "ai" | "infrastructure" | "avalanche"
   difficulty: "beginner" | "intermediate" | "advanced"
   estimatedTime: string
   features: string[]
@@ -649,6 +649,326 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         type: "string", 
         required: true,
         defaultValue: ""
+      }
+    ]
+  },
+  {
+    id: "avalanche-icm-workflow",
+    name: "Avalanche ICM Cross-Chain Messaging",
+    description: "Complete cross-chain messaging workflow using Avalanche Teleporter for secure interchain communication between subnets and mainnets",
+    category: "avalanche",
+    difficulty: "intermediate",
+    estimatedTime: "30 minutes",
+    features: [
+      "📤 Avalanche Teleporter ICM integration",
+      "🔐 Secure cross-chain message sending",
+      "📥 Real-time message reception and decoding",
+      "🏔️ Fuji testnet support with mainnet compatibility",
+      "💰 Automatic fee calculation and gas optimization",
+      "⚡ Real-time transaction monitoring",
+      "🔍 Message payload validation and parsing",
+      "🛡️ Frontend-controlled signing (no backend PK access)"
+    ],
+    nodes: [
+      {
+        id: "wallet-connector-1",
+        type: "walletConnector",
+        position: { x: 100, y: 100 },
+        data: {
+          label: "Avalanche Wallet Connection",
+          config: {
+            template_creation_mode: true,
+            supportedWallets: ["MetaMask", "Core Wallet", "WalletConnect"],
+            autoConnect: true,
+            supportedChains: ["43113"], // Fuji testnet
+            defaultChain: "43113"
+          }
+        }
+      },
+      {
+        id: "chain-selector-1",
+        type: "chainSelector",
+        position: { x: 100, y: 280 },
+        data: {
+          label: "Chain Selector",
+          config: {
+            template_creation_mode: true,
+            supportedChains: ["43113"], // Fuji C-Chain
+            defaultChain: "43113",
+            enableTestnet: true
+          }
+        }
+      },
+      {
+        id: "icm-sender-1",
+        type: "icmSender",
+        position: { x: 400, y: 100 },
+        data: {
+          label: "ICM Message Sender",
+          config: {
+            template_creation_mode: true,
+            sourceChain: "C",
+            destinationChainID: "11111111111111111111111111111111LpoYY", // Fuji subnet
+            amount: "Hello from Avalanche ICM!",
+            payloadType: "string",
+            gasLimit: 100000
+          }
+        }
+      },
+      {
+        id: "icm-receiver-1",
+        type: "icmReceiver",
+        position: { x: 700, y: 100 },
+        data: {
+          label: "ICM Message Receiver",
+          config: {
+            template_creation_mode: true,
+            messageID: "template_msg_123", // Will be set by sender
+            sourceChainID: "11111111111111111111111111111111LpoYY",
+            pollingTimeout: 30
+          }
+        }
+      },
+      {
+        id: "transaction-monitor-1",
+        type: "transactionMonitor",
+        position: { x: 400, y: 280 },
+        data: {
+          label: "ICM Transaction Monitor",
+          config: {
+            template_creation_mode: true,
+            maxTransactions: "10",
+            showPendingTx: true,
+            enableFiltering: true,
+            realTimeUpdates: true
+          }
+        }
+      },
+      {
+        id: "dashboard-1",
+        type: "defiDashboard",
+        position: { x: 1000, y: 100 },
+        data: {
+          label: "ICM Analytics Dashboard",
+          config: {
+            template_creation_mode: true,
+            title: "Avalanche ICM Dashboard",
+            components: ["messages", "transactions", "analytics"],
+            theme: "avalanche-branded",
+            enableRealTime: true
+          }
+        }
+      }
+    ],
+    edges: [
+      { id: "e1-2", source: "wallet-connector-1", target: "chain-selector-1", type: "default" },
+      { id: "e1-3", source: "wallet-connector-1", target: "icm-sender-1", type: "default" },
+      { id: "e2-3", source: "chain-selector-1", target: "icm-sender-1", type: "default" },
+      { id: "e3-4", source: "icm-sender-1", target: "icm-receiver-1", type: "default" },
+      { id: "e3-5", source: "icm-sender-1", target: "transaction-monitor-1", type: "default" },
+      { id: "e4-6", source: "icm-receiver-1", target: "dashboard-1", type: "default" },
+      { id: "e5-6", source: "transaction-monitor-1", target: "dashboard-1", type: "default" }
+    ],
+    requiredInputs: [
+      {
+        key: "destinationSubnet",
+        label: "Destination Subnet ID",
+        description: "The subnet ID where you want to send the ICM message",
+        type: "string",
+        required: true,
+        defaultValue: "11111111111111111111111111111111LpoYY"
+      },
+      {
+        key: "messageContent",
+        label: "Message Content",
+        description: "The content of your cross-chain message",
+        type: "string",
+        required: true,
+        defaultValue: "Hello from Avalanche ICM!"
+      },
+      {
+        key: "gasLimit",
+        label: "Gas Limit",
+        description: "Gas limit for the cross-chain message",
+        type: "number",
+        required: false,
+        defaultValue: 100000
+      }
+    ]
+  },
+  {
+    id: "avalanche-l1-simulation",
+    name: "Avalanche L1 Subnet Creation & ICM",
+    description: "Complete workflow for creating custom Avalanche L1 subnets and demonstrating cross-chain messaging between them",
+    category: "avalanche",
+    difficulty: "advanced",
+    estimatedTime: "45 minutes",
+    features: [
+      "🏗️ Custom L1 subnet configuration generation",
+      "📋 Genesis JSON creation with token allocation",
+      "🚀 Simulated subnet deployment with realistic parameters",
+      "🔗 Cross-chain messaging between custom subnets",
+      "💰 Automatic fee calculation for ICM transactions",
+      "📊 Real-time deployment and messaging analytics",
+      "🎭 Production-ready simulation for demo purposes",
+      "🛡️ Secure wallet integration throughout the process"
+    ],
+    nodes: [
+      {
+        id: "wallet-connector-1",
+        type: "walletConnector",
+        position: { x: 100, y: 100 },
+        data: {
+          label: "Avalanche Wallet Connection",
+          config: {
+            template_creation_mode: true,
+            supportedWallets: ["MetaMask", "Core Wallet"],
+            autoConnect: true,
+            supportedChains: ["43113"], // Fuji testnet
+            defaultChain: "43113"
+          }
+        }
+      },
+      {
+        id: "l1-config-1",
+        type: "l1Config",
+        position: { x: 100, y: 280 },
+        data: {
+          label: "L1 Subnet Configuration",
+          config: {
+            template_creation_mode: true,
+            vmType: "SubnetEVM",
+            chainId: 12345,
+            tokenSymbol: "CUSTOM",
+            initialSupply: 1000000,
+            gasLimit: 8000000
+          }
+        }
+      },
+      {
+        id: "l1-simulator-deployer-1",
+        type: "l1SimulatorDeployer",
+        position: { x: 400, y: 100 },
+        data: {
+          label: "Subnet Deployment Simulator",
+          config: {
+            template_creation_mode: true,
+            controlKeys: [],
+            threshold: 1
+          }
+        }
+      },
+      {
+        id: "icm-sender-1",
+        type: "icmSender",
+        position: { x: 700, y: 100 },
+        data: {
+          label: "Cross-Subnet ICM Sender",
+          config: {
+            template_creation_mode: true,
+            sourceChain: "C",
+            destinationChainID: "", // Will be set by deployer
+            amount: "Welcome to your custom subnet!",
+            payloadType: "string",
+            gasLimit: 100000
+          }
+        }
+      },
+      {
+        id: "icm-receiver-1",
+        type: "icmReceiver",
+        position: { x: 1000, y: 100 },
+        data: {
+          label: "Cross-Subnet ICM Receiver",
+          config: {
+            template_creation_mode: true,
+            messageID: "", // Will be set by sender
+            sourceChainID: "", // Will be set by deployer
+            pollingTimeout: 30
+          }
+        }
+      },
+      {
+        id: "transaction-monitor-1",
+        type: "transactionMonitor",
+        position: { x: 400, y: 280 },
+        data: {
+          label: "Deployment & ICM Monitor",
+          config: {
+            template_creation_mode: true,
+            maxTransactions: "20",
+            showPendingTx: true,
+            enableFiltering: true,
+            realTimeUpdates: true
+          }
+        }
+      },
+      {
+        id: "dashboard-1",
+        type: "defiDashboard",
+        position: { x: 1300, y: 100 },
+        data: {
+          label: "Avalanche L1 & ICM Dashboard",
+          config: {
+            template_creation_mode: true,
+            title: "Custom Subnet & ICM Analytics",
+            components: ["subnet", "icm", "transactions", "analytics"],
+            theme: "avalanche-branded",
+            enableRealTime: true
+          }
+        }
+      }
+    ],
+    edges: [
+      { id: "e1-2", source: "wallet-connector-1", target: "l1-config-1", type: "default" },
+      { id: "e2-3", source: "l1-config-1", target: "l1-simulator-deployer-1", type: "default" },
+      { id: "e3-4", source: "l1-simulator-deployer-1", target: "icm-sender-1", type: "default" },
+      { id: "e4-5", source: "icm-sender-1", target: "icm-receiver-1", type: "default" },
+      { id: "e3-6", source: "l1-simulator-deployer-1", target: "transaction-monitor-1", type: "default" },
+      { id: "e4-6", source: "icm-sender-1", target: "transaction-monitor-1", type: "default" },
+      { id: "e5-7", source: "icm-receiver-1", target: "dashboard-1", type: "default" },
+      { id: "e6-7", source: "transaction-monitor-1", target: "dashboard-1", type: "default" }
+    ],
+    requiredInputs: [
+      {
+        key: "subnetName",
+        label: "Subnet Name",
+        description: "Name for your custom subnet",
+        type: "string",
+        required: true,
+        defaultValue: "MyCustomSubnet"
+      },
+      {
+        key: "chainId",
+        label: "Chain ID",
+        description: "Unique chain ID for your subnet (must be unique)",
+        type: "number",
+        required: true,
+        defaultValue: 12345
+      },
+      {
+        key: "nativeToken",
+        label: "Native Token Symbol",
+        description: "Symbol for the native token of your subnet",
+        type: "string",
+        required: true,
+        defaultValue: "CUSTOM"
+      },
+      {
+        key: "initialSupply",
+        label: "Initial Token Supply",
+        description: "Initial supply of native tokens",
+        type: "number",
+        required: true,
+        defaultValue: 1000000
+      },
+      {
+        key: "welcomeMessage",
+        label: "Welcome Message",
+        description: "Message to send to your new subnet",
+        type: "string",
+        required: false,
+        defaultValue: "Welcome to your custom Avalanche subnet!"
       }
     ]
   }

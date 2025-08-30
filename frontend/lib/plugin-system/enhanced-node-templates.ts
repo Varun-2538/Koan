@@ -929,5 +929,278 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         defaultValue: true
       }
     ]
+  },
+
+  // Avalanche ICM Nodes
+  icmSender: {
+    type: 'icmSender',
+    name: 'ICM Sender',
+    description: 'Send cross-chain messages using Avalanche Teleporter',
+    category: 'Avalanche',
+    icon: '📤',
+    color: '#E84142',
+    inputs: [
+      {
+        id: 'sourceChain',
+        name: 'Source Chain',
+        dataType: 'string',
+        required: true,
+        description: 'Source blockchain (e.g., C for C-Chain)'
+      },
+      {
+        id: 'destinationChainID',
+        name: 'Destination Chain ID',
+        dataType: 'subnetID',
+        required: true,
+        description: 'Destination subnet or chain ID'
+      },
+      {
+        id: 'recipient',
+        name: 'Recipient Address',
+        dataType: 'address',
+        required: true,
+        description: 'Recipient wallet address'
+      },
+      {
+        id: 'walletAddress',
+        name: 'Wallet Address',
+        dataType: 'address',
+        required: true,
+        description: 'Sender wallet address'
+      }
+    ],
+    outputs: [
+      {
+        id: 'transactionHash',
+        name: 'Transaction Hash',
+        dataType: 'string',
+        description: 'Blockchain transaction hash'
+      },
+      {
+        id: 'messageID',
+        name: 'Message ID',
+        dataType: 'string',
+        description: 'Unique message identifier'
+      },
+      {
+        id: 'status',
+        name: 'Status',
+        dataType: 'string',
+        description: 'Transaction status'
+      }
+    ],
+    fields: [
+      {
+        key: 'amount',
+        type: 'text',
+        label: 'Amount/Payload',
+        required: false,
+        placeholder: 'Enter amount or message',
+        description: 'Amount to send or message content'
+      },
+      {
+        key: 'payloadType',
+        type: 'select',
+        label: 'Payload Type',
+        required: false,
+        defaultValue: 'string',
+        options: [
+          { label: 'Text Message', value: 'string' },
+          { label: 'Number', value: 'number' },
+          { label: 'JSON Object', value: 'object' }
+        ],
+        description: 'Type of data to send'
+      },
+      {
+        key: 'gasLimit',
+        type: 'number',
+        label: 'Gas Limit',
+        required: false,
+        defaultValue: 100000,
+        description: 'Gas limit for cross-chain execution'
+      }
+    ]
+  },
+
+  icmReceiver: {
+    type: 'icmReceiver',
+    name: 'ICM Receiver',
+    description: 'Receive and process cross-chain messages',
+    category: 'Avalanche',
+    icon: '📥',
+    color: '#E84142',
+    inputs: [
+      {
+        id: 'messageID',
+        name: 'Message ID',
+        dataType: 'string',
+        required: true,
+        description: 'Unique message identifier to receive'
+      },
+      {
+        id: 'sourceChainID',
+        name: 'Source Chain ID',
+        dataType: 'subnetID',
+        required: true,
+        description: 'Source chain or subnet ID'
+      }
+    ],
+    outputs: [
+      {
+        id: 'decodedPayload',
+        name: 'Decoded Payload',
+        dataType: 'icmPayload',
+        description: 'Decoded message content'
+      },
+      {
+        id: 'status',
+        name: 'Status',
+        dataType: 'string',
+        description: 'Reception status'
+      }
+    ],
+    fields: [
+      {
+        key: 'pollingTimeout',
+        type: 'number',
+        label: 'Polling Timeout (seconds)',
+        required: false,
+        defaultValue: 30,
+        description: 'How long to wait for message'
+      }
+    ]
+  },
+
+  // Avalanche L1 Nodes
+  l1Config: {
+    type: 'l1Config',
+    name: 'L1 Config Generator',
+    description: 'Generate Avalanche subnet configuration and genesis JSON',
+    category: 'Avalanche',
+    icon: '⚙️',
+    color: '#E84142',
+    inputs: [],
+    outputs: [
+      {
+        id: 'genesisJson',
+        name: 'Genesis JSON',
+        dataType: 'avalancheConfig',
+        description: 'Generated genesis configuration'
+      },
+      {
+        id: 'subnetConfig',
+        name: 'Subnet Config',
+        dataType: 'avalancheConfig',
+        description: 'Generated subnet configuration'
+      }
+    ],
+    fields: [
+      {
+        key: 'vmType',
+        type: 'select',
+        label: 'VM Type',
+        required: true,
+        defaultValue: 'SubnetEVM',
+        options: [
+          { label: 'SubnetEVM', value: 'SubnetEVM' },
+          { label: 'Custom VM', value: 'CustomVM' }
+        ],
+        description: 'Virtual machine type for the subnet'
+      },
+      {
+        key: 'chainId',
+        type: 'number',
+        label: 'Chain ID',
+        required: true,
+        placeholder: 'Enter chain ID',
+        description: 'Unique identifier for the blockchain'
+      },
+      {
+        key: 'tokenSymbol',
+        type: 'text',
+        label: 'Token Symbol',
+        required: false,
+        placeholder: 'e.g., MYTOKEN',
+        description: 'Native token symbol'
+      },
+      {
+        key: 'initialSupply',
+        type: 'number',
+        label: 'Initial Supply',
+        required: false,
+        placeholder: '1000000',
+        description: 'Initial token supply'
+      },
+      {
+        key: 'gasLimit',
+        type: 'number',
+        label: 'Gas Limit',
+        required: false,
+        defaultValue: 8000000,
+        description: 'Block gas limit'
+      }
+    ]
+  },
+
+  l1SimulatorDeployer: {
+    type: 'l1SimulatorDeployer',
+    name: 'L1 Simulator Deployer',
+    description: 'Simulate Avalanche subnet deployment for demo purposes',
+    category: 'Avalanche',
+    icon: '🚀',
+    color: '#E84142',
+    inputs: [
+      {
+        id: 'genesisJson',
+        name: 'Genesis JSON',
+        dataType: 'avalancheConfig',
+        required: true,
+        description: 'Genesis configuration from L1 Config node'
+      }
+    ],
+    outputs: [
+      {
+        id: 'subnetID',
+        name: 'Subnet ID',
+        dataType: 'subnetID',
+        description: 'Generated subnet identifier'
+      },
+      {
+        id: 'txHash',
+        name: 'Transaction Hash',
+        dataType: 'string',
+        description: 'Deployment transaction hash'
+      },
+      {
+        id: 'blockchainID',
+        name: 'Blockchain ID',
+        dataType: 'string',
+        description: 'Blockchain identifier'
+      },
+      {
+        id: 'status',
+        name: 'Status',
+        dataType: 'string',
+        description: 'Deployment status'
+      }
+    ],
+    fields: [
+      {
+        key: 'controlKeys',
+        type: 'text',
+        label: 'Control Keys (JSON)',
+        required: false,
+        placeholder: '["0x...", "0x..."]',
+        description: 'Array of control key addresses'
+      },
+      {
+        key: 'threshold',
+        type: 'number',
+        label: 'Threshold',
+        required: false,
+        defaultValue: 1,
+        description: 'Minimum signatures required'
+      }
+    ]
   }
 }

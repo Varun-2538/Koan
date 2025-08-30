@@ -531,6 +531,82 @@ export const BUILT_IN_DATA_TYPES: Record<string, DataType> = {
     color: '#64748B',
     version: '1.0.0',
     isCacheable: true
+  },
+
+  // Avalanche-specific data types (aliases for existing types)
+  subnetID: {
+    id: 'subnetID',
+    name: 'Subnet ID',
+    description: 'Avalanche subnet identifier',
+    category: 'blockchain',
+    schema: {
+      type: 'string',
+      pattern: '^[a-zA-Z0-9]{40,50}$'
+    },
+    color: '#E84142',
+    version: '1.0.0',
+    isCacheable: true,
+    compatibility: ['string'],
+    examples: ['subnet-1234567890abcdef', '0x1234567890abcdef1234567890abcdef12345678']
+  },
+
+  icmPayload: {
+    id: 'icmPayload',
+    name: 'ICM Payload',
+    description: 'Interchain messaging payload data',
+    category: 'blockchain',
+    schema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['string', 'number', 'object'] },
+        data: {},
+        destinationChain: { type: 'string' },
+        sourceChain: { type: 'string' },
+        timestamp: { type: 'number' }
+      },
+      required: ['type', 'data']
+    },
+    color: '#E84142',
+    version: '1.0.0',
+    isCacheable: false,
+    compatibility: ['object'],
+    examples: [{
+      type: 'string',
+      data: 'Hello Avalanche!',
+      destinationChain: 'C',
+      sourceChain: 'P',
+      timestamp: Date.now()
+    }]
+  },
+
+  avalancheConfig: {
+    id: 'avalancheConfig',
+    name: 'Avalanche Config',
+    description: 'Avalanche network configuration',
+    category: 'blockchain',
+    schema: {
+      type: 'object',
+      properties: {
+        chainId: { type: 'number' },
+        rpcUrl: { type: 'string', format: 'uri' },
+        subnetId: { type: 'string' },
+        vmType: { type: 'string', enum: ['SubnetEVM', 'CustomVM'] },
+        gasLimit: { type: 'number' },
+        genesisData: { type: 'object' }
+      },
+      required: ['chainId', 'rpcUrl']
+    },
+    color: '#E84142',
+    version: '1.0.0',
+    isCacheable: true,
+    compatibility: ['object'],
+    examples: [{
+      chainId: 43113,
+      rpcUrl: 'https://api.avax-test.network/ext/bc/C/rpc',
+      subnetId: '11111111111111111111111111111111LpoYY',
+      vmType: 'SubnetEVM',
+      gasLimit: 8000000
+    }]
   }
 }
 

@@ -19,6 +19,8 @@ import { IcmReceiverExecutor } from '@/nodes/icm-receiver-executor'
 // Avalanche L1 imports
 import { L1ConfigExecutor } from '@/nodes/l1-config-executor'
 import { L1SimulatorDeployerExecutor } from '@/nodes/l1-simulator-deployer-executor'
+// Chain selector import
+import { ChainSelectorExecutor } from '@/nodes/chain-selector-executor'
 import './preview-server';
 import {
   WorkflowDefinition,
@@ -155,6 +157,7 @@ const initializeEngine = async () => {
   const icmReceiverExecutor = new IcmReceiverExecutor(logger)
   const l1ConfigExecutor = new L1ConfigExecutor(logger)
   const l1SimulatorDeployerExecutor = new L1SimulatorDeployerExecutor(logger)
+  const chainSelectorExecutor = new ChainSelectorExecutor()
 
   // Register ICM plugins with executor instances
   executionEngine.registerPlugin({
@@ -256,70 +259,34 @@ const initializeEngine = async () => {
     }
   })
 
-  // Register a wallet connector plugin to support walletConnector nodes
+  // Register chainSelector plugin
   executionEngine.registerPlugin({
-    id: 'walletConnector',
-    name: 'Wallet Connector',
+    id: 'chainSelector',
+    name: 'Chain Selector',
     version: '1.0.0',
-    description: 'Connect and validate wallet information for flows',
-    category: 'Wallet',
+    description: 'Select and configure blockchain networks for DeFi operations',
+    category: 'Blockchain',
     inputs: [
-      { key: 'wallet_address', type: 'address', label: 'Wallet Address', required: false },
-      { key: 'wallet_provider', type: 'string', label: 'Wallet Provider', required: false },
-      { key: 'supported_wallets', type: 'array', label: 'Supported Wallets', required: false },
-      { key: 'supported_networks', type: 'array', label: 'Supported Networks', required: false },
-      { key: 'default_network', type: 'number', label: 'Default Network', required: false },
-      { key: 'auto_connect', type: 'boolean', label: 'Auto Connect', required: false },
-      { key: 'show_balance', type: 'boolean', label: 'Show Balance', required: false },
-      { key: 'show_network_switcher', type: 'boolean', label: 'Show Network Switcher', required: false },
-      { key: 'template_creation_mode', type: 'boolean', label: 'Template Mode', required: false }
+      { key: 'primary_chain', type: 'string', label: 'Primary Chain', required: true, defaultValue: '43113' },
+      { key: 'enable_testnet', type: 'boolean', label: 'Enable Testnet', required: false, defaultValue: false },
+      { key: 'available_chains', type: 'string', label: 'Available Chains Filter', required: false, defaultValue: 'all' }
     ],
     outputs: [
-      { key: 'wallet_connection', type: 'object', label: 'Wallet Connection', required: false },
-      { key: 'wallet_config', type: 'object', label: 'Wallet Config', required: false }
+      { key: 'selectedChain', type: 'object', label: 'Selected Chain Config', required: true },
+      { key: 'availableChains', type: 'array', label: 'Available Chains', required: true },
+      { key: 'compatibility', type: 'object', label: 'Compatibility Info', required: true },
+      { key: 'status', type: 'object', label: 'Chain Status', required: true }
     ],
     executor: {
-      type: 'generic'
+      type: 'avalanche',
+      timeout: 10000,
+      retries: 1,
+      instance: chainSelectorExecutor
     }
   })
 
-  // Register a token selector plugin so backend can execute tokenSelector nodes
-  executionEngine.registerPlugin({
-    id: 'tokenSelector',
-    name: 'Token Selector',
-    version: '1.0.0',
-    description: 'Select and emit tokens for downstream nodes',
-    category: 'Wallet',
-    inputs: [
-      { key: 'selected_token', type: 'token', label: 'Selected Token', required: false },
-      { key: 'role', type: 'string', label: 'Role (from|to|both)', required: false, defaultValue: 'both' }
-    ],
-    outputs: [
-      { key: 'selected_token', type: 'token', label: 'Selected Token', required: false },
-      { key: 'from_token', type: 'token', label: 'From Token', required: false },
-      { key: 'to_token', type: 'token', label: 'To Token', required: false }
-    ],
-    executor: {
-      type: 'javascript',
-      timeout: 5000,
-      retries: 0,
-      code: `
-        function execute(inputs) {
-          const role = (inputs.role || 'both').toLowerCase();
-          const token = inputs.selected_token || inputs.token || null;
-          const outputs = {};
-
-          if (token) {
-            outputs.selected_token = token;
-            if (role === 'from' || role === 'both') outputs.from_token = token;
-            if (role === 'to' || role === 'both') outputs.to_token = token;
-          }
-
-          return { success: true, outputs };
-        }
-      `
-    }
-  })
+  // Note: walletConnector and tokenSelector are already registered in loadPlugins()
+  // Removed duplicate registrations to avoid conflicts
 }
 
 // Track WebSocket connections

@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button"
 import { Save, Play, Zap, Trash2, Menu, X } from "lucide-react"
 import { getTemplateById } from "@/lib/templates"
 import { OneInchCodeGenerator, type CodeGenerationResult as OneInchCodeResult } from "@/lib/oneinch-code-generator"
+import { ICMCodeGenerator, type ICMCodeGenerationResult } from "@/lib/icm-code-generator"
 import { CodePreviewModal } from "./code-preview-modal"
 import { GitHubPublishModal } from "./github-publish-modal"
 import { LiveDashboardPreview } from "./live-dashboard-preview"
@@ -100,7 +101,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [templateLoaded, setTemplateLoaded] = useState(false)
-  const [codeResult, setCodeResult] = useState<CodeGenerationResult | OneInchCodeResult | null>(null)
+  const [codeResult, setCodeResult] = useState<CodeGenerationResult | OneInchCodeResult | ICMCodeGenerationResult | null>(null)
   const [showCodeModal, setShowCodeModal] = useState(false)
   const [showGitHubModal, setShowGitHubModal] = useState(false)
   const [autoConnect, setAutoConnect] = useState(true)
@@ -220,6 +221,22 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     setExecutionStatus(`Executing ${componentId}...`)
 
     try {
+      // Get component definition to apply default values
+      const component = unitePluginSystem.getComponent(componentId!)
+      let nodeConfig = { ...node.data?.config } || {}
+      
+      // Apply default values from component template if config is missing values
+      if (component?.template?.fields || component?.template?.configuration) {
+        const fields = component.template?.fields || component.template?.configuration || []
+        fields.forEach(field => {
+          if (nodeConfig[field.key] === undefined && field.defaultValue !== undefined) {
+            nodeConfig[field.key] = field.defaultValue
+          }
+        })
+      }
+      
+      console.log('🔧 Node config with defaults:', { componentId, nodeConfig, fields: component?.template?.fields?.length || 0 })
+
       // Execute single node workflow
       const singleNodeWorkflow = {
         id: `single-node-${Date.now()}`,
@@ -227,7 +244,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         nodes: [{
           id: node.id,
           type: componentId!,
-          config: node.data?.config || {},
+          config: nodeConfig,
           position: node.position
         }],
         connections: []
@@ -286,17 +303,33 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     setNodeOutputs({})
 
     try {
-      // Convert to workflow definition for plugin system
+      // Convert to workflow definition for plugin system with default values
       const workflowDefinition = {
         id: `workflow-${Date.now()}`,
         name: `Canvas Workflow`,
         description: 'Workflow generated from canvas',
-        nodes: nodes.map(node => ({
-          id: node.id,
-          type: node.data?.componentId || node.type || 'unknown', 
-          config: node.data?.config || {},
-          position: node.position
-        })),
+        nodes: nodes.map(node => {
+          const componentId = node.data?.componentId || node.type || 'unknown'
+          let nodeConfig = { ...node.data?.config } || {}
+          
+          // Apply default values from component template if config is missing values
+          const component = unitePluginSystem.getComponent(componentId)
+          if (component?.template?.fields || component?.template?.configuration) {
+            const fields = component.template?.fields || component.template?.configuration || []
+            fields.forEach(field => {
+              if (nodeConfig[field.key] === undefined && field.defaultValue !== undefined) {
+                nodeConfig[field.key] = field.defaultValue
+              }
+            })
+          }
+          
+          return {
+            id: node.id,
+            type: componentId, 
+            config: nodeConfig,
+            position: node.position
+          }
+        }),
         connections: edges.map(edge => ({
           id: edge.id,
           source: edge.source,
@@ -305,12 +338,45 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           targetHandle: edge.targetHandle || 'input'
         }))
       }
+      
+      console.log('🔧 Workflow with default configs:', workflowDefinition.nodes.map(n => ({ id: n.id, type: n.type, configKeys: Object.keys(n.config) })))
 
       setExecutionStatus("Executing workflow...")
 
-      // For template projects, use backend execution since UnitePluginSystem doesn't have all components
+      // Try frontend plugin system execution first, fallback to backend if needed
+      console.log('🎯 Attempting frontend plugin system execution')
+      
+      try {
+        // Use frontend plugin system execution
+        const result = await unitePluginSystem.executeWorkflow(workflowDefinition, {}, { environment: 'development' })
+        
+        if (result.success) {
+          console.log('✅ Frontend plugin system execution successful:', result)
+          
+          // Update node outputs with results
+          const outputUpdates: Record<string, any> = {}
+          result.nodeResults.forEach(nodeResult => {
+            outputUpdates[nodeResult.nodeId] = nodeResult.outputs
+          })
+          setNodeOutputs(outputUpdates)
+          
+          setExecutionStatus("✅ Workflow executed successfully")
+          
+          toast({
+            title: "🎉 Workflow Executed Successfully", 
+            description: `All ${result.nodeResults.length} nodes completed`,
+            variant: "default"
+          })
+          
+          return // Exit early on success
+        }
+      } catch (pluginError) {
+        console.warn('⚠️ Frontend plugin system execution failed, trying backend:', pluginError)
+      }
+      
+      // Fallback to backend execution for template projects
       if (projectId.startsWith('template-')) {
-        console.log('🎯 Using backend execution for template workflow')
+        console.log('🎯 Using backend execution as fallback')
 
         // Use backend execution path
         const executionId = await executionClient.executeWorkflow(workflowDefinition)
@@ -1190,24 +1256,74 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
     setSaving(false)
   }
 
+  // Helper function to detect ICM templates
+  const isICMTemplate = () => {
+    // Check if it's an ICM template by examining nodes for ICM-specific node types
+    const hasICMNodes = nodes.some(node => 
+      node.type === 'icmSender' || 
+      node.type === 'icmReceiver' || 
+      node.type === 'l1Config' || 
+      node.type === 'l1SimulatorDeployer'
+    )
+    
+    // Also check template ID if it's a predefined template
+    const isICMTemplateId = projectId.includes('avalanche') || projectId.includes('icm') || projectId.includes('l1')
+    
+    return hasICMNodes || isICMTemplateId
+  }
+
+  // Helper function to detect L1 Subnet Creation template specifically
+  const isL1SubnetTemplate = () => {
+    // Check for L1 deployment specific nodes
+    const hasL1Nodes = nodes.some(node => 
+      node.type === 'l1Config' || 
+      node.type === 'l1SimulatorDeployer'
+    )
+    
+    // Check if it's the specific L1 subnet template
+    const isL1TemplateId = projectId === 'template-avalanche-l1-simulation'
+    
+    return hasL1Nodes || isL1TemplateId
+  }
+
   // Helper function that generates code and returns the result
-  const generateCodeAndReturn = async (): Promise<CodeGenerationResult | OneInchCodeResult | null> => {
-    const projectName = isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"
+  const generateCodeAndReturn = async (): Promise<CodeGenerationResult | OneInchCodeResult | ICMCodeGenerationResult | null> => {
+    const isICM = isICMTemplate()
+    const isL1 = isL1SubnetTemplate()
+    const projectName = isTemplateProject 
+      ? (isL1 ? "AvalancheL1SubnetCreator" : isICM ? "AvalancheICMDashboard" : "My1inchDeFiSuite")
+      : "MyDeFiApp"
     
     if (isTemplateProject) {
-      // Always use 1inch code generator for template projects, regardless of execution status
-      console.log('🎯 Generating code for template project using OneInchCodeGenerator')
-      const result = OneInchCodeGenerator.generateFromWorkflow(
-        nodes, 
-        edges, 
-        projectName,
-        { 
-          network: "Ethereum",
-          hackathonMode: true,
-          oneInchApiKey: "template-mode-no-key-needed"
-        }
-      )
-      return result
+      if (isICM) {
+        // Use ICM code generator for ICM templates
+        console.log('🏔️ Generating code for ICM template project using ICMCodeGenerator')
+        const result = ICMCodeGenerator.generateFromWorkflow(
+          nodes, 
+          edges, 
+          projectName,
+          { 
+            network: "Avalanche Fuji",
+            templateMode: true,
+            avalancheRPC: "https://api.avax-test.network/ext/bc/C/rpc"
+          }
+        )
+        return result
+      } else {
+        // Use 1inch code generator for DeFi templates
+        console.log('🎯 Generating code for 1inch template project using OneInchCodeGenerator')
+        const result = OneInchCodeGenerator.generateFromWorkflow(
+          nodes, 
+          edges, 
+          projectName,
+          { 
+            network: "Ethereum",
+            hackathonMode: true,
+            oneInchApiKey: "template-mode-no-key-needed"
+          }
+        )
+        return result
+      }
     } else {
       // For custom workflows: always generate from the current node configuration.
       // If an executed workflow is available, we'll also try generating from execution
@@ -1540,10 +1656,10 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
   const isTemplateProject = projectId.startsWith('template-')
   
   // Helper function to convert codeResult to preview panel format
-  const convertCodeResultForPreviews = (result: CodeGenerationResult | OneInchCodeResult | null) => {
+  const convertCodeResultForPreviews = (result: CodeGenerationResult | OneInchCodeResult | ICMCodeGenerationResult | null) => {
     if (!result) return null
     
-    // Check if it's OneInchCodeResult (has array files with path, type, content)
+    // Check if it's OneInchCodeResult or ICMCodeGenerationResult (both have array files with path, type, content)
     if ('files' in result && Array.isArray(result.files)) {
       const filesRecord: Record<string, string> = {}
       result.files.forEach(file => {
@@ -1859,7 +1975,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           <EmbeddedPreviewPanel
             nodes={nodes}
             edges={edges}
-            projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+            projectName={isTemplateProject ? (isL1SubnetTemplate() ? "AvalancheL1SubnetCreator" : isICMTemplate() ? "AvalancheICMDashboard" : "My1inchDeFiSuite") : "MyDeFiApp"}
             isVisible={showEmbeddedPreview}
             onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
             codeResult={convertCodeResultForPreviews(codeResult)}
@@ -1868,7 +1984,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           <FunctionalPreviewPanel
             nodes={nodes}
             edges={edges}
-            projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+            projectName={isTemplateProject ? (isL1SubnetTemplate() ? "AvalancheL1SubnetCreator" : isICMTemplate() ? "AvalancheICMDashboard" : "My1inchDeFiSuite") : "MyDeFiApp"}
             isVisible={showEmbeddedPreview}
             onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
             codeResult={convertCodeResultForPreviews(codeResult)}
@@ -1877,7 +1993,7 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
           <RealTestnetPreview
             nodes={nodes}
             edges={edges}
-            projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+            projectName={isTemplateProject ? (isL1SubnetTemplate() ? "AvalancheL1SubnetCreator" : isICMTemplate() ? "AvalancheICMDashboard" : "My1inchDeFiSuite") : "MyDeFiApp"}
             isVisible={showEmbeddedPreview}
             onToggle={() => setShowEmbeddedPreview(!showEmbeddedPreview)}
             codeResult={convertCodeResultForPreviews(codeResult)}
@@ -1897,21 +2013,21 @@ export function FlowCanvas({ projectId }: FlowCanvasProps) {
         isOpen={showCodeModal}
         onClose={() => setShowCodeModal(false)}
         codeResult={codeResult as OneInchCodeResult | null}
-        projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+        projectName={isTemplateProject ? (isL1SubnetTemplate() ? "AvalancheL1SubnetCreator" : isICMTemplate() ? "AvalancheICMDashboard" : "My1inchDeFiSuite") : "MyDeFiApp"}
       />
 
       <GitHubPublishModal
         isOpen={showGitHubModal}
         onClose={() => setShowGitHubModal(false)}
-        codeResult={codeResult as OneInchCodeResult | null}                    // ✅ Correct prop
-        projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+        codeResult={codeResult as CodeGenerationResult | ICMCodeGenerationResult | null}
+        projectName={isTemplateProject ? (isL1SubnetTemplate() ? "AvalancheL1SubnetCreator" : isICMTemplate() ? "AvalancheICMDashboard" : "My1inchDeFiSuite") : "MyDeFiApp"}
       />
 
       <LiveDashboardPreview
         isOpen={showLivePreviewModal}
         onClose={() => setShowLivePreviewModal(false)}
         codeResult={codeResult as any}
-        projectName={isTemplateProject ? "My1inchDeFiSuite" : "MyDeFiApp"}
+        projectName={isTemplateProject ? (isL1SubnetTemplate() ? "AvalancheL1SubnetCreator" : isICMTemplate() ? "AvalancheICMDashboard" : "My1inchDeFiSuite") : "MyDeFiApp"}
       />
 
       {/* AI Chatbot Panel */}

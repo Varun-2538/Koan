@@ -28,12 +28,13 @@ import {
   LogOut
 } from "lucide-react"
 import type { CodeGenerationResult } from "@/lib/oneinch-code-generator"
+import type { ICMCodeGenerationResult } from "@/lib/icm-code-generator"
 import { createGitHubOAuth, type GitHubUser } from "@/lib/github-oauth"
 
 interface GitHubPublishModalProps {
   isOpen: boolean
   onClose: () => void
-  codeResult: CodeGenerationResult | null
+  codeResult: CodeGenerationResult | ICMCodeGenerationResult | null
   projectName?: string
 }
 

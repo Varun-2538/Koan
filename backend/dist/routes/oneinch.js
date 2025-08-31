@@ -12,13 +12,13 @@ const ONEINCH_BASE_URL = 'https://api.1inch.dev';
 if (!ONEINCH_API_KEY) {
     console.warn('WARNING: ONEINCH_API_KEY not set in environment variables');
 }
-// Helper function to make 1inch API requests
-async function make1inchRequest(endpoint, params = {}) {
+// Helper function to make 1inch API requests with optional per-user override
+async function make1inchRequest(endpoint, params = {}, apiKeyOverride) {
     try {
         const url = `${ONEINCH_BASE_URL}${endpoint}`;
         const config = {
             headers: {
-                'Authorization': `Bearer ${ONEINCH_API_KEY}`,
+                'Authorization': `Bearer ${apiKeyOverride || ONEINCH_API_KEY}`,
                 'accept': 'application/json'
             },
             params
@@ -36,7 +36,7 @@ async function make1inchRequest(endpoint, params = {}) {
 // Get swap quote
 router.get('/quote', async (req, res) => {
     try {
-        const { chainId, src, dst, amount, from, slippage } = req.query;
+        const { chainId, src, dst, amount, from, slippage, apiKey } = req.query;
         // Validate required parameters
         if (!chainId || !src || !dst || !amount) {
             return res.status(400).json({
@@ -56,7 +56,7 @@ router.get('/quote', async (req, res) => {
             params['from'] = from;
         if (slippage)
             params['slippage'] = slippage;
-        const quote = await make1inchRequest(`/swap/v5.2/${chainId}/quote`, params);
+        const quote = await make1inchRequest(`/swap/v5.2/${chainId}/quote`, params, apiKey);
         res.json(quote);
     }
     catch (error) {
@@ -70,7 +70,7 @@ router.get('/quote', async (req, res) => {
 // Execute swap
 router.post('/swap', async (req, res) => {
     try {
-        const { chainId, src, dst, amount, from, slippage, referrer, fee } = req.body;
+        const { chainId, src, dst, amount, from, slippage, referrer, fee, apiKey } = req.body;
         // Validate required parameters
         if (!chainId || !src || !dst || !amount || !from) {
             return res.status(400).json({
@@ -91,7 +91,7 @@ router.post('/swap', async (req, res) => {
             params['referrer'] = referrer;
             params['fee'] = fee;
         }
-        const swap = await make1inchRequest(`/swap/v5.2/${chainId}/swap`, params);
+        const swap = await make1inchRequest(`/swap/v5.2/${chainId}/swap`, params, apiKey);
         res.json(swap);
     }
     catch (error) {
@@ -105,11 +105,11 @@ router.post('/swap', async (req, res) => {
 // Get supported tokens
 router.get('/tokens', async (req, res) => {
     try {
-        const { chainId } = req.query;
+        const { chainId, apiKey } = req.query;
         if (!chainId) {
             return res.status(400).json({ error: 'chainId is required' });
         }
-        const tokens = await make1inchRequest(`/swap/v5.2/${chainId}/tokens`);
+        const tokens = await make1inchRequest(`/swap/v5.2/${chainId}/tokens`, {}, apiKey);
         res.json(tokens);
     }
     catch (error) {

@@ -690,17 +690,23 @@ export class GenericExecutionEngine extends EventEmitter {
    */
   private async executeSteps(execution: WorkflowExecution): Promise<void> {
     execution.status = 'running'
-    
-    while (this.hasRunnableSteps(execution.steps)) {
-      const runnableSteps = this.getRunnableSteps(execution.steps)
-      
-      if (runnableSteps.length === 0) {
-        throw new ExecutionError('No runnable steps found, possible deadlock', undefined, undefined, execution.id)
+
+    // Strict sequential execution in node insertion order (Langflow-style)
+    const orderedNodeIds = Array.from(execution.steps.keys())
+
+    while (true) {
+      // Pick the first pending step whose dependencies are completed, honoring original order
+      let nextStep: ExecutionStep | undefined
+      for (const nodeId of orderedNodeIds) {
+        const step = execution.steps.get(nodeId)!
+        if (step.status !== 'pending') continue
+        const depsDone = step.dependencies.every(depId => execution.steps.get(depId)?.status === 'completed')
+        if (depsDone) { nextStep = step; break }
       }
 
-      // Execute runnable steps in parallel (for independent nodes)
-      const promises = runnableSteps.map(step => this.executeStep(step, execution))
-      await Promise.all(promises)
+      if (!nextStep) break // no more runnable steps
+
+      await this.executeStep(nextStep, execution)
     }
 
     // Check if all steps completed successfully
@@ -758,8 +764,17 @@ export class GenericExecutionEngine extends EventEmitter {
       // Collect inputs from dependencies
       const inputs = this.collectStepInputs(step, execution.steps)
 
+      // Apply plugin default values before validation
+      const inputsWithDefaults: Record<string, any> = { ...inputs }
+      for (const inputDef of plugin.inputs) {
+        const current = inputsWithDefaults[inputDef.key]
+        if ((current === undefined || current === null || current === '') && inputDef.defaultValue !== undefined) {
+          inputsWithDefaults[inputDef.key] = inputDef.defaultValue
+        }
+      }
+
       // Validate inputs against plugin definition
-      const validation = this.validatePluginInputs(plugin, inputs)
+      const validation = this.validatePluginInputs(plugin, inputsWithDefaults)
       if (!validation.valid) {
         throw new ExecutionError(
           `Input validation failed: ${validation.errors.join(', ')}`,
@@ -787,7 +802,7 @@ export class GenericExecutionEngine extends EventEmitter {
         case 'avalanche':
           if (plugin.executor.instance) {
             // Use the direct executor instance for Avalanche plugins
-            result = await plugin.executor.instance.execute(inputs, execution.context)
+            result = await plugin.executor.instance.execute(inputsWithDefaults, execution.context)
           } else {
             throw new ExecutionError(
               'Avalanche plugin missing executor instance',
@@ -799,7 +814,7 @@ export class GenericExecutionEngine extends EventEmitter {
           break
         case 'generic':
         default:
-          result = await this.executeGeneric(plugin, inputs, execution.context)
+          result = await this.executeGeneric(plugin, inputsWithDefaults, execution.context)
           break
       }
       
@@ -1142,6 +1157,20 @@ export class GenericExecutionEngine extends EventEmitter {
       inputs['from'] = inputs['from_address'] || inputs['wallet_address'] || inputs['address']
     }
 
+    // Provide compatibility aliasing for chain selector required input
+    // Prefer explicit default_chain, then chainId/chain_id, then first of supported_chains
+    if (!inputs['primary_chain']) {
+      if (inputs['default_chain']) {
+        inputs['primary_chain'] = String(inputs['default_chain'])
+      } else if (inputs['chainId']) {
+        inputs['primary_chain'] = String(inputs['chainId'])
+      } else if (inputs['chain_id']) {
+        inputs['primary_chain'] = String(inputs['chain_id'])
+      } else if (Array.isArray(inputs['supported_chains']) && inputs['supported_chains'][0]) {
+        inputs['primary_chain'] = String(inputs['supported_chains'][0])
+      }
+    }
+
     // Final safety: if critical fields are still missing, scan all completed steps' outputs
     const fillIfMissing = (key: string, candidates: string[]) => {
       if (inputs[key] !== undefined && inputs[key] !== '') return
@@ -1159,6 +1188,7 @@ export class GenericExecutionEngine extends EventEmitter {
     }
 
     fillIfMissing('chain_id', ['chain_id', 'chainId'])
+    fillIfMissing('primary_chain', ['primary_chain', 'default_chain', 'chainId', 'chain_id'])
     fillIfMissing('src', ['src', 'from_token', 'fromToken'])
     fillIfMissing('dst', ['dst', 'to_token', 'toToken'])
     fillIfMissing('amount', ['amount'])

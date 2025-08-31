@@ -1,12 +1,31 @@
-import { NodeExecutor, ExecutionContext, NodeExecutionResult, ChainConfig } from '../types';
+import { NodeExecutor, ExecutionContext, NodeExecutionResult } from '../types';
 import { logger } from '../utils/logger';
+
+// Extended chain configuration for chain selector
+interface ExtendedChainConfig {
+  chainId: string
+  name: string
+  symbol: string
+  rpcUrl: string
+  explorerUrl: string
+  nativeCurrency: string
+  isTestnet: boolean
+  blockTime: number
+  gasLimit: string
+  supportedBy1inch: boolean
+  isAvalanche?: boolean
+  avalancheChainType?: 'C-Chain' | 'L1-Subnet' | 'P-Chain' | 'X-Chain'
+  subnetId?: string
+  supportsICM?: boolean
+  isCustom?: boolean
+}
 
 export class ChainSelectorExecutor implements NodeExecutor {
   readonly type = 'chainSelector';
   readonly name = 'Chain Selector';
   readonly description = 'Select and configure blockchain networks for DeFi operations';
 
-  private chainConfigs: Record<string, ChainConfig> = {
+  private chainConfigs: Record<string, ExtendedChainConfig> = {
     '1': {
       chainId: '1',
       name: 'Ethereum',
@@ -81,7 +100,7 @@ export class ChainSelectorExecutor implements NodeExecutor {
     },
     '43114': {
       chainId: '43114',
-      name: 'Avalanche',
+      name: 'Avalanche C-Chain',
       symbol: 'AVAX',
       rpcUrl: process.env.AVALANCHE_RPC_URL || 'https://api.avax.network/ext/bc/C/rpc',
       explorerUrl: 'https://snowtrace.io',
@@ -89,7 +108,9 @@ export class ChainSelectorExecutor implements NodeExecutor {
       isTestnet: false,
       blockTime: 2,
       gasLimit: '30000000',
-      supportedBy1inch: true
+      supportedBy1inch: true,
+      isAvalanche: true,
+      avalancheChainType: 'C-Chain'
     },
     '25': {
       chainId: '25',
@@ -115,6 +136,52 @@ export class ChainSelectorExecutor implements NodeExecutor {
       gasLimit: '30000000',
       supportedBy1inch: true
     },
+    // Avalanche Subnets
+    '53935': {
+      chainId: '53935',
+      name: 'DeFi Kingdom (DFK)',
+      symbol: 'JEWEL',
+      rpcUrl: process.env.DFK_RPC_URL || 'https://subnets.avax.network/defi-kingdoms/dfk-chain/rpc',
+      explorerUrl: 'https://subnets.avax.network/defi-kingdoms',
+      nativeCurrency: 'JEWEL',
+      isTestnet: false,
+      blockTime: 2,
+      gasLimit: '30000000',
+      supportedBy1inch: false,
+      isAvalanche: true,
+      avalancheChainType: 'L1-Subnet',
+      subnetId: '2rwhRKN8qfxK9AEJunfUjn5WH7PQzUPPQKCb59ak6fwsrwF2R'
+    },
+    '432204': {
+      chainId: '432204',
+      name: 'Dexalot Subnet',
+      symbol: 'ALOT',
+      rpcUrl: process.env.DEXALOT_RPC_URL || 'https://subnets.avax.network/dexalot/mainnet/rpc',
+      explorerUrl: 'https://subnets.avax.network/dexalot',
+      nativeCurrency: 'ALOT',
+      isTestnet: false,
+      blockTime: 2,
+      gasLimit: '30000000',
+      supportedBy1inch: false,
+      isAvalanche: true,
+      avalancheChainType: 'L1-Subnet',
+      subnetId: '2VCAhX6vE3UnXC6s1CBPE6jJ4c4cHWMfPgCptuWS59pQ8WYxXw'
+    },
+    '78430': {
+      chainId: '78430',
+      name: 'Amplify Subnet',
+      symbol: 'AMP',
+      rpcUrl: process.env.AMPLIFY_RPC_URL || 'https://subnets.avax.network/amplify/mainnet/rpc',
+      explorerUrl: 'https://subnets.avax.network/amplify',
+      nativeCurrency: 'AMP',
+      isTestnet: false,
+      blockTime: 2,
+      gasLimit: '30000000',
+      supportedBy1inch: false,
+      isAvalanche: true,
+      avalancheChainType: 'L1-Subnet',
+      subnetId: 'zJytnh96Pc8rM337bBrtMvJDbEdDNjcXiG3WkTNCiLp8krJUk'
+    },
     // Testnets
     '5': {
       chainId: '5',
@@ -127,11 +194,60 @@ export class ChainSelectorExecutor implements NodeExecutor {
       blockTime: 15,
       gasLimit: '30000000',
       supportedBy1inch: false
+    },
+    '43113': {
+      chainId: '43113',
+      name: 'Avalanche Fuji C-Chain',
+      symbol: 'AVAX',
+      rpcUrl: process.env.AVALANCHE_FUJI_RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc',
+      explorerUrl: 'https://testnet.snowtrace.io',
+      nativeCurrency: 'AVAX',
+      isTestnet: true,
+      blockTime: 2,
+      gasLimit: '30000000',
+      supportedBy1inch: false,
+      isAvalanche: true,
+      avalancheChainType: 'C-Chain',
+      supportsICM: true
+    },
+    '99999': {
+      chainId: '99999',
+      name: 'Custom L1 Subnet (Template)',
+      symbol: 'CUSTOM',
+      rpcUrl: 'http://localhost:8545', // Local development
+      explorerUrl: 'http://localhost:4000',
+      nativeCurrency: 'CUSTOM',
+      isTestnet: true,
+      blockTime: 1,
+      gasLimit: '30000000',
+      supportedBy1inch: false,
+      isAvalanche: true,
+      avalancheChainType: 'L1-Subnet',
+      subnetId: 'template-subnet-id',
+      supportsICM: true,
+      isCustom: true
     }
   };
 
   async validate(inputs: Record<string, any>): Promise<{ valid: boolean; errors: string[] }> {
     const errors: string[] = [];
+
+    // Provide fallback for primary_chain if completely missing
+    if (!inputs.primary_chain) {
+      // Try common fallbacks
+      if (inputs.defaultChain) {
+        inputs.primary_chain = inputs.defaultChain;
+      } else if (inputs.chainId) {
+        inputs.primary_chain = inputs.chainId;
+      } else if (inputs.chain_id) {
+        inputs.primary_chain = inputs.chain_id;
+      } else if (Array.isArray(inputs.supportedChains) && inputs.supportedChains[0]) {
+        inputs.primary_chain = inputs.supportedChains[0];
+      } else {
+        // Ultimate fallback to Avalanche Fuji for ICM compatibility
+        inputs.primary_chain = '43113';
+      }
+    }
 
     // Basic validation
     if (!inputs.primary_chain) {
@@ -156,6 +272,21 @@ export class ChainSelectorExecutor implements NodeExecutor {
 
   async execute(inputs: Record<string, any>, context: ExecutionContext): Promise<NodeExecutionResult> {
     try {
+      // Apply same fallback logic as in validate
+      if (!inputs.primary_chain) {
+        if (inputs.defaultChain) {
+          inputs.primary_chain = inputs.defaultChain;
+        } else if (inputs.chainId) {
+          inputs.primary_chain = inputs.chainId;
+        } else if (inputs.chain_id) {
+          inputs.primary_chain = inputs.chain_id;
+        } else if (Array.isArray(inputs.supportedChains) && inputs.supportedChains[0]) {
+          inputs.primary_chain = inputs.supportedChains[0];
+        } else {
+          inputs.primary_chain = '43113'; // Avalanche Fuji default
+        }
+      }
+
       logger.info(`🔗 Selecting blockchain: ${inputs.primary_chain}`);
 
       const primaryChain = this.chainConfigs[inputs.primary_chain];
@@ -171,7 +302,7 @@ export class ChainSelectorExecutor implements NodeExecutor {
 
       const result = {
         success: true,
-        data: {
+        outputs: {
           selectedChain: {
             chainId: primaryChain.chainId,
             name: primaryChain.name,
@@ -196,7 +327,16 @@ export class ChainSelectorExecutor implements NodeExecutor {
             enableTestnet: inputs.enable_testnet || false,
             availableChainsFilter: inputs.available_chains || 'all'
           }
-        }
+        },
+        logs: [
+          `🔗 Selected chain: ${primaryChain.name} (${primaryChain.chainId})`,
+          `⚡ Block time: ${primaryChain.blockTime}s`,
+          `💰 1inch support: ${supports1inch ? 'Yes' : 'No'}`,
+          `🧪 Testnet: ${primaryChain.isTestnet ? 'Yes' : 'No'}`,
+          `📊 Available chains: ${availableChains.length}`,
+          ...this.getChainRecommendations(primaryChain)
+        ],
+        executionTime: Date.now() - Date.now() // Will be set by caller
       };
 
       logger.info(`✅ Chain selection completed: ${primaryChain.name}`);
@@ -206,7 +346,13 @@ export class ChainSelectorExecutor implements NodeExecutor {
       logger.error(`❌ Chain selection failed:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Chain selection failed'
+        outputs: {},
+        error: error instanceof Error ? error.message : 'Chain selection failed',
+        logs: [
+          '❌ Chain selection failed',
+          `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        ],
+        executionTime: Date.now() - Date.now()
       };
     }
   }
@@ -216,7 +362,7 @@ export class ChainSelectorExecutor implements NodeExecutor {
     return '0';
   }
 
-  private getAvailableChains(inputs: Record<string, any>): ChainConfig[] {
+  private getAvailableChains(inputs: Record<string, any>): ExtendedChainConfig[] {
     let chains = Object.values(this.chainConfigs);
 
     // Filter by testnet preference
@@ -234,10 +380,25 @@ export class ChainSelectorExecutor implements NodeExecutor {
       chains = chains.filter(chain => !chain.isTestnet);
     }
 
+    // Filter by Avalanche only
+    if (inputs.available_chains === 'avalanche_only') {
+      chains = chains.filter(chain => chain.isAvalanche);
+    }
+
+    // Filter by ICM support
+    if (inputs.available_chains === 'icm_compatible') {
+      chains = chains.filter(chain => chain.supportsICM);
+    }
+
+    // Filter by L1 subnets only
+    if (inputs.available_chains === 'l1_subnets_only') {
+      chains = chains.filter(chain => chain.avalancheChainType === 'L1-Subnet');
+    }
+
     return chains;
   }
 
-  private async getChainStatus(chain: ChainConfig) {
+  private async getChainStatus(chain: ExtendedChainConfig) {
     try {
       // In a real implementation, this would check RPC connectivity
       return {
@@ -276,7 +437,7 @@ export class ChainSelectorExecutor implements NodeExecutor {
     return gasPrices[chainId] || '20000000000';
   }
 
-  private getChainRecommendations(chain: ChainConfig): string[] {
+  private getChainRecommendations(chain: ExtendedChainConfig): string[] {
     const recommendations: string[] = [];
 
     if (chain.isTestnet) {
@@ -301,6 +462,23 @@ export class ChainSelectorExecutor implements NodeExecutor {
 
     if (chain.chainId === '1') {
       recommendations.push('🏆 Ethereum mainnet - highest liquidity and most protocols available');
+    }
+
+    // Avalanche-specific recommendations
+    if (chain.isAvalanche) {
+      if (chain.avalancheChainType === 'C-Chain') {
+        recommendations.push('🏔️ Avalanche C-Chain - EVM-compatible with fast finality');
+      } else if (chain.avalancheChainType === 'L1-Subnet') {
+        recommendations.push('⚡ Avalanche L1 Subnet - Custom blockchain with dedicated resources');
+      }
+      
+      if (chain.supportsICM) {
+        recommendations.push('📤 Supports Avalanche ICM for cross-chain messaging');
+      }
+      
+      if (chain.isCustom) {
+        recommendations.push('🔧 Custom subnet - designed for your specific use case');
+      }
     }
 
     return recommendations;

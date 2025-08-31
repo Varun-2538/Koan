@@ -21,6 +21,8 @@ const icm_receiver_executor_1 = require("@/nodes/icm-receiver-executor");
 // Avalanche L1 imports
 const l1_config_executor_1 = require("@/nodes/l1-config-executor");
 const l1_simulator_deployer_executor_1 = require("@/nodes/l1-simulator-deployer-executor");
+// Chain selector import
+const chain_selector_executor_1 = require("@/nodes/chain-selector-executor");
 require("./preview-server");
 // Load environment variables
 dotenv_1.default.config();
@@ -138,6 +140,7 @@ const initializeEngine = async () => {
     const icmReceiverExecutor = new icm_receiver_executor_1.IcmReceiverExecutor(logger);
     const l1ConfigExecutor = new l1_config_executor_1.L1ConfigExecutor(logger);
     const l1SimulatorDeployerExecutor = new l1_simulator_deployer_executor_1.L1SimulatorDeployerExecutor(logger);
+    const chainSelectorExecutor = new chain_selector_executor_1.ChainSelectorExecutor();
     // Register ICM plugins with executor instances
     executionEngine.registerPlugin({
         id: 'icmSender',
@@ -232,6 +235,94 @@ const initializeEngine = async () => {
             timeout: 60000,
             retries: 1,
             instance: l1SimulatorDeployerExecutor // Direct executor instance
+        }
+    });
+    // Register chainSelector plugin
+    executionEngine.registerPlugin({
+        id: 'chainSelector',
+        name: 'Chain Selector',
+        version: '1.0.0',
+        description: 'Select and configure blockchain networks for DeFi operations',
+        category: 'Blockchain',
+        inputs: [
+            { key: 'primary_chain', type: 'string', label: 'Primary Chain', required: true },
+            { key: 'enable_testnet', type: 'boolean', label: 'Enable Testnet', required: false, defaultValue: false },
+            { key: 'available_chains', type: 'string', label: 'Available Chains Filter', required: false, defaultValue: 'all' }
+        ],
+        outputs: [
+            { key: 'selectedChain', type: 'object', label: 'Selected Chain Config', required: true },
+            { key: 'availableChains', type: 'array', label: 'Available Chains', required: true },
+            { key: 'compatibility', type: 'object', label: 'Compatibility Info', required: true },
+            { key: 'status', type: 'object', label: 'Chain Status', required: true }
+        ],
+        executor: {
+            type: 'blockchain',
+            timeout: 10000,
+            retries: 1,
+            instance: chainSelectorExecutor
+        }
+    });
+    // Register a wallet connector plugin to support walletConnector nodes
+    executionEngine.registerPlugin({
+        id: 'walletConnector',
+        name: 'Wallet Connector',
+        version: '1.0.0',
+        description: 'Connect and validate wallet information for flows',
+        category: 'Wallet',
+        inputs: [
+            { key: 'wallet_address', type: 'address', label: 'Wallet Address', required: false },
+            { key: 'wallet_provider', type: 'string', label: 'Wallet Provider', required: false },
+            { key: 'supported_wallets', type: 'array', label: 'Supported Wallets', required: false },
+            { key: 'supported_networks', type: 'array', label: 'Supported Networks', required: false },
+            { key: 'default_network', type: 'number', label: 'Default Network', required: false },
+            { key: 'auto_connect', type: 'boolean', label: 'Auto Connect', required: false },
+            { key: 'show_balance', type: 'boolean', label: 'Show Balance', required: false },
+            { key: 'show_network_switcher', type: 'boolean', label: 'Show Network Switcher', required: false },
+            { key: 'template_creation_mode', type: 'boolean', label: 'Template Mode', required: false }
+        ],
+        outputs: [
+            { key: 'wallet_connection', type: 'object', label: 'Wallet Connection', required: false },
+            { key: 'wallet_config', type: 'object', label: 'Wallet Config', required: false }
+        ],
+        executor: {
+            type: 'generic'
+        }
+    });
+    // Register a token selector plugin so backend can execute tokenSelector nodes
+    executionEngine.registerPlugin({
+        id: 'tokenSelector',
+        name: 'Token Selector',
+        version: '1.0.0',
+        description: 'Select and emit tokens for downstream nodes',
+        category: 'Wallet',
+        inputs: [
+            { key: 'selected_token', type: 'token', label: 'Selected Token', required: false },
+            { key: 'role', type: 'string', label: 'Role (from|to|both)', required: false, defaultValue: 'both' }
+        ],
+        outputs: [
+            { key: 'selected_token', type: 'token', label: 'Selected Token', required: false },
+            { key: 'from_token', type: 'token', label: 'From Token', required: false },
+            { key: 'to_token', type: 'token', label: 'To Token', required: false }
+        ],
+        executor: {
+            type: 'javascript',
+            timeout: 5000,
+            retries: 0,
+            code: `
+        function execute(inputs) {
+          const role = (inputs.role || 'both').toLowerCase();
+          const token = inputs.selected_token || inputs.token || null;
+          const outputs = {};
+
+          if (token) {
+            outputs.selected_token = token;
+            if (role === 'from' || role === 'both') outputs.from_token = token;
+            if (role === 'to' || role === 'both') outputs.to_token = token;
+          }
+
+          return { success: true, outputs };
+        }
+      `
         }
     });
 };

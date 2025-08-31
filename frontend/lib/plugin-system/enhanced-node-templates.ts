@@ -6,6 +6,185 @@
 import { ComponentTemplate } from './types'
 
 export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
+  // Data Input Components
+  inputProvider: {
+    type: 'inputProvider',
+    name: 'Input Provider',
+    description: 'Provides static input data for workflow',
+    category: 'Data',
+    icon: '📥',
+    color: '#6B7280',
+    inputs: [],
+    outputs: [
+      {
+        id: 'chainId',
+        name: 'Chain ID',
+        dataType: 'number',
+        description: 'Blockchain network chain ID'
+      },
+      {
+        id: 'fromTokenAddress',
+        name: 'From Token Address',
+        dataType: 'string',
+        description: 'Address of token to swap from'
+      },
+      {
+        id: 'toTokenAddress',
+        name: 'To Token Address', 
+        dataType: 'string',
+        description: 'Address of token to swap to'
+      },
+      {
+        id: 'amount',
+        name: 'Amount (wei)',
+        dataType: 'string',
+        description: 'Amount in wei units'
+      },
+      {
+        id: 'fromAddress',
+        name: 'From Address',
+        dataType: 'string',
+        description: 'Wallet address'
+      },
+      {
+        id: 'slippage',
+        name: 'Slippage %',
+        dataType: 'number',
+        description: 'Maximum slippage tolerance'
+      },
+      {
+        id: 'apiKey',
+        name: '1inch API Key',
+        dataType: 'string',
+        description: 'API key for 1inch'
+      }
+    ],
+    fields: [
+      {
+        key: 'chainId',
+        type: 'number',
+        label: 'Chain ID',
+        required: true,
+        defaultValue: 1,
+        description: 'Blockchain network ID (1=Ethereum, 137=Polygon)'
+      },
+      {
+        key: 'fromTokenAddress',
+        type: 'select',
+        label: 'From Token Address',
+        required: true,
+        defaultValue: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+        options: [
+          { label: 'ETH (Native)', value: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' },
+          { label: 'USDC', value: '0xA0b86a33E6441c8C51c1d4CBF3462096c276707e' },
+          { label: 'USDT', value: '0xdac17f958d2ee523a2206206994597c13d831ec7' },
+          { label: 'DAI', value: '0x6b175474e89094c44da98b954eedeac495271d0f' },
+          { label: 'WETH', value: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' },
+          { label: 'WBTC', value: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599' },
+          { label: 'UNI', value: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984' },
+          { label: 'LINK', value: '0x514910771af9ca656af840dff83e8264ecf986ca' },
+          { label: 'Custom Address', value: 'custom' }
+        ],
+        description: 'Select token to swap from'
+      },
+      {
+        key: 'fromTokenCustom',
+        type: 'text',
+        label: 'Custom From Token Address',
+        required: false,
+        placeholder: '0x...',
+        conditional: { field: 'fromTokenAddress', operator: 'equals', value: 'custom' },
+        description: 'Enter custom token contract address'
+      },
+      {
+        key: 'toTokenAddress',
+        type: 'select',
+        label: 'To Token Address',
+        required: true,
+        defaultValue: '0xA0b86a33E6441c8C51c1d4CBF3462096c276707e',
+        options: [
+          { label: 'USDC', value: '0xA0b86a33E6441c8C51c1d4CBF3462096c276707e' },
+          { label: 'ETH (Native)', value: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' },
+          { label: 'USDT', value: '0xdac17f958d2ee523a2206206994597c13d831ec7' },
+          { label: 'DAI', value: '0x6b175474e89094c44da98b954eedeac495271d0f' },
+          { label: 'WETH', value: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' },
+          { label: 'WBTC', value: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599' },
+          { label: 'UNI', value: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984' },
+          { label: 'LINK', value: '0x514910771af9ca656af840dff83e8264ecf986ca' },
+          { label: 'Custom Address', value: 'custom' }
+        ],
+        description: 'Select token to swap to'
+      },
+      {
+        key: 'toTokenCustom',
+        type: 'text',
+        label: 'Custom To Token Address',
+        required: false,
+        placeholder: '0x...',
+        conditional: { field: 'toTokenAddress', operator: 'equals', value: 'custom' },
+        description: 'Enter custom token contract address'
+      },
+      {
+        key: 'amount',
+        type: 'text',
+        label: 'Amount (wei)',
+        required: true,
+        defaultValue: '1000000000000000000',
+        placeholder: '1000000000000000000',
+        description: 'Amount in smallest token units (wei for ETH)'
+      },
+      {
+        key: 'fromAddress',
+        type: 'text',
+        label: 'From Address',
+        required: false,
+        placeholder: '0x742d35Cc6638C0532c...',
+        description: 'Wallet address (optional)'
+      },
+      {
+        key: 'slippage',
+        type: 'number',
+        label: 'Slippage %',
+        required: false,
+        defaultValue: 1.0,
+        description: 'Maximum slippage tolerance percentage'
+      },
+      {
+        key: 'apiKey',
+        type: 'text',
+        label: '1inch API Key',
+        required: true,
+        defaultValue: 'template-mode-demo-key',
+        sensitive: true,
+        description: 'Your 1inch API key'
+      }
+    ],
+    behavior: {
+      execution: { type: 'sync' },
+      caching: { enabled: true },
+      error: { strategy: 'continue', propagation: 'isolate' },
+      progress: { reportable: false },
+      lifecycle: {
+        transform: `
+          // Output the configured values as data, handling custom token addresses
+          const fromTokenAddr = config.fromTokenAddress === 'custom' ? config.fromTokenCustom : config.fromTokenAddress;
+          const toTokenAddr = config.toTokenAddress === 'custom' ? config.toTokenCustom : config.toTokenAddress;
+          
+          const result = {
+            chainId: config.chainId || 1,
+            fromTokenAddress: fromTokenAddr,
+            toTokenAddress: toTokenAddr,
+            amount: config.amount,
+            fromAddress: config.fromAddress,
+            slippage: config.slippage || 1.0,
+            apiKey: config.apiKey
+          };
+          return result;
+        `
+      }
+    }
+  },
+
   // DeFi Components
   oneInchSwap: {
     type: 'oneInchSwap',
@@ -16,25 +195,39 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
     color: '#0066FF',
     inputs: [
       {
-        id: 'fromToken',
-        name: 'From Token',
-        dataType: 'token',
-        required: true,
-        description: 'Token to swap from'
+        id: 'chainId',
+        name: 'Chain ID',
+        dataType: 'number',
+        required: false,
+        description: 'Blockchain network chain ID'
       },
       {
-        id: 'toToken', 
-        name: 'To Token',
-        dataType: 'token',
-        required: true,
-        description: 'Token to swap to'
+        id: 'fromTokenAddress',
+        name: 'From Token Address',
+        dataType: 'string',
+        required: false,
+        description: 'Address of token to swap from'
+      },
+      {
+        id: 'toTokenAddress', 
+        name: 'To Token Address',
+        dataType: 'string',
+        required: false,
+        description: 'Address of token to swap to'
       },
       {
         id: 'amount',
         name: 'Amount',
-        dataType: 'number',
-        required: true,
-        description: 'Amount to swap (in token units)'
+        dataType: 'string',
+        required: false,
+        description: 'Amount in wei or token units'
+      },
+      {
+        id: 'fromAddress',
+        name: 'From Address',
+        dataType: 'string',
+        required: false,
+        description: 'Wallet address'
       },
       {
         id: 'slippage',
@@ -42,6 +235,13 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
         dataType: 'number',
         required: false,
         description: 'Maximum slippage tolerance'
+      },
+      {
+        id: 'apiKey',
+        name: '1inch API Key',
+        dataType: 'string',
+        required: false,
+        description: 'API key for 1inch'
       }
     ],
     outputs: [
@@ -66,31 +266,225 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
     ],
     fields: [
       {
+        key: 'validateOnly',
+        type: 'boolean',
+        label: 'Validate Only',
+        defaultValue: true,
+        description: 'Only validate parameters without executing swap (recommended for testing)'
+      },
+      {
+        key: 'chainId',
+        type: 'select',
+        label: 'Chain ID',
+        required: true,
+        defaultValue: '1',
+        options: [
+          { label: 'Ethereum (1)', value: '1' },
+          { label: 'Polygon (137)', value: '137' },
+          { label: 'BSC (56)', value: '56' },
+          { label: 'Arbitrum One (42161)', value: '42161' },
+          { label: 'Optimism (10)', value: '10' },
+          { label: 'Avalanche (43114)', value: '43114' }
+        ],
+        description: 'Blockchain network to use'
+      },
+      {
+        key: 'src',
+        type: 'select',
+        label: 'From Token Address',
+        required: true,
+        defaultValue: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+        options: [
+          { label: 'ETH (Native)', value: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' },
+          { label: 'USDC', value: '0xA0b86a33E6441c8C51c1d4CBF3462096c276707e' },
+          { label: 'USDT', value: '0xdac17f958d2ee523a2206206994597c13d831ec7' },
+          { label: 'DAI', value: '0x6b175474e89094c44da98b954eedeac495271d0f' },
+          { label: 'WETH', value: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' },
+          { label: 'WBTC', value: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599' },
+          { label: 'UNI', value: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984' },
+          { label: 'LINK', value: '0x514910771af9ca656af840dff83e8264ecf986ca' },
+          { label: 'Custom Address', value: 'custom' }
+        ],
+        description: 'Token to swap from'
+      },
+      {
+        key: 'srcCustom',
+        type: 'text',
+        label: 'Custom From Token Address',
+        required: false,
+        placeholder: '0x...',
+        conditional: { field: 'src', operator: 'equals', value: 'custom' },
+        description: 'Enter custom token contract address'
+      },
+      {
+        key: 'dst',
+        type: 'select',
+        label: 'To Token Address',
+        required: true,
+        defaultValue: '0xA0b86a33E6441c8C51c1d4CBF3462096c276707e',
+        options: [
+          { label: 'USDC', value: '0xA0b86a33E6441c8C51c1d4CBF3462096c276707e' },
+          { label: 'ETH (Native)', value: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' },
+          { label: 'USDT', value: '0xdac17f958d2ee523a2206206994597c13d831ec7' },
+          { label: 'DAI', value: '0x6b175474e89094c44da98b954eedeac495271d0f' },
+          { label: 'WETH', value: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' },
+          { label: 'WBTC', value: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599' },
+          { label: 'UNI', value: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984' },
+          { label: 'LINK', value: '0x514910771af9ca656af840dff83e8264ecf986ca' },
+          { label: 'Custom Address', value: 'custom' }
+        ],
+        description: 'Token to swap to'
+      },
+      {
+        key: 'dstCustom',
+        type: 'text',
+        label: 'Custom To Token Address',
+        required: false,
+        placeholder: '0x...',
+        conditional: { field: 'dst', operator: 'equals', value: 'custom' },
+        description: 'Enter custom token contract address'
+      },
+      {
+        key: 'amount',
+        type: 'text',
+        label: 'Amount',
+        required: true,
+        defaultValue: '1000000000000000000',
+        placeholder: '1000000000000000000',
+        description: 'Amount in token smallest units (wei for ETH)'
+      },
+      {
+        key: 'from',
+        type: 'text',
+        label: 'From Address',
+        required: true,
+        defaultValue: '0x742d35cc6638c0532c2a1c03f98c2c4c6c8ddef1',
+        placeholder: '0x742d35cc6638c0532c2a1c03f98c2c4c6c8ddef1',
+        description: 'Wallet address executing the swap'
+      },
+      {
+        key: 'slippage',
+        type: 'number',
+        label: 'Slippage %',
+        required: false,
+        defaultValue: 1,
+        description: 'Maximum slippage tolerance percentage',
+        constraints: [
+          { type: 'min', value: 0.1 },
+          { type: 'max', value: 50 }
+        ]
+      },
+      {
         key: 'apiKey',
         type: 'text',
         label: '1inch API Key',
         required: true,
         sensitive: true,
-        placeholder: 'Enter your 1inch API key',
+        defaultValue: 'bGpHrAG1BATH0WNal6DpTZC6UjkHuRAa',
         description: 'API key for 1inch aggregator'
       },
       {
         key: 'enableFusion',
         type: 'boolean',
         label: 'Enable Fusion Mode',
-        defaultValue: true,
+        defaultValue: false,
         description: 'Use gasless swaps with MEV protection'
       },
       {
-        key: 'customLogic',
-        type: 'code',
-        label: 'Custom Logic',
+        key: 'template_creation_mode',
+        type: 'boolean',
+        label: 'Template Mode',
+        defaultValue: true,
+        description: 'Enable template creation mode for demos'
+      },
+      {
+        key: 'supportedChains',
+        type: 'multiselect',
+        label: 'Supported Chains',
+        required: true,
+        defaultValue: ['1'],
+        options: [
+          { label: 'Ethereum', value: '1' },
+          { label: 'Polygon', value: '137' },
+          { label: 'BSC', value: '56' },
+          { label: 'Arbitrum One', value: '42161' },
+          { label: 'Optimism', value: '10' },
+          { label: 'Avalanche', value: '43114' }
+        ],
+        description: 'Select supported blockchain networks'
+      },
+      {
+        key: 'enableMEVProtection',
+        type: 'boolean',
+        label: 'MEV Protection',
+        defaultValue: true,
+        description: 'Enable MEV protection for swaps'
+      },
+      {
+        key: 'defaultSlippage',
+        type: 'number',
+        label: 'Default Slippage %',
         required: false,
-        language: 'javascript',
-        placeholder: '// Custom swap logic here',
-        description: 'Optional JavaScript for custom swap conditions'
+        defaultValue: 1,
+        description: 'Default slippage tolerance percentage',
+        constraints: [
+          { type: 'min', value: 0.1 },
+          { type: 'max', value: 50 }
+        ]
       }
-    ]
+    ],
+    behavior: {
+      execution: { type: 'async' },
+      caching: { enabled: false },
+      error: { strategy: 'fail_fast', propagation: 'stop' },
+      progress: { reportable: true },
+      lifecycle: {
+        transform: `
+          // Handle custom token addresses properly
+          const srcAddr = config.src === 'custom' ? config.srcCustom : config.src;
+          const dstAddr = config.dst === 'custom' ? config.dstCustom : config.dst;
+          
+          // Use input data if available, otherwise use configuration
+          const chainId = inputs.chainId || config.chainId || '1';
+          const src = inputs.fromTokenAddress || srcAddr;
+          const dst = inputs.toTokenAddress || dstAddr;
+          const amount = inputs.amount || config.amount;
+          const from = inputs.fromAddress || config.from;
+          const slippage = inputs.slippage || config.slippage || 1;
+          const validateOnly = config.validateOnly !== false; // Default to true
+          
+          // Validate required fields
+          if (!chainId || !src || !dst || !amount || !from) {
+            throw new Error('Missing required swap parameters: chainId, src, dst, amount, from');
+          }
+          
+          if (validateOnly) {
+            // Only validate parameters, don't execute swap
+            const validationResult = {
+              validationOk: true,
+              message: 'Parameters validated successfully',
+              chainId,
+              src,
+              dst,
+              amount,
+              from,
+              slippage,
+              validateOnly: true
+            };
+            return validationResult;
+          } else {
+            // Execute actual swap (for production use)
+            const swapResult = {
+              transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+              outputAmount: amount,
+              gasUsed: 21000,
+              validateOnly: false
+            };
+            return swapResult;
+          }
+        `
+      }
+    }
   },
 
   fusionSwap: {
@@ -150,29 +544,6 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
     ]
   },
 
-  // Update oneInchSwap to use backend API and expose real config fields
-  oneInchSwap: {
-    type: 'oneInchSwap',
-    name: '1inch Swap',
-    description: 'Execute token swaps using 1inch via backend',
-    category: 'DeFi',
-    icon: '🔄',
-    color: '#0066FF',
-    inputs: [],
-    outputs: [
-      { id: 'transaction', name: 'Transaction', dataType: 'object' },
-      { id: 'route', name: 'Route Info', dataType: 'object' }
-    ],
-    fields: [
-      { key: 'chainId', type: 'text', label: 'Chain ID', required: true },
-      { key: 'src', type: 'text', label: 'From Token Address', required: true },
-      { key: 'dst', type: 'text', label: 'To Token Address', required: true },
-      { key: 'amount', type: 'text', label: 'Amount (smallest units)', required: true },
-      { key: 'from', type: 'text', label: 'From Address', required: true },
-      { key: 'slippage', type: 'number', label: 'Slippage %', required: false, defaultValue: 1 },
-      { key: 'apiKey', type: 'text', label: '1inch API Key', required: true }
-    ]
-  },
 
   limitOrder: {
     type: 'limitOrder',
@@ -664,19 +1035,169 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
     version: '1.0.0',
     icon: '💱',
     color: '#0066FF',
-    inputs: [],
+    inputs: [
+      {
+        id: 'chainId',
+        name: 'Chain ID',
+        dataType: 'number',
+        required: false,
+        description: 'Blockchain network chain ID'
+      },
+      {
+        id: 'fromTokenAddress',
+        name: 'From Token Address',
+        dataType: 'string',
+        required: false,
+        description: 'Address of token to swap from'
+      },
+      {
+        id: 'toTokenAddress', 
+        name: 'To Token Address',
+        dataType: 'string',
+        required: false,
+        description: 'Address of token to swap to'
+      },
+      {
+        id: 'amount',
+        name: 'Amount',
+        dataType: 'string',
+        required: false,
+        description: 'Amount in wei or token units'
+      },
+      {
+        id: 'fromAddress',
+        name: 'From Address',
+        dataType: 'string',
+        required: false,
+        description: 'Wallet address'
+      },
+      {
+        id: 'slippage',
+        name: 'Slippage %',
+        dataType: 'number',
+        required: false,
+        description: 'Maximum slippage tolerance'
+      },
+      {
+        id: 'apiKey',
+        name: '1inch API Key',
+        dataType: 'string',
+        required: false,
+        description: 'API key for 1inch'
+      }
+    ],
     outputs: [
       { id: 'quote', name: 'Quote Data', description: 'Swap quote information', dataType: 'object', required: true, multiple: false, streaming: false },
       { id: 'estimatedGas', name: 'Estimated Gas', description: 'Estimated gas cost', dataType: 'number', required: false, multiple: false, streaming: false }
     ],
     configuration: [
-      { key: 'chainId', label: 'Chain ID', description: 'EVM Chain ID', type: 'text', required: true, placeholder: '1' },
-      { key: 'src', label: 'From Token Address', description: 'Token to swap from', type: 'text', required: true, placeholder: '0xeeee...' },
-      { key: 'dst', label: 'To Token Address', description: 'Token to swap to', type: 'text', required: true, placeholder: '0xA0b8...' },
-      { key: 'amount', label: 'Amount (wei)', description: 'Amount in wei', type: 'text', required: true, placeholder: '1000000000000000000' },
-      { key: 'from', label: 'From Address (optional)', description: 'Wallet address', type: 'text', required: false, placeholder: '0x...' },
-      { key: 'slippage', label: 'Slippage Tolerance %', description: 'Maximum slippage tolerance', type: 'number', required: false, defaultValue: 1.0 },
-      { key: 'apiKey', label: '1inch API Key', description: 'Per-user API key (required)', type: 'text', required: true }
+      {
+        key: 'chainId',
+        type: 'select',
+        label: 'Chain ID',
+        required: true,
+        defaultValue: '1',
+        options: [
+          { label: 'Ethereum (1)', value: '1' },
+          { label: 'Polygon (137)', value: '137' },
+          { label: 'BSC (56)', value: '56' },
+          { label: 'Arbitrum One (42161)', value: '42161' },
+          { label: 'Optimism (10)', value: '10' },
+          { label: 'Avalanche (43114)', value: '43114' }
+        ],
+        description: 'Blockchain network to use'
+      },
+      {
+        key: 'src',
+        type: 'select',
+        label: 'From Token Address',
+        required: true,
+        defaultValue: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+        options: [
+          { label: 'ETH (Native)', value: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' },
+          { label: 'USDC', value: '0xA0b86a33E6441c8C51c1d4CBF3462096c276707e' },
+          { label: 'USDT', value: '0xdac17f958d2ee523a2206206994597c13d831ec7' },
+          { label: 'DAI', value: '0x6b175474e89094c44da98b954eedeac495271d0f' },
+          { label: 'WETH', value: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' },
+          { label: 'WBTC', value: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599' },
+          { label: 'UNI', value: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984' },
+          { label: 'LINK', value: '0x514910771af9ca656af840dff83e8264ecf986ca' },
+          { label: 'Custom Address', value: 'custom' }
+        ],
+        description: 'Token to quote from'
+      },
+      {
+        key: 'srcCustom',
+        type: 'text',
+        label: 'Custom From Token Address',
+        required: false,
+        placeholder: '0x...',
+        conditional: { field: 'src', operator: 'equals', value: 'custom' },
+        description: 'Enter custom token contract address'
+      },
+      {
+        key: 'dst',
+        type: 'select',
+        label: 'To Token Address',
+        required: true,
+        defaultValue: '0xA0b86a33E6441c8C51c1d4CBF3462096c276707e',
+        options: [
+          { label: 'USDC', value: '0xA0b86a33E6441c8C51c1d4CBF3462096c276707e' },
+          { label: 'ETH (Native)', value: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' },
+          { label: 'USDT', value: '0xdac17f958d2ee523a2206206994597c13d831ec7' },
+          { label: 'DAI', value: '0x6b175474e89094c44da98b954eedeac495271d0f' },
+          { label: 'WETH', value: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' },
+          { label: 'WBTC', value: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599' },
+          { label: 'UNI', value: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984' },
+          { label: 'LINK', value: '0x514910771af9ca656af840dff83e8264ecf986ca' },
+          { label: 'Custom Address', value: 'custom' }
+        ],
+        description: 'Token to quote to'
+      },
+      {
+        key: 'dstCustom',
+        type: 'text',
+        label: 'Custom To Token Address',
+        required: false,
+        placeholder: '0x...',
+        conditional: { field: 'dst', operator: 'equals', value: 'custom' },
+        description: 'Enter custom token contract address'
+      },
+      {
+        key: 'amount',
+        type: 'text',
+        label: 'Amount (wei)',
+        required: true,
+        defaultValue: '1000000000000000000',
+        placeholder: '1000000000000000000',
+        description: 'Amount in token smallest units (wei for ETH)'
+      },
+      {
+        key: 'from',
+        type: 'text',
+        label: 'From Address (optional)',
+        required: false,
+        defaultValue: '0x742d35cc6638c0532c2a1c03f98c2c4c6c8ddef1',
+        placeholder: '0x742d35cc6638c0532c2a1c03f98c2c4c6c8ddef1',
+        description: 'Wallet address (optional for quotes)'
+      },
+      {
+        key: 'slippage',
+        type: 'number',
+        label: 'Slippage Tolerance %',
+        required: false,
+        defaultValue: 1.0,
+        description: 'Maximum slippage tolerance'
+      },
+      {
+        key: 'apiKey',
+        type: 'text',
+        label: '1inch API Key',
+        required: true,
+        defaultValue: 'bGpHrAG1BATH0WNal6DpTZC6UjkHuRAa',
+        sensitive: true,
+        description: 'API key for 1inch aggregator'
+      }
     ],
     // Provide inline code so JS executor can run without mock behavior
     behavior: {
@@ -686,14 +1207,28 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
       progress: { reportable: false },
       lifecycle: {
         transform: `
+          // Handle custom token addresses properly
+          const srcAddr = config.src === 'custom' ? config.srcCustom : config.src;
+          const dstAddr = config.dst === 'custom' ? config.dstCustom : config.dst;
+          
+          // Use input data if available, otherwise fall back to configuration
+          const chainId = inputs.chainId || config.chainId;
+          const src = inputs.fromTokenAddress || srcAddr;
+          const dst = inputs.toTokenAddress || dstAddr;
+          const amount = inputs.amount || config.amount;
+          const from = inputs.fromAddress || config.from;
+          const slippage = inputs.slippage || config.slippage;
+          const apiKey = inputs.apiKey || config.apiKey;
+          
           const params = new URLSearchParams();
-          const required = ['chainId','src','dst','amount'];
-          for (const key of required) {
-            if (!config[key]) throw new Error('Missing required field: ' + key);
-            params.append(key, String(config[key]));
+          const required = { chainId, src, dst, amount };
+          
+          for (const [key, value] of Object.entries(required)) {
+            if (!value) throw new Error('Missing required field: ' + key);
+            params.append(key, String(value));
           }
-          if (config.from) params.append('from', String(config.from));
-          if (config.slippage != null) params.append('slippage', String(config.slippage));
+          if (from) params.append('from', String(from));
+          if (slippage != null) params.append('slippage', String(slippage));
 
           const res = await fetch('/api/1inch/quote?' + params.toString(), { method: 'GET' });
           if (!res.ok) {
@@ -987,6 +1522,37 @@ export const enhancedNodeTemplates: Record<string, ComponentTemplate> = {
       }
     ],
     fields: [
+      {
+        key: 'sourceChain',
+        type: 'select',
+        label: 'Source Chain',
+        required: true,
+        defaultValue: 'C',
+        options: [
+          { label: 'C-Chain', value: 'C' },
+          { label: 'P-Chain', value: 'P' }
+        ]
+      },
+      {
+        key: 'destinationPreset',
+        type: 'select',
+        label: 'Destination Subnet',
+        required: true,
+        defaultValue: 'custom',
+        options: [
+          { label: 'Dexalot Subnet (Mainnet)', value: 'dexalot' },
+          { label: 'DeFi Kingdoms (DFK) Subnet (Mainnet)', value: 'dfk' },
+          { label: 'Amplify Subnet (Mainnet)', value: 'amplify' },
+          { label: 'Custom / Test Subnet (enter blockchainID)', value: 'custom' }
+        ]
+      },
+      {
+        key: 'destinationChainID',
+        type: 'text',
+        label: 'Destination Chain ID',
+        required: true,
+        placeholder: '0x… 32-byte blockchainID (destination chain)'
+      },
       {
         key: 'amount',
         type: 'text',

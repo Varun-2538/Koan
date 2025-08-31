@@ -81,7 +81,7 @@ class ChainSelectorExecutor {
         },
         '43114': {
             chainId: '43114',
-            name: 'Avalanche',
+            name: 'Avalanche C-Chain',
             symbol: 'AVAX',
             rpcUrl: process.env.AVALANCHE_RPC_URL || 'https://api.avax.network/ext/bc/C/rpc',
             explorerUrl: 'https://snowtrace.io',
@@ -89,7 +89,9 @@ class ChainSelectorExecutor {
             isTestnet: false,
             blockTime: 2,
             gasLimit: '30000000',
-            supportedBy1inch: true
+            supportedBy1inch: true,
+            isAvalanche: true,
+            avalancheChainType: 'C-Chain'
         },
         '25': {
             chainId: '25',
@@ -115,6 +117,52 @@ class ChainSelectorExecutor {
             gasLimit: '30000000',
             supportedBy1inch: true
         },
+        // Avalanche Subnets
+        '53935': {
+            chainId: '53935',
+            name: 'DeFi Kingdom (DFK)',
+            symbol: 'JEWEL',
+            rpcUrl: process.env.DFK_RPC_URL || 'https://subnets.avax.network/defi-kingdoms/dfk-chain/rpc',
+            explorerUrl: 'https://subnets.avax.network/defi-kingdoms',
+            nativeCurrency: 'JEWEL',
+            isTestnet: false,
+            blockTime: 2,
+            gasLimit: '30000000',
+            supportedBy1inch: false,
+            isAvalanche: true,
+            avalancheChainType: 'L1-Subnet',
+            subnetId: '2rwhRKN8qfxK9AEJunfUjn5WH7PQzUPPQKCb59ak6fwsrwF2R'
+        },
+        '432204': {
+            chainId: '432204',
+            name: 'Dexalot Subnet',
+            symbol: 'ALOT',
+            rpcUrl: process.env.DEXALOT_RPC_URL || 'https://subnets.avax.network/dexalot/mainnet/rpc',
+            explorerUrl: 'https://subnets.avax.network/dexalot',
+            nativeCurrency: 'ALOT',
+            isTestnet: false,
+            blockTime: 2,
+            gasLimit: '30000000',
+            supportedBy1inch: false,
+            isAvalanche: true,
+            avalancheChainType: 'L1-Subnet',
+            subnetId: '2VCAhX6vE3UnXC6s1CBPE6jJ4c4cHWMfPgCptuWS59pQ8WYxXw'
+        },
+        '78430': {
+            chainId: '78430',
+            name: 'Amplify Subnet',
+            symbol: 'AMP',
+            rpcUrl: process.env.AMPLIFY_RPC_URL || 'https://subnets.avax.network/amplify/mainnet/rpc',
+            explorerUrl: 'https://subnets.avax.network/amplify',
+            nativeCurrency: 'AMP',
+            isTestnet: false,
+            blockTime: 2,
+            gasLimit: '30000000',
+            supportedBy1inch: false,
+            isAvalanche: true,
+            avalancheChainType: 'L1-Subnet',
+            subnetId: 'zJytnh96Pc8rM337bBrtMvJDbEdDNjcXiG3WkTNCiLp8krJUk'
+        },
         // Testnets
         '5': {
             chainId: '5',
@@ -127,6 +175,38 @@ class ChainSelectorExecutor {
             blockTime: 15,
             gasLimit: '30000000',
             supportedBy1inch: false
+        },
+        '43113': {
+            chainId: '43113',
+            name: 'Avalanche Fuji C-Chain',
+            symbol: 'AVAX',
+            rpcUrl: process.env.AVALANCHE_FUJI_RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc',
+            explorerUrl: 'https://testnet.snowtrace.io',
+            nativeCurrency: 'AVAX',
+            isTestnet: true,
+            blockTime: 2,
+            gasLimit: '30000000',
+            supportedBy1inch: false,
+            isAvalanche: true,
+            avalancheChainType: 'C-Chain',
+            supportsICM: true
+        },
+        '99999': {
+            chainId: '99999',
+            name: 'Custom L1 Subnet (Template)',
+            symbol: 'CUSTOM',
+            rpcUrl: 'http://localhost:8545', // Local development
+            explorerUrl: 'http://localhost:4000',
+            nativeCurrency: 'CUSTOM',
+            isTestnet: true,
+            blockTime: 1,
+            gasLimit: '30000000',
+            supportedBy1inch: false,
+            isAvalanche: true,
+            avalancheChainType: 'L1-Subnet',
+            subnetId: 'template-subnet-id',
+            supportsICM: true,
+            isCustom: true
         }
     };
     async validate(inputs) {
@@ -220,6 +300,18 @@ class ChainSelectorExecutor {
         if (inputs.available_chains === 'mainnet_only') {
             chains = chains.filter(chain => !chain.isTestnet);
         }
+        // Filter by Avalanche only
+        if (inputs.available_chains === 'avalanche_only') {
+            chains = chains.filter(chain => chain.isAvalanche);
+        }
+        // Filter by ICM support
+        if (inputs.available_chains === 'icm_compatible') {
+            chains = chains.filter(chain => chain.supportsICM);
+        }
+        // Filter by L1 subnets only
+        if (inputs.available_chains === 'l1_subnets_only') {
+            chains = chains.filter(chain => chain.avalancheChainType === 'L1-Subnet');
+        }
         return chains;
     }
     async getChainStatus(chain) {
@@ -278,6 +370,21 @@ class ChainSelectorExecutor {
         }
         if (chain.chainId === '1') {
             recommendations.push('🏆 Ethereum mainnet - highest liquidity and most protocols available');
+        }
+        // Avalanche-specific recommendations
+        if (chain.isAvalanche) {
+            if (chain.avalancheChainType === 'C-Chain') {
+                recommendations.push('🏔️ Avalanche C-Chain - EVM-compatible with fast finality');
+            }
+            else if (chain.avalancheChainType === 'L1-Subnet') {
+                recommendations.push('⚡ Avalanche L1 Subnet - Custom blockchain with dedicated resources');
+            }
+            if (chain.supportsICM) {
+                recommendations.push('📤 Supports Avalanche ICM for cross-chain messaging');
+            }
+            if (chain.isCustom) {
+                recommendations.push('🔧 Custom subnet - designed for your specific use case');
+            }
         }
         return recommendations;
     }

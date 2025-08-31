@@ -675,19 +675,23 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
   {
     id: "avalanche-icm-workflow",
     name: "Avalanche ICM Cross-Chain Messaging",
-    description: "Complete cross-chain messaging workflow using Avalanche Teleporter for secure interchain communication between subnets and mainnets",
+    description: "Complete cross-chain messaging workflow using Avalanche Teleporter for secure interchain communication between L1 subnets and C-Chain",
     category: "avalanche",
     difficulty: "intermediate",
     estimatedTime: "30 minutes",
     features: [
-      "📤 Avalanche Teleporter ICM integration",
-      "🔐 Secure cross-chain message sending",
+      "📤 Avalanche Teleporter ICM integration for L1 subnets",
+      "🔗 Multi-directional cross-chain messaging (C-Chain ↔ Subnet)",
+      "🏗️ Support for custom L1 subnet deployment",
       "📥 Real-time message reception and decoding",
-      "🏔️ Fuji testnet support with mainnet compatibility",
+      "🏔️ Fuji testnet with mainnet-ready architecture",
       "💰 Automatic fee calculation and gas optimization",
-      "⚡ Real-time transaction monitoring",
-      "🔍 Message payload validation and parsing",
-      "🛡️ Frontend-controlled signing (no backend PK access)"
+      "⚡ Real-time transaction monitoring across chains",
+      "🔍 Advanced message payload validation and parsing",
+      "🛡️ Frontend-controlled signing (no backend PK access)",
+      "📊 Cross-chain analytics and monitoring dashboard",
+      "🚀 Langflow-style visual workflow builder for ICM",
+      "🔧 Template mode for rapid L1 subnet ICM setup"
     ],
     nodes: [
       {
@@ -710,109 +714,227 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
         type: "chainSelector",
         position: { x: 100, y: 280 },
         data: {
-          label: "Chain Selector",
+          label: "Source Chain Selector",
+          config: {
+            primary_chain: "43113", // Fuji C-Chain
+            enable_testnet: true,
+            available_chains: "icm_compatible"
+          }
+        }
+      },
+      {
+        id: "chain-selector-2", 
+        type: "chainSelector",
+        position: { x: 100, y: 460 },
+        data: {
+          label: "Destination Chain Selector",
+          config: {
+            primary_chain: "99999", // Custom L1 Subnet
+            enable_testnet: true,
+            available_chains: "l1_subnets_only"
+          }
+        }
+      },
+      {
+        id: "l1-config-1",
+        type: "l1Config",
+        position: { x: 400, y: 280 },
+        data: {
+          label: "L1 Subnet Configuration",
           config: {
             template_creation_mode: true,
-            supportedChains: ["43113"], // Fuji C-Chain
-            defaultChain: "43113",
-            enableTestnet: true
+            vmType: "SubnetEVM",
+            chainId: 99999,
+            tokenSymbol: "ICM",
+            initialSupply: 1000000,
+            gasLimit: 8000000
+          }
+        }
+      },
+      {
+        id: "l1-simulator-deployer-1",
+        type: "l1SimulatorDeployer", 
+        position: { x: 400, y: 460 },
+        data: {
+          label: "L1 Subnet Deployer",
+          config: {
+            template_creation_mode: true,
+            controlKeys: [],
+            threshold: 1
           }
         }
       },
       {
         id: "icm-sender-1",
         type: "icmSender",
-        position: { x: 400, y: 100 },
+        position: { x: 700, y: 100 },
         data: {
-          label: "ICM Message Sender",
+          label: "ICM C-Chain → L1 Sender",
           config: {
             template_creation_mode: true,
-            sourceChain: "C",
-            destinationChainID: "11111111111111111111111111111111LpoYY", // Fuji subnet
-            amount: "Hello from Avalanche ICM!",
-            payloadType: "string",
-            gasLimit: 100000
+            sourceChain: "43113", // Fuji C-Chain
+            destinationChainID: "99999", // Custom L1 Subnet
+            amount: "Hello from C-Chain to L1 Subnet!",
+            payloadType: "object",
+            gasLimit: 200000
           }
         }
       },
       {
         id: "icm-receiver-1",
         type: "icmReceiver",
-        position: { x: 700, y: 100 },
+        position: { x: 1000, y: 100 },
         data: {
-          label: "ICM Message Receiver",
+          label: "ICM L1 Receiver",
           config: {
             template_creation_mode: true,
             messageID: "template_msg_123", // Will be set by sender
-            sourceChainID: "11111111111111111111111111111111LpoYY",
-            pollingTimeout: 30
+            sourceChainID: "43113", // From C-Chain
+            pollingTimeout: 30,
+            autoDecode: true
+          }
+        }
+      },
+      {
+        id: "icm-sender-2",
+        type: "icmSender",
+        position: { x: 700, y: 280 },
+        data: {
+          label: "ICM L1 → C-Chain Sender",
+          config: {
+            template_creation_mode: true,
+            sourceChain: "99999", // Custom L1 Subnet
+            destinationChainID: "43113", // Back to C-Chain
+            amount: "Response from L1 Subnet!",
+            payloadType: "object",
+            gasLimit: 200000
+          }
+        }
+      },
+      {
+        id: "icm-receiver-2",
+        type: "icmReceiver",
+        position: { x: 1000, y: 280 },
+        data: {
+          label: "ICM C-Chain Receiver",
+          config: {
+            template_creation_mode: true,
+            messageID: "template_msg_456", // Will be set by sender
+            sourceChainID: "99999", // From L1 Subnet
+            pollingTimeout: 30,
+            autoDecode: true
           }
         }
       },
       {
         id: "transaction-monitor-1",
         type: "transactionMonitor",
-        position: { x: 400, y: 280 },
+        position: { x: 700, y: 460 },
         data: {
-          label: "ICM Transaction Monitor",
+          label: "Cross-Chain Transaction Monitor",
           config: {
             template_creation_mode: true,
-            maxTransactions: "10",
+            maxTransactions: "20",
             showPendingTx: true,
             enableFiltering: true,
-            realTimeUpdates: true
+            realTimeUpdates: true,
+            monitorMultipleChains: true,
+            supportedChains: ["43113", "99999"]
           }
         }
       },
       {
         id: "dashboard-1",
         type: "defiDashboard",
-        position: { x: 1000, y: 100 },
+        position: { x: 1300, y: 100 },
         data: {
-          label: "ICM Analytics Dashboard",
+          label: "Avalanche ICM Analytics",
           config: {
             template_creation_mode: true,
-            title: "Avalanche ICM Dashboard",
-            components: ["messages", "transactions", "analytics"],
+            title: "Avalanche L1 ICM Dashboard",
+            components: ["messages", "transactions", "analytics", "subnets", "topology"],
             theme: "avalanche-branded",
-            enableRealTime: true
+            enableRealTime: true,
+            showCrossChainFlow: true,
+            supportedChains: ["43113", "99999"]
           }
         }
       }
     ],
     edges: [
-      { id: "e1-2", source: "wallet-connector-1", target: "chain-selector-1", type: "default" },
-      { id: "e1-3", source: "wallet-connector-1", target: "icm-sender-1", type: "default" },
-      { id: "e2-3", source: "chain-selector-1", target: "icm-sender-1", type: "default" },
-      { id: "e3-4", source: "icm-sender-1", target: "icm-receiver-1", type: "default" },
-      { id: "e3-5", source: "icm-sender-1", target: "transaction-monitor-1", type: "default" },
-      { id: "e4-6", source: "icm-receiver-1", target: "dashboard-1", type: "default" },
-      { id: "e5-6", source: "transaction-monitor-1", target: "dashboard-1", type: "default" }
+      // Wallet to chain selectors
+      { id: "e1-cs1", source: "wallet-connector-1", target: "chain-selector-1", type: "default" },
+      { id: "e1-cs2", source: "wallet-connector-1", target: "chain-selector-2", type: "default" },
+      
+      // L1 subnet creation flow
+      { id: "ecs2-l1c", source: "chain-selector-2", target: "l1-config-1", type: "default" },
+      { id: "el1c-l1d", source: "l1-config-1", target: "l1-simulator-deployer-1", type: "default" },
+      
+      // C-Chain to L1 messaging
+      { id: "ecs1-icms1", source: "chain-selector-1", target: "icm-sender-1", type: "default" },
+      { id: "el1d-icms1", source: "l1-simulator-deployer-1", target: "icm-sender-1", type: "default" },
+      { id: "eicms1-icmr1", source: "icm-sender-1", target: "icm-receiver-1", type: "default" },
+      
+      // L1 to C-Chain messaging
+      { id: "eicmr1-icms2", source: "icm-receiver-1", target: "icm-sender-2", type: "default" },
+      { id: "eicms2-icmr2", source: "icm-sender-2", target: "icm-receiver-2", type: "default" },
+      
+      // Monitoring and analytics
+      { id: "eicms1-tm", source: "icm-sender-1", target: "transaction-monitor-1", type: "default" },
+      { id: "eicms2-tm", source: "icm-sender-2", target: "transaction-monitor-1", type: "default" },
+      { id: "eicmr1-dash", source: "icm-receiver-1", target: "dashboard-1", type: "default" },
+      { id: "eicmr2-dash", source: "icm-receiver-2", target: "dashboard-1", type: "default" },
+      { id: "etm-dash", source: "transaction-monitor-1", target: "dashboard-1", type: "default" },
+      { id: "el1d-dash", source: "l1-simulator-deployer-1", target: "dashboard-1", type: "default" }
     ],
     requiredInputs: [
       {
-        key: "destinationSubnet",
-        label: "Destination Subnet ID",
-        description: "The subnet ID where you want to send the ICM message",
+        key: "l1SubnetName",
+        label: "L1 Subnet Name",
+        description: "Name for your custom L1 subnet",
         type: "string",
         required: true,
-        defaultValue: "11111111111111111111111111111111LpoYY"
+        defaultValue: "MyICMSubnet"
       },
       {
-        key: "messageContent",
-        label: "Message Content",
-        description: "The content of your cross-chain message",
+        key: "l1TokenSymbol", 
+        label: "L1 Token Symbol",
+        description: "Symbol for the native token of your L1 subnet",
         type: "string",
         required: true,
-        defaultValue: "Hello from Avalanche ICM!"
+        defaultValue: "ICM"
+      },
+      {
+        key: "initialSupply",
+        label: "Initial Token Supply",
+        description: "Initial supply of tokens for the L1 subnet",
+        type: "number",
+        required: false,
+        defaultValue: 1000000
+      },
+      {
+        key: "cChainMessage",
+        label: "C-Chain → L1 Message",
+        description: "Message to send from C-Chain to L1 Subnet",
+        type: "string",
+        required: true,
+        defaultValue: "Hello from C-Chain!"
+      },
+      {
+        key: "l1ResponseMessage",
+        label: "L1 → C-Chain Response",
+        description: "Response message to send back to C-Chain",
+        type: "string",
+        required: true,
+        defaultValue: "Hello back from L1 Subnet!"
       },
       {
         key: "gasLimit",
-        label: "Gas Limit",
-        description: "Gas limit for the cross-chain message",
+        label: "ICM Gas Limit",
+        description: "Gas limit for cross-chain messages",
         type: "number",
         required: false,
-        defaultValue: 100000
+        defaultValue: 200000
       }
     ]
   },

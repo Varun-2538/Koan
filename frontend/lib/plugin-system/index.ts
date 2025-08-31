@@ -300,6 +300,86 @@ export class UnitePluginSystem {
         }
       }
       ,
+      // Avalanche ICM - Sender (panel validation only)
+      {
+        id: 'icmSender',
+        name: 'ICM Sender',
+        description: 'Avalanche Teleporter send (panel validates only)',
+        category: 'Avalanche',
+        version: '1.0.0',
+        template: {
+          inputs: [],
+          outputs: [
+            { id: 'validationOk', name: 'Validation OK', dataType: 'boolean' }
+          ],
+          configuration: [
+            {
+              key: 'sourceChain',
+              name: 'Source Chain',
+              type: 'select',
+              required: true,
+              options: [
+                { label: 'C-Chain', value: 'C' },
+                { label: 'P-Chain', value: 'P' }
+              ],
+              defaultValue: 'C'
+            },
+            {
+              key: 'destinationPreset',
+              name: 'Destination Subnet',
+              type: 'select',
+              required: true,
+              options: [
+                { label: 'Dexalot Subnet (Mainnet)', value: 'dexalot' },
+                { label: 'DeFi Kingdoms (DFK) Subnet (Mainnet)', value: 'dfk' },
+                { label: 'Amplify Subnet (Mainnet)', value: 'amplify' },
+                { label: 'Custom / Test Subnet (enter blockchainID)', value: 'custom' }
+              ],
+              defaultValue: 'custom'
+            },
+            {
+              key: 'destinationChainID',
+              name: 'Destination Chain ID',
+              type: 'text',
+              required: true,
+              placeholder: '0x… 32-byte blockchainID (destination chain)',
+              ui: {
+                helpText: 'Paste the destination blockchainID (bytes32 hex). Presets provide guidance; you can override manually.'
+              }
+            },
+            { key: 'recipient', name: 'Recipient Address', type: 'text', required: true, placeholder: '0x...' },
+            { key: 'walletAddress', name: 'Wallet Address', type: 'text', required: true, placeholder: '0x...' },
+            { key: 'amount', name: 'Amount/Payload (optional)', type: 'text', required: false },
+            { key: 'validateOnly', name: 'Validate Only (don’t broadcast)', type: 'boolean', required: false, defaultValue: true }
+          ]
+        },
+        executor: {
+          type: 'javascript',
+          code: `
+            async function execute(inputs, config, context) {
+              // Auto-fill destinationChainID from preset if provided
+              if ((config.destinationPreset && config.destinationPreset !== 'custom') && !config.destinationChainID) {
+                const presetMap = {
+                  dexalot: "${process.env.NEXT_PUBLIC_AVAX_BLOCKCHAIN_ID_DEXALOT || ''}",
+                  dfk: "${process.env.NEXT_PUBLIC_AVAX_BLOCKCHAIN_ID_DFK || ''}",
+                  amplify: "${process.env.NEXT_PUBLIC_AVAX_BLOCKCHAIN_ID_AMPLIFY || ''}"
+                };
+                const suggested = presetMap[String(config.destinationPreset)] || '';
+                if (suggested) {
+                  config.destinationChainID = suggested;
+                }
+              }
+
+              const required = ['sourceChain','destinationChainID','recipient','walletAddress'];
+              const missing = required.filter(k => !config[k]);
+              if (missing.length) throw new Error('Missing required field(s): ' + missing.join(', '));
+              // Panel validates only
+              return { validationOk: true };
+            }
+          `
+        }
+      }
+      ,
       // 1inch Quote (Frontend built-in)
       {
         id: 'oneInchQuote',
@@ -1116,6 +1196,15 @@ export class UnitePluginSystem {
     }
     
     return inputs
+  }
+
+  // Component access methods
+  getComponent(componentId: string): any {
+    return pluginRegistry.getComponent(componentId)
+  }
+
+  getComponents(): any[] {
+    return pluginRegistry.getComponents()
   }
 
   // System status and health checks

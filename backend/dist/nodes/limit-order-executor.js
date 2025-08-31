@@ -150,7 +150,7 @@ class LimitOrderExecutor {
             toToken: {
                 symbol: 'USDC',
                 name: 'USD Coin',
-                address: '0xA0b86a33E6441203206448619dd91e2df9dd2abF',
+                address: '0xA0b86a33E6441fb3cD7b2a9da94C2b48A8aE5fF0',
                 amount: '1700.00'
             },
             orderType: 'limit',

@@ -15,66 +15,7 @@
 
 Koan consists of three main components working together to provide a seamless no-code DeFi experience:
 
-```mermaid
-graph TB
-    subgraph "User Interface"
-        UI[React Flow UI<br/>Visual Workflow Designer]
-        NL[Natural Language Input<br/>Create ETH/USDC swap]
-    end
-    
-    subgraph "Frontend - Next.js"
-        UI --> WB[Workflow Builder<br/>Node-based Editor]
-        WB --> API[API Client<br/>Frontend to Backend]
-    end
-    
-    subgraph "AI Agents - Python FastAPI"
-        NL --> AI[AI Agent Service<br/>agno-agi + OpenAI]
-        AI --> WG[Workflow Generator<br/>Requirements to Workflow]
-        WG --> BC[Backend Client<br/>API Connector]
-    end
-    
-    subgraph "Backend - TypeScript"
-        API --> EE[Execution Engine<br/>Generic Workflow Processor]
-        BC --> EE
-        EE --> NE[Node Executors<br/>DeFi Protocol Handlers]
-        EE --> EM[Execution Monitor<br/>Real-time Status]
-    end
-    
-    subgraph "DeFi Protocols"
-        NE --> ONEINCH[1inch DEX<br/>Token Swaps]
-        NE --> UNISWAP[Uniswap V3<br/>Liquidity and Swaps]
-        NE --> AAVE[Aave<br/>Lending and Borrowing]
-        NE --> CHAINLINK[Chainlink<br/>Price Oracles]
-        NE --> FUSION[Fusion+<br/>Cross-chain Bridge]
-    end
-    
-    subgraph "Blockchain Networks"
-        ONEINCH --> ETH[Ethereum]
-        UNISWAP --> ETH
-        AAVE --> ETH
-        CHAINLINK --> ETH
-        FUSION --> MULTI[Multi-chain<br/>Ethereum, Polygon, etc.]
-    end
-    
-    %% Data Flow
-    EM -.-> API
-    EM -.-> BC
-    
-    %% Styling
-    classDef userInterface fill:#e1f5fe
-    classDef frontend fill:#f3e5f5
-    classDef agents fill:#e8f5e8
-    classDef backend fill:#fff3e0
-    classDef protocols fill:#fce4ec
-    classDef blockchain fill:#f1f8e9
-    
-    class UI,NL userInterface
-    class WB,API frontend
-    class AI,WG,BC agents
-    class EE,NE,EM backend
-    class ONEINCH,UNISWAP,AAVE,CHAINLINK,FUSION protocols
-    class ETH,MULTI blockchain
-```
+![Koan Architecture](Architecture.png)
 
 ### 🎯 Component Overview
 

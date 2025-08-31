@@ -187,21 +187,11 @@ The AI system analyzes these requests and produces executable workflows with:
 - **Audit Logging**: Complete execution history and audit trails
 - **Safe Execution**: Sandboxed environment for workflow testing
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
-
-- Code style and standards
-- Testing requirements
-- Pull request process
-- Issue reporting
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
-
+## 🆘 Support (Coming soon)
 - **Documentation**: [Full documentation](docs/)
 - **Issues**: [GitHub Issues](issues/)
 - **Discussions**: [GitHub Discussions](discussions/)

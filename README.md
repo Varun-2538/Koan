@@ -2,6 +2,10 @@
 
 **Koan** is a powerful no-code platform that enables users to design complex DeFi workflows and deploy decentralized applications through an intuitive node-based visual interface. With built-in AI agents and comprehensive DeFi protocol integrations, Koan makes blockchain development accessible to everyone.
 
+## 🎯 Our Mission
+
+**Koan is designed to be inclusive, not exclusive.** Our aim is to enable anyone to build and code their ideas, regardless of their technical background or blockchain experience. We believe that the advantages of web3 technology should be accessible to everyone: from complete beginners to seasoned developers. By providing intuitive visual tools and AI-powered assistance, we're democratizing access to decentralized finance and empowering creators from all walks of life to participate in the web3 revolution.
+
 ## 🌟 Key Features
 
 - **🎨 Visual Workflow Builder**: Drag-and-drop node-based interface powered by React Flow
